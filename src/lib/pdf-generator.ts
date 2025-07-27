@@ -32,7 +32,7 @@ export async function generateInvoicePdf(
     doc.setFontSize(26);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryColor);
-    doc.text(t('nav.invoices').toUpperCase(), 20, 30);
+    doc.text(t('invoices.invoice').toUpperCase(), 20, 30);
 
     if (company?.logoUrl && company.logoUrl.startsWith('data:image')) {
         try {

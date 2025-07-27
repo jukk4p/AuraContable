@@ -62,7 +62,8 @@
         "deleteInvoice": "Delete Invoice",
         "statusPaid": "Paid",
         "statusPending": "Pending",
-        "statusOverdue": "Overdue"
+        "statusOverdue": "Overdue",
+        "invoice": "Invoice"
     },
     "newInvoice": {
         "title": "Create New Invoice",

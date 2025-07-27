@@ -62,7 +62,8 @@
         "deleteInvoice": "Elimina Fattura",
         "statusPaid": "Pagata",
         "statusPending": "In sospeso",
-        "statusOverdue": "Scaduta"
+        "statusOverdue": "Scaduta",
+        "invoice": "Fattura"
     },
     "newInvoice": {
         "title": "Crea Nuova Fattura",

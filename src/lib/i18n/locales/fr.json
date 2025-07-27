@@ -62,7 +62,8 @@
         "deleteInvoice": "Supprimer la facture",
         "statusPaid": "Payée",
         "statusPending": "En attente",
-        "statusOverdue": "En retard"
+        "statusOverdue": "En retard",
+        "invoice": "Facture"
     },
     "newInvoice": {
         "title": "Créer une nouvelle facture",
