@@ -1,0 +1,113 @@
+
+{
+    "common": {
+        "search": "Rechercher",
+        "createInvoice": "Créer une facture",
+        "viewAll": "Voir tout",
+        "actions": "Actions",
+        "menu": "Menu",
+        "toggleMenu": "Basculer le menu",
+        "viewDetails": "Voir les détails",
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "saveChanges": "Enregistrer les modifications",
+        "all": "Tous"
+    },
+    "nav": {
+        "dashboard": "Tableau de bord",
+        "invoices": "Factures",
+        "newInvoice": "Nouvelle facture",
+        "invoiceDetails": "Détails de la facture",
+        "clients": "Clients",
+        "settings": "Paramètres",
+        "myAccount": "Mon compte",
+        "support": "Support",
+        "signOut": "Se déconnecter"
+    },
+    "login": {
+        "title": "Connectez-vous pour gérer vos factures",
+        "email": "Email",
+        "password": "Mot de passe",
+        "signIn": "Se connecter",
+        "or": "OU",
+        "googleSignIn": "Se connecter avec Google",
+        "noAccount": "Vous n'avez pas de compte ?",
+        "signUp": "S'inscrire"
+    },
+    "dashboard": {
+        "totalRevenue": "Revenu total",
+        "paidInvoices": "Factures payées",
+        "totalPaidInvoices": "Total des factures payées",
+        "pendingInvoices": "Factures en attente",
+        "awaitingPayment": "En attente de paiement",
+        "overdueInvoices": "Factures en retard",
+        "paymentOverdue": "Date de paiement dépassée",
+        "recentInvoices": "Factures récentes"
+    },
+    "invoices": {
+        "allInvoices": "Toutes les factures",
+        "searchPlaceholder": "Rechercher par client ou n° de facture",
+        "client": "Client",
+        "invoiceNumber": "Numéro de facture",
+        "invoiceNumberShort": "N° de facture",
+        "amount": "Montant",
+        "status": "Statut",
+        "dueDate": "Date d'échéance",
+        "issueDate": "Date d'émission",
+        "markAsPaid": "Marquer comme payée",
+        "downloadPdf": "Télécharger le PDF",
+        "deleteInvoice": "Supprimer la facture",
+        "statusPaid": "Payée",
+        "statusPending": "En attente",
+        "statusOverdue": "En retard"
+    },
+    "newInvoice": {
+        "title": "Créer une nouvelle facture",
+        "selectClient": "Sélectionner un client",
+        "pickDate": "Choisir une date",
+        "selectStatus": "Sélectionner un statut",
+        "items": "Articles",
+        "itemDescription": "Description de l'article",
+        "itemQuantity": "Qté.",
+        "itemPrice": "Prix",
+        "addItem": "Ajouter un article",
+        "subtotal": "Sous-total",
+        "notes": "Notes",
+        "notesPlaceholder": "Ajouter des notes supplémentaires...",
+        "toast": {
+            "title": "Facture créée",
+            "description": "La facture a été créée avec succès."
+        }
+    },
+    "clients": {
+        "allClients": "Tous les clients",
+        "searchPlaceholder": "Rechercher par nom ou email",
+        "newClient": "Nouveau client",
+        "addNewClient": "Ajouter un nouveau client",
+        "addNewClientDescription": "Entrez les détails de votre nouveau client.",
+        "name": "Nom",
+        "email": "Email"
+    },
+    "settings": {
+        "profile": {
+            "title": "Profil",
+            "description": "Modifiez votre profil public ici. Cliquez sur enregistrer lorsque vous avez terminé.",
+            "name": "Nom",
+            "email": "Email"
+        },
+        "account": {
+            "title": "Compte",
+            "description": "Gérez les paramètres et préférences de votre compte.",
+            "newPassword": "Nouveau mot de passe",
+            "confirmPassword": "Confirmer le mot de passe",
+            "updatePassword": "Mettre à jour le mot de passe"
+        },
+        "language": {
+            "title": "Langue",
+            "description": "Choisissez la langue de l'interface.",
+            "select": "Sélectionner la langue"
+        }
+    }
+}

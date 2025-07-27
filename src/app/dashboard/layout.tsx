@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import React from "react"
+import { useLocale } from "@/lib/i18n/locale-provider"
 
 export default function DashboardLayout({
   children,
@@ -15,28 +16,29 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const { t } = useLocale();
 
   const navItems = [
-    { href: "/dashboard", icon: LayoutGrid, label: "Panel" },
-    { href: "/dashboard/invoices", icon: FileText, label: "Facturas" },
-    { href: "/dashboard/clients", icon: Users, label: "Clientes" },
-    { href: "/dashboard/settings", icon: Settings, label: "Ajustes" },
+    { href: "/dashboard", icon: LayoutGrid, label: t('nav.dashboard') },
+    { href: "/dashboard/invoices", icon: FileText, label: t('nav.invoices') },
+    { href: "/dashboard/clients", icon: Users, label: t('nav.clients') },
+    { href: "/dashboard/settings", icon: Settings, label: t('nav.settings') },
   ]
   
   const getPageTitle = () => {
     switch (pathname) {
       case '/dashboard':
-        return 'Panel';
+        return t('nav.dashboard');
       case '/dashboard/invoices':
-        return 'Facturas';
+        return t('nav.invoices');
       case '/dashboard/invoices/new':
-        return 'Nueva Factura';
+        return t('nav.newInvoice');
       case '/dashboard/clients':
-        return 'Clientes';
+        return t('nav.clients');
       case '/dashboard/settings':
-        return 'Ajustes';
+        return t('nav.settings');
       default:
-        if (pathname.startsWith('/dashboard/invoices/')) return 'Detalles de Factura';
+        if (pathname.startsWith('/dashboard/invoices/')) return t('nav.invoiceDetails');
         return 'InvoiceFlow';
     }
   };
@@ -74,12 +76,12 @@ export default function DashboardLayout({
           <div className="flex items-center gap-4">
             <div className="relative hidden md:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar..." className="pl-9" />
+              <Input placeholder={t('common.search') + "..."} className="pl-9" />
             </div>
             <Link href="/dashboard/invoices/new">
                 <Button>
                     <PlusCircle className="w-4 h-4 mr-2"/>
-                    Crear Factura
+                    {t('common.createInvoice')}
                 </Button>
             </Link>
             <DropdownMenu>
@@ -92,12 +94,12 @@ export default function DashboardLayout({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('nav.myAccount')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild><Link href="/dashboard/settings">Ajustes</Link></DropdownMenuItem>
-                <DropdownMenuItem>Soporte</DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href="/dashboard/settings">{t('nav.settings')}</Link></DropdownMenuItem>
+                <DropdownMenuItem>{t('nav.support')}</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild><Link href="/">Cerrar Sesión</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href="/">{t('nav.signOut')}</Link></DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

@@ -1,0 +1,113 @@
+
+{
+    "common": {
+        "search": "Cerca",
+        "createInvoice": "Crea Fattura",
+        "viewAll": "Vedi tutto",
+        "actions": "Azioni",
+        "menu": "Menu",
+        "toggleMenu": "Attiva/disattiva menu",
+        "viewDetails": "Vedi Dettagli",
+        "edit": "Modifica",
+        "delete": "Elimina",
+        "save": "Salva",
+        "cancel": "Annulla",
+        "saveChanges": "Salva modifiche",
+        "all": "Tutti"
+    },
+    "nav": {
+        "dashboard": "Cruscotto",
+        "invoices": "Fatture",
+        "newInvoice": "Nuova Fattura",
+        "invoiceDetails": "Dettagli Fattura",
+        "clients": "Clienti",
+        "settings": "Impostazioni",
+        "myAccount": "Il mio account",
+        "support": "Supporto",
+        "signOut": "Esci"
+    },
+    "login": {
+        "title": "Accedi per gestire le tue fatture",
+        "email": "Email",
+        "password": "Password",
+        "signIn": "Accedi",
+        "or": "O",
+        "googleSignIn": "Accedi con Google",
+        "noAccount": "Non hai un account?",
+        "signUp": "Registrati"
+    },
+    "dashboard": {
+        "totalRevenue": "Entrate Totali",
+        "paidInvoices": "Fatture Pagate",
+        "totalPaidInvoices": "Totale fatture pagate",
+        "pendingInvoices": "Fatture in Sospeso",
+        "awaitingPayment": "In attesa di pagamento",
+        "overdueInvoices": "Fatture Scadute",
+        "paymentOverdue": "Data di pagamento superata",
+        "recentInvoices": "Fatture Recenti"
+    },
+    "invoices": {
+        "allInvoices": "Tutte le Fatture",
+        "searchPlaceholder": "Cerca per cliente o n. fattura",
+        "client": "Cliente",
+        "invoiceNumber": "Numero Fattura",
+        "invoiceNumberShort": "N. Fattura",
+        "amount": "Importo",
+        "status": "Stato",
+        "dueDate": "Scadenza",
+        "issueDate": "Data di Emissione",
+        "markAsPaid": "Segna come Pagata",
+        "downloadPdf": "Scarica PDF",
+        "deleteInvoice": "Elimina Fattura",
+        "statusPaid": "Pagata",
+        "statusPending": "In sospeso",
+        "statusOverdue": "Scaduta"
+    },
+    "newInvoice": {
+        "title": "Crea Nuova Fattura",
+        "selectClient": "Seleziona un cliente",
+        "pickDate": "Scegli una data",
+        "selectStatus": "Seleziona uno stato",
+        "items": "Voci",
+        "itemDescription": "Descrizione della voce",
+        "itemQuantity": "Qtà.",
+        "itemPrice": "Prezzo",
+        "addItem": "Aggiungi Voce",
+        "subtotal": "Subtotale",
+        "notes": "Note",
+        "notesPlaceholder": "Aggiungi note aggiuntive...",
+        "toast": {
+            "title": "Fattura Creata",
+            "description": "La fattura è stata creata con successo."
+        }
+    },
+    "clients": {
+        "allClients": "Tutti i Clienti",
+        "searchPlaceholder": "Cerca per nome o email",
+        "newClient": "Nuovo Cliente",
+        "addNewClient": "Aggiungi Nuovo Cliente",
+        "addNewClientDescription": "Inserisci i dettagli del tuo nuovo cliente.",
+        "name": "Nome",
+        "email": "Email"
+    },
+    "settings": {
+        "profile": {
+            "title": "Profilo",
+            "description": "Apporta modifiche al tuo profilo pubblico qui. Clicca su salva quando hai finito.",
+            "name": "Nome",
+            "email": "Email"
+        },
+        "account": {
+            "title": "Account",
+            "description": "Gestisci le impostazioni e le preferenze del tuo account.",
+            "newPassword": "Nuova Password",
+            "confirmPassword": "Conferma Password",
+            "updatePassword": "Aggiorna Password"
+        },
+        "language": {
+            "title": "Lingua",
+            "description": "Scegli la lingua per l'interfaccia.",
+            "select": "Seleziona Lingua"
+        }
+    }
+}

@@ -1,0 +1,113 @@
+
+{
+    "common": {
+        "search": "Search",
+        "createInvoice": "Create Invoice",
+        "viewAll": "View All",
+        "actions": "Actions",
+        "menu": "Menu",
+        "toggleMenu": "Toggle menu",
+        "viewDetails": "View Details",
+        "edit": "Edit",
+        "delete": "Delete",
+        "save": "Save",
+        "cancel": "Cancel",
+        "saveChanges": "Save Changes",
+        "all": "All"
+    },
+    "nav": {
+        "dashboard": "Dashboard",
+        "invoices": "Invoices",
+        "newInvoice": "New Invoice",
+        "invoiceDetails": "Invoice Details",
+        "clients": "Clients",
+        "settings": "Settings",
+        "myAccount": "My Account",
+        "support": "Support",
+        "signOut": "Sign Out"
+    },
+    "login": {
+        "title": "Sign in to manage your invoices",
+        "email": "Email",
+        "password": "Password",
+        "signIn": "Sign In",
+        "or": "OR",
+        "googleSignIn": "Sign in with Google",
+        "noAccount": "Don't have an account?",
+        "signUp": "Sign up"
+    },
+    "dashboard": {
+        "totalRevenue": "Total Revenue",
+        "paidInvoices": "Paid Invoices",
+        "totalPaidInvoices": "Total paid invoices",
+        "pendingInvoices": "Pending Invoices",
+        "awaitingPayment": "Awaiting payment",
+        "overdueInvoices": "Overdue Invoices",
+        "paymentOverdue": "Payment date exceeded",
+        "recentInvoices": "Recent Invoices"
+    },
+    "invoices": {
+        "allInvoices": "All Invoices",
+        "searchPlaceholder": "Search by client or invoice #",
+        "client": "Client",
+        "invoiceNumber": "Invoice Number",
+        "invoiceNumberShort": "Invoice #",
+        "amount": "Amount",
+        "status": "Status",
+        "dueDate": "Due Date",
+        "issueDate": "Issue Date",
+        "markAsPaid": "Mark as Paid",
+        "downloadPdf": "Download PDF",
+        "deleteInvoice": "Delete Invoice",
+        "statusPaid": "Paid",
+        "statusPending": "Pending",
+        "statusOverdue": "Overdue"
+    },
+    "newInvoice": {
+        "title": "Create New Invoice",
+        "selectClient": "Select a client",
+        "pickDate": "Pick a date",
+        "selectStatus": "Select a status",
+        "items": "Items",
+        "itemDescription": "Item description",
+        "itemQuantity": "Qty.",
+        "itemPrice": "Price",
+        "addItem": "Add Item",
+        "subtotal": "Subtotal",
+        "notes": "Notes",
+        "notesPlaceholder": "Add additional notes...",
+        "toast": {
+            "title": "Invoice Created",
+            "description": "Invoice has been created successfully."
+        }
+    },
+    "clients": {
+        "allClients": "All Clients",
+        "searchPlaceholder": "Search by name or email",
+        "newClient": "New Client",
+        "addNewClient": "Add New Client",
+        "addNewClientDescription": "Enter the details of your new client.",
+        "name": "Name",
+        "email": "Email"
+    },
+    "settings": {
+        "profile": {
+            "title": "Profile",
+            "description": "Make changes to your public profile here. Click save when you're done.",
+            "name": "Name",
+            "email": "Email"
+        },
+        "account": {
+            "title": "Account",
+            "description": "Manage your account settings and preferences.",
+            "newPassword": "New Password",
+            "confirmPassword": "Confirm Password",
+            "updatePassword": "Update Password"
+        },
+        "language": {
+            "title": "Language",
+            "description": "Choose the language for the interface.",
+            "select": "Select Language"
+        }
+    }
+}

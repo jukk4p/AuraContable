@@ -1,26 +1,24 @@
+"use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, DollarSign, Users, FileWarning, CheckCircle2 } from "lucide-react";
 import { mockDashboardData, mockInvoices } from "@/lib/data";
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import InvoiceStatusBadge from "@/components/invoice-status-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export default function DashboardPage() {
+    const { t, formatCurrency } = useLocale();
     const recentInvoices = mockInvoices.slice(0, 5);
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
-    }
-  
     return (
       <div className="space-y-8">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Ingresos Totales</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('dashboard.totalRevenue')}</CardTitle>
               <DollarSign className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -30,42 +28,42 @@ export default function DashboardPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Facturas Pagadas</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('dashboard.paidInvoices')}</CardTitle>
               <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{mockDashboardData.paidInvoices}</div>
-              <p className="text-xs text-muted-foreground">Total de facturas pagadas</p>
+              <p className="text-xs text-muted-foreground">{t('dashboard.totalPaidInvoices')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Facturas Pendientes</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('dashboard.pendingInvoices')}</CardTitle>
               <Users className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{mockDashboardData.pendingInvoices}</div>
-              <p className="text-xs text-muted-foreground">Esperando pago</p>
+              <p className="text-xs text-muted-foreground">{t('dashboard.awaitingPayment')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Facturas Vencidas</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('dashboard.overdueInvoices')}</CardTitle>
               <FileWarning className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{mockDashboardData.overdueInvoices}</div>
-              <p className="text-xs text-muted-foreground">Fecha de pago superada</p>
+              <p className="text-xs text-muted-foreground">{t('dashboard.paymentOverdue')}</p>
             </CardContent>
           </Card>
         </div>
         
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Facturas Recientes</CardTitle>
+                <CardTitle>{t('dashboard.recentInvoices')}</CardTitle>
                 <Link href="/dashboard/invoices">
                     <Button variant="outline" size="sm">
-                        Ver Todas
+                        {t('common.viewAll')}
                         <ArrowUpRight className="w-4 h-4 ml-2" />
                     </Button>
                 </Link>
@@ -74,11 +72,11 @@ export default function DashboardPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Cliente</TableHead>
-                            <TableHead className="hidden md:table-cell">Nº Factura</TableHead>
-                            <TableHead>Importe</TableHead>
-                            <TableHead>Estado</TableHead>
-                            <TableHead className="hidden md:table-cell">Vencimiento</TableHead>
+                            <TableHead>{t('invoices.client')}</TableHead>
+                            <TableHead className="hidden md:table-cell">{t('invoices.invoiceNumber')}</TableHead>
+                            <TableHead>{t('invoices.amount')}</TableHead>
+                            <TableHead>{t('invoices.status')}</TableHead>
+                            <TableHead className="hidden md:table-cell">{t('invoices.dueDate')}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>

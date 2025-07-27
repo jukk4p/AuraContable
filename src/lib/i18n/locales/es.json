@@ -1,0 +1,113 @@
+
+{
+    "common": {
+        "search": "Buscar",
+        "createInvoice": "Crear Factura",
+        "viewAll": "Ver Todas",
+        "actions": "Acciones",
+        "menu": "Menú",
+        "toggleMenu": "Alternar menú",
+        "viewDetails": "Ver Detalles",
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "save": "Guardar",
+        "cancel": "Cancelar",
+        "saveChanges": "Guardar cambios",
+        "all": "Todas"
+    },
+    "nav": {
+        "dashboard": "Panel",
+        "invoices": "Facturas",
+        "newInvoice": "Nueva Factura",
+        "invoiceDetails": "Detalles de Factura",
+        "clients": "Clientes",
+        "settings": "Ajustes",
+        "myAccount": "Mi Cuenta",
+        "support": "Soporte",
+        "signOut": "Cerrar Sesión"
+    },
+    "login": {
+        "title": "Inicia sesión para gestionar tus facturas",
+        "email": "Email",
+        "password": "Contraseña",
+        "signIn": "Iniciar Sesión",
+        "or": "O",
+        "googleSignIn": "Iniciar sesión con Google",
+        "noAccount": "¿No tienes una cuenta?",
+        "signUp": "Regístrate"
+    },
+    "dashboard": {
+        "totalRevenue": "Ingresos Totales",
+        "paidInvoices": "Facturas Pagadas",
+        "totalPaidInvoices": "Total de facturas pagadas",
+        "pendingInvoices": "Facturas Pendientes",
+        "awaitingPayment": "Esperando pago",
+        "overdueInvoices": "Facturas Vencidas",
+        "paymentOverdue": "Fecha de pago superada",
+        "recentInvoices": "Facturas Recientes"
+    },
+    "invoices": {
+        "allInvoices": "Todas las Facturas",
+        "searchPlaceholder": "Buscar por cliente o nº de factura",
+        "client": "Cliente",
+        "invoiceNumber": "Número de Factura",
+        "invoiceNumberShort": "Nº Factura",
+        "amount": "Importe",
+        "status": "Estado",
+        "dueDate": "Vencimiento",
+        "issueDate": "Fecha de Emisión",
+        "markAsPaid": "Marcar como Pagada",
+        "downloadPdf": "Descargar PDF",
+        "deleteInvoice": "Eliminar Factura",
+        "statusPaid": "Pagada",
+        "statusPending": "Pendiente",
+        "statusOverdue": "Vencida"
+    },
+    "newInvoice": {
+        "title": "Crear Nueva Factura",
+        "selectClient": "Selecciona un cliente",
+        "pickDate": "Elige una fecha",
+        "selectStatus": "Selecciona un estado",
+        "items": "Conceptos",
+        "itemDescription": "Descripción del concepto",
+        "itemQuantity": "Cant.",
+        "itemPrice": "Precio",
+        "addItem": "Añadir Concepto",
+        "subtotal": "Subtotal",
+        "notes": "Notas",
+        "notesPlaceholder": "Añade notas adicionales...",
+        "toast": {
+            "title": "Factura Creada",
+            "description": "La factura ha sido creada con éxito."
+        }
+    },
+    "clients": {
+        "allClients": "Todos los Clientes",
+        "searchPlaceholder": "Buscar por nombre o email",
+        "newClient": "Nuevo Cliente",
+        "addNewClient": "Añadir Nuevo Cliente",
+        "addNewClientDescription": "Introduce los detalles de tu nuevo cliente.",
+        "name": "Nombre",
+        "email": "Email"
+    },
+    "settings": {
+        "profile": {
+            "title": "Perfil",
+            "description": "Realiza cambios en tu perfil público aquí. Haz clic en guardar cuando hayas terminado.",
+            "name": "Nombre",
+            "email": "Email"
+        },
+        "account": {
+            "title": "Cuenta",
+            "description": "Gestiona la configuración y las preferencias de tu cuenta.",
+            "newPassword": "Nueva Contraseña",
+            "confirmPassword": "Confirmar Contraseña",
+            "updatePassword": "Actualizar Contraseña"
+        },
+        "language": {
+            "title": "Idioma",
+            "description": "Elige el idioma de la interfaz.",
+            "select": "Seleccionar Idioma"
+        }
+    }
+}

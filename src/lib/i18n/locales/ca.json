@@ -1,0 +1,113 @@
+
+{
+    "common": {
+        "search": "Cerca",
+        "createInvoice": "Crea Factura",
+        "viewAll": "Veure Totes",
+        "actions": "Accions",
+        "menu": "Menú",
+        "toggleMenu": "Alterna el menú",
+        "viewDetails": "Veure Detalls",
+        "edit": "Edita",
+        "delete": "Elimina",
+        "save": "Desa",
+        "cancel": "Cancel·la",
+        "saveChanges": "Desa els canvis",
+        "all": "Totes"
+    },
+    "nav": {
+        "dashboard": "Panell",
+        "invoices": "Factures",
+        "newInvoice": "Nova Factura",
+        "invoiceDetails": "Detalls de la Factura",
+        "clients": "Clients",
+        "settings": "Configuració",
+        "myAccount": "El meu compte",
+        "support": "Suport",
+        "signOut": "Tanca la sessió"
+    },
+    "login": {
+        "title": "Inicia sessió per gestionar les teves factures",
+        "email": "Correu electrònic",
+        "password": "Contrasenya",
+        "signIn": "Inicia Sessió",
+        "or": "O",
+        "googleSignIn": "Inicia sessió amb Google",
+        "noAccount": "No tens un compte?",
+        "signUp": "Registra't"
+    },
+    "dashboard": {
+        "totalRevenue": "Ingressos Totals",
+        "paidInvoices": "Factures Pagades",
+        "totalPaidInvoices": "Total de factures pagades",
+        "pendingInvoices": "Factures Pendents",
+        "awaitingPayment": "Esperant pagament",
+        "overdueInvoices": "Factures Vençudes",
+        "paymentOverdue": "Data de pagament superada",
+        "recentInvoices": "Factures Recents"
+    },
+    "invoices": {
+        "allInvoices": "Totes les Factures",
+        "searchPlaceholder": "Cerca per client o núm. de factura",
+        "client": "Client",
+        "invoiceNumber": "Número de Factura",
+        "invoiceNumberShort": "Núm. Factura",
+        "amount": "Import",
+        "status": "Estat",
+        "dueDate": "Venciment",
+        "issueDate": "Data d'Emissió",
+        "markAsPaid": "Marca com a Pagada",
+        "downloadPdf": "Descarrega el PDF",
+        "deleteInvoice": "Elimina la Factura",
+        "statusPaid": "Pagada",
+        "statusPending": "Pendent",
+        "statusOverdue": "Vençuda"
+    },
+    "newInvoice": {
+        "title": "Crea una Nova Factura",
+        "selectClient": "Selecciona un client",
+        "pickDate": "Tria una data",
+        "selectStatus": "Selecciona un estat",
+        "items": "Conceptes",
+        "itemDescription": "Descripció del concepte",
+        "itemQuantity": "Quant.",
+        "itemPrice": "Preu",
+        "addItem": "Afegeix Concepte",
+        "subtotal": "Subtotal",
+        "notes": "Notes",
+        "notesPlaceholder": "Afegeix notes addicionals...",
+        "toast": {
+            "title": "Factura Creada",
+            "description": "La factura s'ha creat correctament."
+        }
+    },
+    "clients": {
+        "allClients": "Tots els Clients",
+        "searchPlaceholder": "Cerca per nom o correu electrònic",
+        "newClient": "Nou Client",
+        "addNewClient": "Afegeix un Client Nou",
+        "addNewClientDescription": "Introdueix els detalls del teu nou client.",
+        "name": "Nom",
+        "email": "Correu electrònic"
+    },
+    "settings": {
+        "profile": {
+            "title": "Perfil",
+            "description": "Fes canvis al teu perfil públic aquí. Fes clic a desa quan hagis acabat.",
+            "name": "Nom",
+            "email": "Correu electrònic"
+        },
+        "account": {
+            "title": "Compte",
+            "description": "Gestiona la configuració i les preferències del teu compte.",
+            "newPassword": "Nova Contrasenya",
+            "confirmPassword": "Confirma la Contrasenya",
+            "updatePassword": "Actualitza la Contrasenya"
+        },
+        "language": {
+            "title": "Idioma",
+            "description": "Tria l'idioma de la interfície.",
+            "select": "Selecciona l'Idioma"
+        }
+    }
+}

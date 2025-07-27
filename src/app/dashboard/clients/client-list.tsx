@@ -11,8 +11,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { mockClients } from '@/lib/data';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useLocale } from '@/lib/i18n/locale-provider';
 
 export default function ClientList() {
+    const { t } = useLocale();
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredClients = useMemo(() => {
@@ -30,10 +32,10 @@ export default function ClientList() {
         <Card>
             <CardHeader>
                 <div className="flex items-center justify-between gap-4">
-                    <CardTitle>Todos los Clientes</CardTitle>
+                    <CardTitle>{t('clients.allClients')}</CardTitle>
                     <div className="flex items-center gap-2">
                         <Input
-                            placeholder="Buscar por nombre o email"
+                            placeholder={t('clients.searchPlaceholder')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-64"
@@ -42,32 +44,32 @@ export default function ClientList() {
                             <DialogTrigger asChild>
                                 <Button>
                                     <PlusCircle className="w-4 h-4 mr-2" />
-                                    Nuevo Cliente
+                                    {t('clients.newClient')}
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-[425px]">
                                 <DialogHeader>
-                                <DialogTitle>Añadir Nuevo Cliente</DialogTitle>
+                                <DialogTitle>{t('clients.addNewClient')}</DialogTitle>
                                 <DialogDescription>
-                                    Introduce los detalles de tu nuevo cliente.
+                                    {t('clients.addNewClientDescription')}
                                 </DialogDescription>
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4">
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="name" className="text-right">
-                                    Nombre
+                                    {t('clients.name')}
                                     </Label>
                                     <Input id="name" placeholder="Acme Inc." className="col-span-3" />
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="email" className="text-right">
-                                    Email
+                                    {t('clients.email')}
                                     </Label>
                                     <Input id="email" type="email" placeholder="contact@acme.com" className="col-span-3" />
                                 </div>
                                 </div>
                                 <DialogFooter>
-                                <Button type="submit">Guardar Cliente</Button>
+                                <Button type="submit">{t('common.save')}</Button>
                                 </DialogFooter>
                             </DialogContent>
                         </Dialog>
@@ -78,10 +80,10 @@ export default function ClientList() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Nombre</TableHead>
-                            <TableHead>Email</TableHead>
+                            <TableHead>{t('clients.name')}</TableHead>
+                            <TableHead>{t('clients.email')}</TableHead>
                             <TableHead>
-                                <span className="sr-only">Acciones</span>
+                                <span className="sr-only">{t('common.actions')}</span>
                             </TableHead>
                         </TableRow>
                     </TableHeader>
@@ -103,13 +105,13 @@ export default function ClientList() {
                                         <DropdownMenuTrigger asChild>
                                             <Button aria-haspopup="true" size="icon" variant="ghost">
                                                 <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">Toggle menu</span>
+                                                <span className="sr-only">{t('common.toggleMenu')}</span>
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                            <DropdownMenuItem>Editar</DropdownMenuItem>
-                                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">Eliminar</DropdownMenuItem>
+                                            <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
+                                            <DropdownMenuItem>{t('common.edit')}</DropdownMenuItem>
+                                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">{t('common.delete')}</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </TableCell>

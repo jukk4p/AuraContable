@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { useToast } from "@/hooks/use-toast"
 import { es } from "date-fns/locale"
+import { useLocale } from "@/lib/i18n/locale-provider"
 
 const invoiceFormSchema = z.object({
     invoiceNumber: z.string().min(1, "El número de factura es obligatorio"),
@@ -35,6 +36,7 @@ const invoiceFormSchema = z.object({
 type InvoiceFormValues = z.infer<typeof invoiceFormSchema>
 
 export default function NewInvoicePage() {
+    const { t, formatCurrency } = useLocale();
     const { toast } = useToast()
 
     const form = useForm<InvoiceFormValues>({
@@ -65,8 +67,8 @@ export default function NewInvoicePage() {
     function onSubmit(data: InvoiceFormValues) {
         console.log(data)
         toast({
-            title: "Factura Creada",
-            description: `La factura ${data.invoiceNumber} ha sido creada con éxito.`,
+            title: t('newInvoice.toast.title'),
+            description: `${t('newInvoice.toast.description')} ${data.invoiceNumber}`,
         })
     }
     
@@ -75,7 +77,7 @@ export default function NewInvoicePage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Crear Nueva Factura</CardTitle>
+                        <CardTitle>{t('newInvoice.title')}</CardTitle>
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-4">
@@ -84,11 +86,11 @@ export default function NewInvoicePage() {
                                 name="clientId"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Cliente</FormLabel>
+                                        <FormLabel>{t('invoices.client')}</FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder="Selecciona un cliente" />
+                                                    <SelectValue placeholder={t('newInvoice.selectClient')} />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
@@ -106,7 +108,7 @@ export default function NewInvoicePage() {
                                 name="invoiceNumber"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Número de Factura</FormLabel>
+                                        <FormLabel>{t('invoices.invoiceNumber')}</FormLabel>
                                         <FormControl>
                                             <Input placeholder="FAC-2024-001" {...field} />
                                         </FormControl>
@@ -120,7 +122,7 @@ export default function NewInvoicePage() {
                                     name="issueDate"
                                     render={({ field }) => (
                                         <FormItem className="flex flex-col">
-                                            <FormLabel>Fecha de Emisión</FormLabel>
+                                            <FormLabel>{t('invoices.issueDate')}</FormLabel>
                                             <Popover>
                                                 <PopoverTrigger asChild>
                                                 <FormControl>
@@ -134,7 +136,7 @@ export default function NewInvoicePage() {
                                                     {field.value ? (
                                                         format(field.value, "PPP", { locale: es })
                                                     ) : (
-                                                        <span>Elige una fecha</span>
+                                                        <span>{t('newInvoice.pickDate')}</span>
                                                     )}
                                                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                                     </Button>
@@ -159,7 +161,7 @@ export default function NewInvoicePage() {
                                     name="dueDate"
                                     render={({ field }) => (
                                         <FormItem className="flex flex-col">
-                                            <FormLabel>Fecha de Vencimiento</FormLabel>
+                                            <FormLabel>{t('invoices.dueDate')}</FormLabel>
                                             <Popover>
                                                 <PopoverTrigger asChild>
                                                 <FormControl>
@@ -173,7 +175,7 @@ export default function NewInvoicePage() {
                                                     {field.value ? (
                                                         format(field.value, "PPP", { locale: es })
                                                     ) : (
-                                                        <span>Elige una fecha</span>
+                                                        <span>{t('newInvoice.pickDate')}</span>
                                                     )}
                                                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                                     </Button>
@@ -199,17 +201,17 @@ export default function NewInvoicePage() {
                                 name="status"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Estado</FormLabel>
+                                        <FormLabel>{t('invoices.status')}</FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder="Selecciona un estado" />
+                                                    <SelectValue placeholder={t('newInvoice.selectStatus')} />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                <SelectItem value="Pendiente">Pendiente</SelectItem>
-                                                <SelectItem value="Pagada">Pagada</SelectItem>
-                                                <SelectItem value="Vencida">Vencida</SelectItem>
+                                                <SelectItem value="Pendiente">{t('invoices.statusPending')}</SelectItem>
+                                                <SelectItem value="Pagada">{t('invoices.statusPaid')}</SelectItem>
+                                                <SelectItem value="Vencida">{t('invoices.statusOverdue')}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
@@ -218,7 +220,7 @@ export default function NewInvoicePage() {
                             />
                         </div>
                         <div className="space-y-4">
-                            <FormLabel>Conceptos</FormLabel>
+                            <FormLabel>{t('newInvoice.items')}</FormLabel>
                             <div className="space-y-4">
                                 {fields.map((field, index) => (
                                     <div key={field.id} className="grid grid-cols-[1fr_80px_100px_auto] gap-2 items-start">
@@ -228,7 +230,7 @@ export default function NewInvoicePage() {
                                             render={({ field }) => (
                                                 <FormItem>
                                                      <FormControl>
-                                                        <Input placeholder="Descripción del concepto" {...field} />
+                                                        <Input placeholder={t('newInvoice.itemDescription')} {...field} />
                                                      </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -240,7 +242,7 @@ export default function NewInvoicePage() {
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormControl>
-                                                        <Input type="number" placeholder="Cant." {...field} />
+                                                        <Input type="number" placeholder={t('newInvoice.itemQuantity')} {...field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -252,7 +254,7 @@ export default function NewInvoicePage() {
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormControl>
-                                                        <Input type="number" placeholder="Precio" {...field} />
+                                                        <Input type="number" placeholder={t('newInvoice.itemPrice')} {...field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -271,13 +273,13 @@ export default function NewInvoicePage() {
                                 onClick={() => append({ description: "", quantity: 1, price: 0 })}
                             >
                                 <PlusCircle className="mr-2 h-4 w-4" />
-                                Añadir Concepto
+                                {t('newInvoice.addItem')}
                             </Button>
 
                             <div className="flex justify-end mt-4">
                                 <div className="text-right">
-                                    <p className="text-muted-foreground">Subtotal</p>
-                                    <p className="font-semibold text-lg">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(subtotal)}</p>
+                                    <p className="text-muted-foreground">{t('newInvoice.subtotal')}</p>
+                                    <p className="font-semibold text-lg">{formatCurrency(subtotal)}</p>
                                 </div>
                             </div>
                              <FormField
@@ -285,9 +287,9 @@ export default function NewInvoicePage() {
                                 name="notes"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Notas</FormLabel>
+                                        <FormLabel>{t('newInvoice.notes')}</FormLabel>
                                         <FormControl>
-                                            <Textarea placeholder="Añade notas adicionales..." {...field} />
+                                            <Textarea placeholder={t('newInvoice.notesPlaceholder')} {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -297,8 +299,8 @@ export default function NewInvoicePage() {
 
                     </CardContent>
                     <CardFooter className="justify-end gap-2">
-                         <Button variant="outline" type="button" onClick={() => form.reset()}>Cancelar</Button>
-                        <Button type="submit">Guardar Factura</Button>
+                         <Button variant="outline" type="button" onClick={() => form.reset()}>{t('common.cancel')}</Button>
+                        <Button type="submit">{t('common.save')}</Button>
                     </CardFooter>
                 </Card>
             </form>

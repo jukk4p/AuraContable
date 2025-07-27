@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { FileText } from "lucide-react";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
     return (
@@ -30,6 +33,7 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 
 export default function LoginPage() {
+  const { t } = useLocale();
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
@@ -39,33 +43,33 @@ export default function LoginPage() {
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold tracking-tight font-headline">InvoiceFlow</CardTitle>
-            <CardDescription>Inicia sesión para gestionar tus facturas</CardDescription>
+            <CardDescription>{t('login.title')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('login.email')}</Label>
                 <Input id="email" type="email" placeholder="nombre@ejemplo.com" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label htmlFor="password">{t('login.password')}</Label>
                 <Input id="password" type="password" required />
               </div>
             </div>
             <Link href="/dashboard">
-                <Button className="w-full mt-6">Iniciar Sesión</Button>
+                <Button className="w-full mt-6">{t('login.signIn')}</Button>
             </Link>
             <Separator className="my-6">
-              <span className="px-2 text-muted-foreground bg-background">O</span>
+              <span className="px-2 text-muted-foreground bg-background">{t('login.or')}</span>
             </Separator>
             <Button variant="outline" className="w-full">
               <GoogleIcon className="mr-2 h-4 w-4" />
-              Iniciar sesión con Google
+              {t('login.googleSignIn')}
             </Button>
             <div className="mt-4 text-center text-sm">
-              ¿No tienes una cuenta?{" "}
+              {t('login.noAccount')}{" "}
               <Link href="#" className="underline text-primary">
-                Regístrate
+                {t('login.signUp')}
               </Link>
             </div>
           </CardContent>

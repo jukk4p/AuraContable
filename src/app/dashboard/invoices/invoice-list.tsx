@@ -13,12 +13,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { mockInvoices } from '@/lib/data';
 import type { Invoice, InvoiceStatus } from '@/lib/types';
 import InvoiceStatusBadge from '@/components/invoice-status-badge';
-
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
-}
+import { useLocale } from '@/lib/i18n/locale-provider';
 
 export default function InvoiceList() {
+    const { t, formatCurrency } = useLocale();
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
     const [sortConfig, setSortConfig] = useState<{ key: keyof Invoice | 'client.name'; direction: 'ascending' | 'descending' } | null>(null);
@@ -87,20 +85,20 @@ export default function InvoiceList() {
         <Card>
             <CardHeader>
                 <div className="flex items-center justify-between gap-4">
-                    <CardTitle>Todas las Facturas</CardTitle>
+                    <CardTitle>{t('invoices.allInvoices')}</CardTitle>
                     <div className="flex items-center gap-2">
                         <Input
-                            placeholder="Buscar por cliente o nº de factura"
+                            placeholder={t('invoices.searchPlaceholder')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-64"
                         />
                         <Tabs value={statusFilter} onValueChange={(value) => setStatusFilter(value as InvoiceStatus | 'All')}>
                             <TabsList>
-                                <TabsTrigger value="All">Todas</TabsTrigger>
-                                <TabsTrigger value="Paid">Pagadas</TabsTrigger>
-                                <TabsTrigger value="Pending">Pendientes</TabsTrigger>
-                                <TabsTrigger value="Overdue">Vencidas</TabsTrigger>
+                                <TabsTrigger value="All">{t('common.all')}</TabsTrigger>
+                                <TabsTrigger value="Paid">{t('invoices.statusPaid')}</TabsTrigger>
+                                <TabsTrigger value="Pending">{t('invoices.statusPending')}</TabsTrigger>
+                                <TabsTrigger value="Overdue">{t('invoices.statusOverdue')}</TabsTrigger>
                             </TabsList>
                         </Tabs>
                     </div>
@@ -112,31 +110,31 @@ export default function InvoiceList() {
                         <TableRow>
                             <TableHead>
                                 <Button variant="ghost" onClick={() => requestSort('client.name')}>
-                                    Cliente {getSortIcon('client.name')}
+                                    {t('invoices.client')} {getSortIcon('client.name')}
                                 </Button>
                             </TableHead>
                             <TableHead>
                                 <Button variant="ghost" onClick={() => requestSort('invoiceNumber')}>
-                                    Nº Factura {getSortIcon('invoiceNumber')}
+                                    {t('invoices.invoiceNumberShort')} {getSortIcon('invoiceNumber')}
                                 </Button>
                             </TableHead>
                             <TableHead>
                                 <Button variant="ghost" onClick={() => requestSort('total')}>
-                                    Importe {getSortIcon('total')}
+                                    {t('invoices.amount')} {getSortIcon('total')}
                                 </Button>
                             </TableHead>
                             <TableHead>
                                 <Button variant="ghost" onClick={() => requestSort('status')}>
-                                    Estado {getSortIcon('status')}
+                                    {t('invoices.status')} {getSortIcon('status')}
                                 </Button>
                             </TableHead>
                             <TableHead>
                                 <Button variant="ghost" onClick={() => requestSort('dueDate')}>
-                                    Vencimiento {getSortIcon('dueDate')}
+                                    {t('invoices.dueDate')} {getSortIcon('dueDate')}
                                 </Button>
                             </TableHead>
                             <TableHead>
-                                <span className="sr-only">Acciones</span>
+                                <span className="sr-only">{t('common.actions')}</span>
                             </TableHead>
                         </TableRow>
                     </TableHeader>
@@ -163,15 +161,15 @@ export default function InvoiceList() {
                                         <DropdownMenuTrigger asChild>
                                             <Button aria-haspopup="true" size="icon" variant="ghost">
                                                 <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">Menú</span>
+                                                <span className="sr-only">{t('common.menu')}</span>
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                            <DropdownMenuItem asChild><Link href={`/dashboard/invoices/${invoice.id}`}>Ver Detalles</Link></DropdownMenuItem>
-                                            <DropdownMenuItem>Marcar como Pagada</DropdownMenuItem>
-                                            <DropdownMenuItem>Descargar PDF</DropdownMenuItem>
-                                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">Eliminar Factura</DropdownMenuItem>
+                                            <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
+                                            <DropdownMenuItem asChild><Link href={`/dashboard/invoices/${invoice.id}`}>{t('common.viewDetails')}</Link></DropdownMenuItem>
+                                            <DropdownMenuItem>{t('invoices.markAsPaid')}</DropdownMenuItem>
+                                            <DropdownMenuItem>{t('invoices.downloadPdf')}</DropdownMenuItem>
+                                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">{t('invoices.deleteInvoice')}</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </TableCell>
