@@ -1,6 +1,6 @@
 "use client"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { FileText, LayoutGrid, Settings, Users, PanelLeft, Search, PlusCircle, Receipt } from "lucide-react"
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input"
 import React from "react"
 import { useLocale } from "@/lib/i18n/locale-provider"
 import { cn } from "@/lib/utils"
+import { auth } from "@/lib/firebase/config"
+import { signOut } from "firebase/auth"
 
 function CustomSidebarTrigger() {
     const { toggleSidebar } = useSidebar();
@@ -25,8 +27,9 @@ function CustomSidebarTrigger() {
     )
 }
 
-function DashboardHeader({children}: {children: React.ReactNode}) {
+function DashboardHeaderContent({children}: {children: React.ReactNode}) {
   const pathname = usePathname()
+  const router = useRouter();
   const { t } = useLocale();
   const { state } = useSidebar();
 
@@ -55,6 +58,15 @@ function DashboardHeader({children}: {children: React.ReactNode}) {
       default:
         if (pathname.startsWith('/dashboard/invoices/')) return t('nav.invoiceDetails');
         return 'InvoiceFlow';
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      router.push('/');
+    } catch (error) {
+      console.error("Error signing out: ", error);
     }
   };
 
@@ -87,7 +99,7 @@ function DashboardHeader({children}: {children: React.ReactNode}) {
         <header className="flex items-center justify-between h-16 px-6 border-b">
           <div className="flex items-center gap-4">
             <SidebarTrigger className="md:hidden" />
-            <h1 className={cn("text-2xl font-semibold font-headline", state === 'collapsed' && "hidden")}>{getPageTitle()}</h1>
+            <h1 className={cn("text-2xl font-semibold font-headline whitespace-nowrap", state === 'collapsed' && "hidden")}>{getPageTitle()}</h1>
           </div>
           <div className="flex items-center gap-4">
             <div className="relative hidden md:block">
@@ -115,7 +127,7 @@ function DashboardHeader({children}: {children: React.ReactNode}) {
                 <DropdownMenuItem asChild><Link href="/dashboard/settings">{t('nav.settings')}</Link></DropdownMenuItem>
                 <DropdownMenuItem>{t('nav.support')}</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild><Link href="/">{t('nav.signOut')}</Link></DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>{t('nav.signOut')}</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -128,6 +140,7 @@ function DashboardHeader({children}: {children: React.ReactNode}) {
   )
 }
 
+
 export default function DashboardLayout({
   children,
 }: {
@@ -135,9 +148,9 @@ export default function DashboardLayout({
 }) {
   return (
     <SidebarProvider>
-      <DashboardHeader>
+      <DashboardHeaderContent>
         {children}
-      </DashboardHeader>
+      </DashboardHeaderContent>
     </SidebarProvider>
   )
 }

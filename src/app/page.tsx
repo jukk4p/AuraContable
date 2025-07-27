@@ -1,13 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { FileText } from "lucide-react";
+import { FileText, AlertCircle } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase/config";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
     return (
@@ -34,6 +40,44 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
 
 export default function LoginPage() {
   const { t } = useLocale();
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isSignUp, setIsSignUp] = useState(false);
+
+  const handleAuthAction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      if (isSignUp) {
+        await createUserWithEmailAndPassword(auth, email, password);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+      router.push('/dashboard');
+    } catch (err: any) {
+        switch (err.code) {
+            case 'auth/user-not-found':
+                setError("No existe ningún usuario con este correo electrónico.");
+                break;
+            case 'auth/wrong-password':
+                setError("La contraseña es incorrecta.");
+                break;
+            case 'auth/email-already-in-use':
+                setError("Este correo electrónico ya está en uso.");
+                break;
+            case 'auth/weak-password':
+                setError("La contraseña debe tener al menos 6 caracteres.");
+                break;
+            default:
+                setError("Ha ocurrido un error. Por favor, inténtalo de nuevo.");
+                break;
+        }
+    }
+  };
+
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
@@ -43,22 +87,29 @@ export default function LoginPage() {
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold tracking-tight font-headline">InvoiceFlow</CardTitle>
-            <CardDescription>{t('login.title')}</CardDescription>
+            <CardDescription>{isSignUp ? t('login.signUp') : t('login.title')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">{t('login.email')}</Label>
-                <Input id="email" type="email" placeholder="nombre@ejemplo.com" required />
+            {error && (
+                 <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
+            <form onSubmit={handleAuthAction}>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">{t('login.email')}</Label>
+                  <Input id="email" type="email" placeholder="nombre@ejemplo.com" required value={email} onChange={e => setEmail(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">{t('login.password')}</Label>
+                  <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)}/>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">{t('login.password')}</Label>
-                <Input id="password" type="password" required />
-              </div>
-            </div>
-            <Link href="/dashboard">
-                <Button className="w-full mt-6">{t('login.signIn')}</Button>
-            </Link>
+              <Button type="submit" className="w-full mt-6">{isSignUp ? t('login.signUp') : t('login.signIn')}</Button>
+            </form>
             <Separator className="my-6">
               <span className="px-2 text-muted-foreground bg-background">{t('login.or')}</span>
             </Separator>
@@ -67,10 +118,10 @@ export default function LoginPage() {
               {t('login.googleSignIn')}
             </Button>
             <div className="mt-4 text-center text-sm">
-              {t('login.noAccount')}{" "}
-              <Link href="#" className="underline text-primary">
-                {t('login.signUp')}
-              </Link>
+                {isSignUp ? "¿Ya tienes una cuenta?" : t('login.noAccount')}{" "}
+                <Button variant="link" onClick={() => {setIsSignUp(!isSignUp); setError(null);}} className="p-0 h-auto">
+                    {isSignUp ? t('login.signIn') : t('login.signUp')}
+                </Button>
             </div>
           </CardContent>
         </Card>
