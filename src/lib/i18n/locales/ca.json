@@ -91,7 +91,8 @@
         "name": "Nom",
         "email": "Correu electrònic",
         "editClient": "Edita el Client",
-        "editClientDescription": "Actualitza els detalls del teu client."
+        "editClientDescription": "Actualitza els detalls del teu client.",
+        "noClients": "Encara no tens clients. Afegeix-ne un per començar!"
     },
     "expenses": {
         "searchPlaceholder": "Cerca per proveïdor o descripció",

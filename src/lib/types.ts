@@ -1,3 +1,4 @@
+
 export type InvoiceStatus = 'Paid' | 'Pending' | 'Overdue';
 
 export type Client = {
@@ -5,6 +6,7 @@ export type Client = {
   name: string;
   email: string;
   avatarUrl: string;
+  userId: string;
 };
 
 export type InvoiceItem = {
@@ -26,6 +28,7 @@ export type Invoice = {
   issueDate: string;
   dueDate: string;
   notes: string;
+  userId: string;
 };
 
 export type DashboardData = {

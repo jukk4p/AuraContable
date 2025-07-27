@@ -91,7 +91,8 @@
         "name": "Nom",
         "email": "Email",
         "editClient": "Modifier le client",
-        "editClientDescription": "Mettez à jour les détails de votre client."
+        "editClientDescription": "Mettez à jour les détails de votre client.",
+        "noClients": "Vous n'avez pas encore de clients. Ajoutez-en un pour commencer !"
     },
     "expenses": {
         "searchPlaceholder": "Rechercher par fournisseur ou description",

@@ -1,6 +1,7 @@
+
 "use client"
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,15 +13,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { useLocale } from '@/lib/i18n/locale-provider';
 import type { Client } from '@/lib/types';
+import { auth } from '@/lib/firebase/config';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { getClients, addClient, updateClient, deleteClient } from '@/lib/firebase/firestore';
+import { toast } from '@/hooks/use-toast';
 
-// Initial dummy data. This will be replaced by Firestore data.
-const initialClients: Client[] = [
-  { id: '1', name: 'Acme Inc.', email: 'contact@acme.com', avatarUrl: 'https://placehold.co/40x40' },
-  { id: '2', name: 'Stark Industries', email: 'tony@starkindustries.com', avatarUrl: 'https://placehold.co/40x40' },
-  { id: '3', name: 'Wayne Enterprises', email: 'bruce@wayne.com', avatarUrl: 'https://placehold.co/40x40' },
-];
-
-function ClientForm({ client, onSave, onCancel }: { client?: Client | null, onSave: (client: Omit<Client, 'id' | 'avatarUrl'> & { id?: string }) => void, onCancel: () => void }) {
+function ClientForm({ client, onSave, onCancel }: { client?: Client | null, onSave: (client: Omit<Client, 'id' | 'avatarUrl' | 'userId'> & { id?: string }) => void, onCancel: () => void }) {
     const { t } = useLocale();
     const [name, setName] = useState(client?.name || '');
     const [email, setEmail] = useState(client?.email || '');
@@ -62,10 +60,25 @@ function ClientForm({ client, onSave, onCancel }: { client?: Client | null, onSa
 
 export default function ClientList() {
     const { t } = useLocale();
-    const [clients, setClients] = useState<Client[]>(initialClients);
+    const [user] = useAuthState(auth);
+    const [clients, setClients] = useState<Client[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
+    const [loading, setLoading] = useState(true);
+
+
+    useEffect(() => {
+        const fetchClients = async () => {
+            if (user) {
+                setLoading(true);
+                const userClients = await getClients(user.uid);
+                setClients(userClients);
+                setLoading(false);
+            }
+        };
+        fetchClients();
+    }, [user]);
 
     const filteredClients = useMemo(() => {
         return clients.filter(client =>
@@ -74,25 +87,46 @@ export default function ClientList() {
         );
     }, [searchTerm, clients]);
 
-    const handleSaveClient = (clientData: Omit<Client, 'id' | 'avatarUrl'> & { id?: string }) => {
-        if (clientData.id) {
-            // Edit existing client
-            setClients(clients.map(c => c.id === clientData.id ? { ...c, name: clientData.name, email: clientData.email } : c));
-        } else {
-            // Add new client
-            const newClient: Client = {
-                id: (clients.length + 1).toString(),
-                ...clientData,
-                avatarUrl: `https://placehold.co/40x40?text=${clientData.name.charAt(0)}`
-            };
-            setClients([...clients, newClient]);
+    const handleSaveClient = async (clientData: Omit<Client, 'id' | 'avatarUrl' | 'userId'> & { id?: string }) => {
+        if (!user) {
+            toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
+            return;
         }
-        setIsFormOpen(false);
-        setEditingClient(null);
+
+        try {
+            if (clientData.id) {
+                // Edit existing client
+                await updateClient(clientData.id, { name: clientData.name, email: clientData.email });
+                setClients(clients.map(c => c.id === clientData.id ? { ...c, name: clientData.name, email: clientData.email } : c));
+                toast({ title: "Client Updated", description: "Client details have been updated." });
+            } else {
+                // Add new client
+                const newClientData = {
+                    name: clientData.name,
+                    email: clientData.email,
+                    avatarUrl: `https://placehold.co/40x40?text=${clientData.name.charAt(0)}`,
+                    userId: user.uid,
+                };
+                const newClient = await addClient(newClientData);
+                setClients([...clients, newClient]);
+                toast({ title: "Client Added", description: "New client has been added." });
+            }
+            handleCloseForm();
+        } catch (error) {
+            console.error("Error saving client: ", error);
+            toast({ title: "Error", description: "There was a problem saving the client.", variant: "destructive" });
+        }
     };
 
-    const handleDeleteClient = (clientId: string) => {
-        setClients(clients.filter(c => c.id !== clientId));
+    const handleDeleteClient = async (clientId: string) => {
+        try {
+            await deleteClient(clientId);
+            setClients(clients.filter(c => c.id !== clientId));
+            toast({ title: "Client Deleted", description: "The client has been deleted." });
+        } catch (error) {
+            console.error("Error deleting client: ", error);
+            toast({ title: "Error", description: "There was a problem deleting the client.", variant: "destructive" });
+        }
     };
 
     const handleOpenForm = (client: Client | null = null) => {
@@ -104,6 +138,10 @@ export default function ClientList() {
         setIsFormOpen(false);
         setEditingClient(null);
     };
+    
+    if (loading) {
+        return <p>Loading clients...</p>
+    }
 
     return (
         <Card>
@@ -124,7 +162,7 @@ export default function ClientList() {
                                     {t('clients.newClient')}
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={handleCloseForm}>
+                            <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => { if (isFormOpen) e.preventDefault()}} onEscapeKeyDown={handleCloseForm}>
                                 <ClientForm client={editingClient} onSave={handleSaveClient} onCancel={handleCloseForm} />
                             </DialogContent>
                         </Dialog>
@@ -174,6 +212,11 @@ export default function ClientList() {
                         ))}
                     </TableBody>
                 </Table>
+                 {filteredClients.length === 0 && (
+                    <div className="text-center py-10">
+                        <p className="text-muted-foreground">{t('clients.noClients')}</p>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

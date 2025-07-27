@@ -91,7 +91,8 @@
         "name": "Name",
         "email": "Email",
         "editClient": "Edit Client",
-        "editClientDescription": "Update your client's details."
+        "editClientDescription": "Update your client's details.",
+        "noClients": "You don't have any clients yet. Add one to get started!"
     },
     "expenses": {
         "searchPlaceholder": "Search by provider or description",
