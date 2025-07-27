@@ -111,7 +111,17 @@
         },
         "invoicing": {
             "title": "Fatturazione",
-            "description": "Configura le impostazioni predefinite per le tue fatture."
+            "description": "Configura le impostazioni predefinite per le tue fatture.",
+            "prefix": "Prefisso fattura",
+            "startNumber": "Numero di partenza",
+            "defaultTaxes": "Tasse predefinite",
+            "addTax": "Aggiungi tassa",
+            "defaultCurrency": "Valuta predefinita",
+            "selectCurrency": "Seleziona una valuta",
+            "dateFormat": "Formato data",
+            "selectDateFormat": "Seleziona un formato",
+            "defaultNotes": "Note predefinite",
+            "defaultNotesPlaceholder": "Es: Grazie per la vostra fiducia."
         },
         "security": {
             "title": "Sicurezza",
@@ -122,7 +132,15 @@
         },
         "notifications": {
             "title": "Notifiche",
-            "description": "Scegli come desideri ricevere le notifiche."
+            "description": "Scegli come desideri ricevere le notifiche.",
+            "invoicePaid": {
+                "title": "Fattura pagata",
+                "description": "Ricevi un'e-mail quando un cliente paga una fattura."
+            },
+            "invoiceOverdue": {
+                "title": "Promemoria fattura scaduta",
+                "description": "Ricevi un'e-mail quando una fattura è scaduta."
+            }
         },
         "appearance": {
             "title": "Aspetto",
@@ -139,3 +157,5 @@
         }
     }
 }
+
+    

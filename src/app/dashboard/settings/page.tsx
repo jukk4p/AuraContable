@@ -10,8 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import type { Locale } from "@/lib/i18n/locales";
-import { Building, Languages, Shield, User, Bell, Palette, FileText, Moon, Sun, Monitor } from "lucide-react";
+import { Building, Languages, Shield, User, Bell, Palette, FileText, Moon, Sun, Monitor, PlusCircle, Trash2 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { Switch } from "@/components/ui/switch";
 
 
 export default function SettingsPage() {
@@ -49,23 +50,13 @@ export default function SettingsPage() {
                         <CompanySettings />
                     </TabsContent>
                     <TabsContent value="invoicing" className="m-0">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>{t('settings.invoicing.title')}</CardTitle>
-                                <CardDescription>{t('settings.invoicing.description')}</CardDescription>
-                            </CardHeader>
-                        </Card>
+                        <InvoicingSettings />
                     </TabsContent>
                     <TabsContent value="security" className="m-0">
                         <SecuritySettings />
                     </TabsContent>
                     <TabsContent value="notifications" className="m-0">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>{t('settings.notifications.title')}</CardTitle>
-                                <CardDescription>{t('settings.notifications.description')}</CardDescription>
-                            </CardHeader>
-                        </Card>
+                        <NotificationsSettings />
                     </TabsContent>
                     <TabsContent value="appearance" className="m-0">
                         <AppearanceSettings />
@@ -156,6 +147,87 @@ function CompanySettings() {
     )
 }
 
+function InvoicingSettings() {
+    const { t } = useLocale();
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>{t('settings.invoicing.title')}</CardTitle>
+                <CardDescription>{t('settings.invoicing.description')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+                <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="invoice-prefix">{t('settings.invoicing.prefix')}</Label>
+                        <Input id="invoice-prefix" placeholder="FAC-" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="invoice-startNumber">{t('settings.invoicing.startNumber')}</Label>
+                        <Input id="invoice-startNumber" type="number" placeholder="1" />
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <Label>{t('settings.invoicing.defaultTaxes')}</Label>
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                            <Input placeholder="IVA" className="w-1/3" />
+                            <Input type="number" placeholder="21" className="w-1/4" />
+                            <span className="text-muted-foreground">%</span>
+                            <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                         <div className="flex items-center gap-2">
+                            <Input placeholder="IRPF" className="w-1/3" />
+                            <Input type="number" placeholder="-15" className="w-1/4" />
+                            <span className="text-muted-foreground">%</span>
+                            <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                    </div>
+                     <Button variant="outline" size="sm"><PlusCircle className="h-4 w-4 mr-2" /> {t('settings.invoicing.addTax')}</Button>
+                </div>
+                <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="default-currency">{t('settings.invoicing.defaultCurrency')}</Label>
+                        <Select>
+                            <SelectTrigger id="default-currency">
+                                <SelectValue placeholder={t('settings.invoicing.selectCurrency')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="EUR">€ EUR - Euro</SelectItem>
+                                <SelectItem value="USD">$ USD - Dólar estadounidense</SelectItem>
+                                <SelectItem value="GBP">£ GBP - Libra esterlina</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="date-format">{t('settings.invoicing.dateFormat')}</Label>
+                        <Select>
+                            <SelectTrigger id="date-format">
+                                <SelectValue placeholder={t('settings.invoicing.selectDateFormat')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="dd/mm/yyyy">DD/MM/YYYY</SelectItem>
+                                <SelectItem value="mm/dd/yyyy">MM/DD/YYYY</SelectItem>
+                                <SelectItem value="yyyy/mm/dd">YYYY/MM/DD</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="default-notes">{t('settings.invoicing.defaultNotes')}</Label>
+                    <Textarea id="default-notes" placeholder={t('settings.invoicing.defaultNotesPlaceholder')} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="invoice-logo">{t('settings.company.logo')}</Label>
+                    <Input id="invoice-logo" type="file" />
+                </div>
+            </CardContent>
+             <CardFooter>
+                <Button>{t('common.saveChanges')}</Button>
+            </CardFooter>
+        </Card>
+    );
+}
+
 
 function SecuritySettings() {
     const { t } = useLocale();
@@ -182,6 +254,34 @@ function SecuritySettings() {
             </CardFooter>
         </Card>
     )
+}
+
+function NotificationsSettings() {
+    const { t } = useLocale();
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>{t('settings.notifications.title')}</CardTitle>
+                <CardDescription>{t('settings.notifications.description')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                        <Label htmlFor="invoice-paid-email">{t('settings.notifications.invoicePaid.title')}</Label>
+                        <p className="text-sm text-muted-foreground">{t('settings.notifications.invoicePaid.description')}</p>
+                    </div>
+                    <Switch id="invoice-paid-email" />
+                </div>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                        <Label htmlFor="invoice-overdue-email">{t('settings.notifications.invoiceOverdue.title')}</Label>
+                         <p className="text-sm text-muted-foreground">{t('settings.notifications.invoiceOverdue.description')}</p>
+                    </div>
+                    <Switch id="invoice-overdue-email" />
+                </div>
+            </CardContent>
+        </Card>
+    );
 }
 
 function LanguageSettings() {
@@ -261,3 +361,5 @@ function AppearanceSettings() {
         </Card>
     )
 }
+
+    

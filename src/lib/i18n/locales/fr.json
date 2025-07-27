@@ -111,7 +111,17 @@
         },
         "invoicing": {
             "title": "Facturation",
-            "description": "Configurez les paramètres par défaut de vos factures."
+            "description": "Configurez les paramètres par défaut de vos factures.",
+            "prefix": "Préfixe de facture",
+            "startNumber": "Numéro de départ",
+            "defaultTaxes": "Taxes par défaut",
+            "addTax": "Ajouter une taxe",
+            "defaultCurrency": "Devise par défaut",
+            "selectCurrency": "Sélectionnez une devise",
+            "dateFormat": "Format de date",
+            "selectDateFormat": "Sélectionnez un format",
+            "defaultNotes": "Notes par défaut",
+            "defaultNotesPlaceholder": "Ex: Merci pour votre confiance."
         },
         "security": {
             "title": "Sécurité",
@@ -122,7 +132,15 @@
         },
         "notifications": {
             "title": "Notifications",
-            "description": "Choisissez comment vous souhaitez recevoir les notifications."
+            "description": "Choisissez comment vous souhaitez recevoir les notifications.",
+            "invoicePaid": {
+                "title": "Facture payée",
+                "description": "Recevoir un e-mail lorsqu'un client paie une facture."
+            },
+            "invoiceOverdue": {
+                "title": "Rappel de facture en retard",
+                "description": "Recevoir un e-mail lorsqu'une facture est en retard."
+            }
         },
         "appearance": {
             "title": "Apparence",
@@ -139,3 +157,5 @@
         }
     }
 }
+
+    

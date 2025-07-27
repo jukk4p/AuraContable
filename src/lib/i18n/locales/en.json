@@ -111,7 +111,17 @@
         },
         "invoicing": {
             "title": "Invoicing",
-            "description": "Configure the default settings for your invoices."
+            "description": "Configure the default settings for your invoices.",
+            "prefix": "Invoice prefix",
+            "startNumber": "Starting number",
+            "defaultTaxes": "Default taxes",
+            "addTax": "Add tax",
+            "defaultCurrency": "Default currency",
+            "selectCurrency": "Select a currency",
+            "dateFormat": "Date format",
+            "selectDateFormat": "Select a format",
+            "defaultNotes": "Default notes",
+            "defaultNotesPlaceholder": "E.g. Thank you for your business."
         },
         "security": {
             "title": "Security",
@@ -122,7 +132,15 @@
         },
         "notifications": {
             "title": "Notifications",
-            "description": "Choose how you want to receive notifications."
+            "description": "Choose how you want to receive notifications.",
+             "invoicePaid": {
+                "title": "Invoice paid",
+                "description": "Get an email when a client pays an invoice."
+            },
+            "invoiceOverdue": {
+                "title": "Overdue invoice reminder",
+                "description": "Get an email when an invoice is overdue."
+            }
         },
         "appearance": {
             "title": "Appearance",
@@ -139,3 +157,5 @@
         }
     }
 }
+
+    

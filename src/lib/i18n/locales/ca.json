@@ -111,7 +111,17 @@
         },
         "invoicing": {
             "title": "Facturació",
-            "description": "Configura els paràmetres per defecte de les teves factures."
+            "description": "Configura els paràmetres per defecte de les teves factures.",
+            "prefix": "Prefix de factura",
+            "startNumber": "Número inicial",
+            "defaultTaxes": "Impostos per defecte",
+            "addTax": "Afegeix impost",
+            "defaultCurrency": "Moneda per defecte",
+            "selectCurrency": "Selecciona una moneda",
+            "dateFormat": "Format de data",
+            "selectDateFormat": "Selecciona un format",
+            "defaultNotes": "Notes per defecte",
+            "defaultNotesPlaceholder": "Ex: Gràcies per la seva confiança."
         },
         "security": {
             "title": "Seguretat",
@@ -122,7 +132,15 @@
         },
         "notifications": {
             "title": "Notificacions",
-            "description": "Tria com vols rebre les notificacions."
+            "description": "Tria com vols rebre les notificacions.",
+            "invoicePaid": {
+                "title": "Factura pagada",
+                "description": "Rep un correu electrònic quan un client pagui una factura."
+            },
+            "invoiceOverdue": {
+                "title": "Recordatori de factura vençuda",
+                "description": "Rep un correu electrònic quan una factura venci."
+            }
         },
         "appearance": {
             "title": "Aparença",
@@ -139,3 +157,5 @@
         }
     }
 }
+
+    

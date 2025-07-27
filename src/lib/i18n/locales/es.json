@@ -111,7 +111,17 @@
         },
         "invoicing": {
             "title": "Facturación",
-            "description": "Configura los ajustes por defecto para tus facturas."
+            "description": "Configura los ajustes por defecto para tus facturas.",
+            "prefix": "Prefijo de factura",
+            "startNumber": "Número inicial",
+            "defaultTaxes": "Impuestos por defecto",
+            "addTax": "Añadir impuesto",
+            "defaultCurrency": "Moneda por defecto",
+            "selectCurrency": "Selecciona una moneda",
+            "dateFormat": "Formato de fecha",
+            "selectDateFormat": "Selecciona un formato",
+            "defaultNotes": "Notas por defecto",
+            "defaultNotesPlaceholder": "Ej: Gracias por su confianza."
         },
         "security": {
             "title": "Seguridad",
@@ -122,7 +132,15 @@
         },
         "notifications": {
             "title": "Notificaciones",
-            "description": "Elige cómo quieres recibir las notificaciones."
+            "description": "Elige cómo quieres recibir las notificaciones.",
+            "invoicePaid": {
+                "title": "Factura pagada",
+                "description": "Recibir un email cuando un cliente pague una factura."
+            },
+            "invoiceOverdue": {
+                "title": "Recordatorio de factura vencida",
+                "description": "Recibir un email cuando una factura venza."
+            }
         },
         "appearance": {
             "title": "Apariencia",
@@ -139,3 +157,5 @@
         }
     }
 }
+
+    
