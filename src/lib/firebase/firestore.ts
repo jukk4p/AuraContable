@@ -68,14 +68,14 @@ function isInvoice(doc: DocumentData): doc is Omit<Invoice, 'id' | 'issueDate' |
 }
 
 // Helper to convert snapshot to Invoice
-const invoiceFromSnapshot = (snapshot: QueryDocumentSnapshot<DocumentData>): Invoice => {
-    const data = snapshot.data();
+const invoiceFromSnapshot = (snapshot: QueryDocumentSnapshot<DocumentData> | DocumentData): Invoice => {
+    const data = 'data' in snapshot ? snapshot.data() : snapshot;
     if (!isInvoice(data)) {
         console.error("Invalid invoice data received from Firestore:", data);
         throw new Error("Invalid invoice data from Firestore.");
     }
     return {
-        id: snapshot.id,
+        id: 'id' in snapshot ? snapshot.id : '',
         ...data,
         issueDate: data.issueDate.toDate(),
         dueDate: data.dueDate.toDate(),
@@ -87,8 +87,31 @@ export async function getInvoices(userId: string): Promise<Invoice[]> {
     if (!userId) return [];
     const q = query(collection(db, "invoices"), where("userId", "==", userId));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(invoiceFromSnapshot);
+    return querySnapshot.docs.map(d => invoiceFromSnapshot(d));
 }
+
+export async function getInvoiceById(invoiceId: string): Promise<Invoice | null> {
+    if (!invoiceId) return null;
+    const docRef = doc(db, "invoices", invoiceId);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+        const data = docSnap.data();
+         if (!isInvoice(data)) {
+            console.error("Invalid invoice data received from Firestore:", data);
+            throw new Error("Invalid invoice data from Firestore.");
+        }
+        return {
+            id: docSnap.id,
+            ...data,
+            issueDate: data.issueDate.toDate(),
+            dueDate: data.dueDate.toDate(),
+        };
+    } else {
+        return null;
+    }
+}
+
 
 export async function addInvoice(invoice: Omit<Invoice, 'id'>): Promise<Invoice> {
     const docRef = await addDoc(collection(db, "invoices"), invoice);

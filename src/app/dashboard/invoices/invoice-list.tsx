@@ -16,11 +16,12 @@ import InvoiceStatusBadge from '@/components/invoice-status-badge';
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { auth } from '@/lib/firebase/config';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { getInvoices, deleteInvoice } from '@/lib/firebase/firestore';
+import { getInvoices, deleteInvoice, getInvoiceById, getCompanyProfile } from '@/lib/firebase/firestore';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, MailWarning } from "lucide-react";
+import { generateInvoicePdf } from '@/lib/pdf-generator';
 
 
 export default function InvoiceList() {
@@ -31,6 +32,7 @@ export default function InvoiceList() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
     const [sortConfig, setSortConfig] = useState<{ key: keyof Invoice | 'client.name'; direction: 'ascending' | 'descending' } | null>(null);
+    const [isDownloading, setIsDownloading] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchInvoices = async () => {
@@ -79,7 +81,6 @@ export default function InvoiceList() {
                     bValue = b.client.name;
                 } else if (key === 'issueDate' || key === 'dueDate') {
                     aValue = new Date(a[key]);
-                    bValue = new Date(b[key]);
                 }
                 else {
                     aValue = a[key as keyof Invoice];
@@ -114,6 +115,27 @@ export default function InvoiceList() {
         } catch (error) {
             console.error("Error deleting invoice:", error);
             toast({ title: "Error", description: "Hubo un problema al eliminar la factura.", variant: "destructive" });
+        }
+    }
+
+    const handleDownloadPdf = async (invoiceId: string) => {
+        if (!user) return;
+        setIsDownloading(invoiceId);
+        try {
+            const invoice = await getInvoiceById(invoiceId);
+            const companyProfile = await getCompanyProfile(user.uid);
+            
+            if (!invoice) {
+                throw new Error("Invoice not found");
+            }
+
+            await generateInvoicePdf(invoice, companyProfile, { t, formatCurrency });
+
+        } catch (error) {
+            console.error("Error downloading PDF:", error);
+            toast({ title: "Error", description: "Hubo un problema al generar el PDF.", variant: "destructive" });
+        } finally {
+            setIsDownloading(null);
         }
     }
 
@@ -238,7 +260,7 @@ export default function InvoiceList() {
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                <Button aria-haspopup="true" size="icon" variant="ghost" disabled={isDownloading === invoice.id}>
                                                     <MoreHorizontal className="h-4 w-4" />
                                                     <span className="sr-only">{t('common.menu')}</span>
                                                 </Button>
@@ -247,7 +269,9 @@ export default function InvoiceList() {
                                                 <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
                                                 <DropdownMenuItem asChild><Link href={`/dashboard/invoices/${invoice.id}`}>{t('common.viewDetails')}</Link></DropdownMenuItem>
                                                 <DropdownMenuItem>{t('invoices.markAsPaid')}</DropdownMenuItem>
-                                                <DropdownMenuItem>{t('invoices.downloadPdf')}</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleDownloadPdf(invoice.id)} disabled={isDownloading === invoice.id}>
+                                                    {isDownloading === invoice.id ? "Descargando..." : t('invoices.downloadPdf')}
+                                                </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handleDeleteInvoice(invoice.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">{t('invoices.deleteInvoice')}</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
