@@ -22,7 +22,7 @@ import { Client, InvoiceStatus } from "@/lib/types"
 import React, { useState, useEffect } from 'react'
 import { auth } from "@/lib/firebase/config"
 import { useAuthState } from "react-firebase-hooks/auth"
-import { getClients, addInvoice } from "@/lib/firebase/firestore"
+import { getClients, addInvoice, getInvoices } from "@/lib/firebase/firestore"
 import { useRouter } from "next/navigation"
 
 const invoiceFormSchema = z.object({
@@ -48,26 +48,65 @@ export default function NewInvoicePage() {
     const [user] = useAuthState(auth);
     const [clients, setClients] = useState<Client[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    useEffect(() => {
-        const fetchUserClients = async () => {
-            if(user) {
-                const userClients = await getClients(user.uid);
-                setClients(userClients);
-            }
-        }
-        fetchUserClients();
-    }, [user]);
+    const [isLoading, setIsLoading] = useState(true);
 
     const form = useForm<InvoiceFormValues>({
         resolver: zodResolver(invoiceFormSchema),
         defaultValues: {
-            invoiceNumber: `FAC-${new Date().getFullYear()}-`,
+            invoiceNumber: "",
             status: "Pending",
             items: [{ description: "", quantity: 1, price: 0 }],
             notes: "",
         },
     })
+    
+    useEffect(() => {
+        const fetchData = async () => {
+            if(user) {
+                setIsLoading(true);
+                try {
+                    const [userClients, userInvoices] = await Promise.all([
+                        getClients(user.uid),
+                        getInvoices(user.uid)
+                    ]);
+                    
+                    setClients(userClients);
+
+                    const currentYear = new Date().getFullYear();
+                    const yearPrefix = `FAC-${currentYear}-`;
+                    
+                    const invoicesThisYear = userInvoices.filter(inv => inv.invoiceNumber.startsWith(yearPrefix));
+                    
+                    let nextInvoiceNumber = 1;
+                    if (invoicesThisYear.length > 0) {
+                        const invoiceNumbers = invoicesThisYear.map(inv => {
+                            const parts = inv.invoiceNumber.split('-');
+                            return parseInt(parts[parts.length - 1], 10);
+                        });
+                        const maxNumber = Math.max(...invoiceNumbers);
+                        nextInvoiceNumber = maxNumber + 1;
+                    }
+
+                    const newInvoiceNumber = `${yearPrefix}${String(nextInvoiceNumber).padStart(3, '0')}`;
+                    
+                    form.reset({
+                        ...form.getValues(),
+                        invoiceNumber: newInvoiceNumber,
+                    });
+
+                } catch (error) {
+                    console.error("Error fetching initial data:", error);
+                    toast({ title: "Error", description: "No se pudieron cargar los datos iniciales.", variant: "destructive" });
+                } finally {
+                    setIsLoading(false);
+                }
+            } else {
+                setIsLoading(false);
+            }
+        }
+        fetchData();
+    }, [user, form, toast]);
+
 
     const { fields, append, remove } = useFieldArray({
         control: form.control,
@@ -122,6 +161,10 @@ export default function NewInvoicePage() {
 
     const localeMap = {
         es: es,
+    }
+
+    if (isLoading) {
+        return <p>Cargando formulario...</p>
     }
     
     return (
