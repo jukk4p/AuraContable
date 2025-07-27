@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ArrowLeft, Download, Edit, Trash2, CheckCircle, Clock, AlertCircle as AlertCircleIcon } from 'lucide-react';
+import { ArrowLeft, Download, Edit, Trash2, CheckCircle, Clock, AlertCircle as AlertCircleIcon, Send } from 'lucide-react';
 import Link from 'next/link';
 
 import type { Invoice, CompanyProfile } from '@/lib/types';
@@ -36,6 +36,7 @@ export default function InvoiceDetailsPage() {
     const [isDownloading, setIsDownloading] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isSending, setIsSending] = useState(false);
 
     const invoiceId = params.id as string;
     const localeMap = { es: es };
@@ -111,6 +112,26 @@ export default function InvoiceDetailsPage() {
             setIsDeleting(false);
         }
     }
+    
+    const handleSendEmail = async () => {
+        if (!invoice || !companyProfile) return;
+        setIsSending(true);
+
+        // TODO: Replace with actual email sending logic via a serverless function.
+        // For now, we simulate the action and show a success message.
+        console.log("Simulating sending email for invoice:", invoice.invoiceNumber);
+        console.log("Using template:", companyProfile.templates?.newInvoice);
+        
+        // Simulate a delay for the email sending process
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        toast({
+            title: "Correo Enviado (Simulación)",
+            description: `La factura ${invoice.invoiceNumber} ha sido enviada a ${invoice.client.email}.`,
+        });
+
+        setIsSending(false);
+    }
 
     if (isLoading) {
         return <InvoiceDetailsSkeleton />;
@@ -134,6 +155,8 @@ export default function InvoiceDetailsPage() {
         );
     }
     
+    const isActionDisabled = isDownloading || isDeleting || isUpdating || isSending;
+    
     return (
         <div className="max-w-4xl mx-auto space-y-6">
              <div className="flex items-center gap-4">
@@ -150,7 +173,10 @@ export default function InvoiceDetailsPage() {
                         <InvoiceStatusBadge status={invoice.status} />
                     </div>
                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" disabled={isDownloading || isDeleting} onClick={handleDownloadPdf}>
+                        <Button variant="outline" size="sm" disabled={isActionDisabled} onClick={handleSendEmail}>
+                            <Send className="mr-2 h-4 w-4"/> {isSending ? "Enviando..." : "Enviar por Email"}
+                        </Button>
+                        <Button variant="outline" size="sm" disabled={isActionDisabled} onClick={handleDownloadPdf}>
                             <Download className="mr-2 h-4 w-4"/> {isDownloading ? "Generando..." : "PDF"}
                         </Button>
                         <Button variant="outline" size="sm" asChild>
@@ -158,12 +184,12 @@ export default function InvoiceDetailsPage() {
                                 <Edit className="mr-2 h-4 w-4"/> {t('common.edit')}
                            </Link>
                         </Button>
-                         <Button variant="outline" size="sm" disabled={isUpdating || invoice.status === 'Paid' || isDeleting} onClick={handleMarkAsPaid}>
+                         <Button variant="outline" size="sm" disabled={isActionDisabled || invoice.status === 'Paid'} onClick={handleMarkAsPaid}>
                             <CheckCircle className="mr-2 h-4 w-4"/> {t('invoices.markAsPaid')}
                         </Button>
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button variant="destructive" size="sm" disabled={isUpdating || isDeleting}>
+                                <Button variant="destructive" size="sm" disabled={isActionDisabled}>
                                     <Trash2 className="mr-2 h-4 w-4"/> {isDeleting ? "Eliminando..." : t('common.delete')}
                                 </Button>
                             </AlertDialogTrigger>

@@ -60,6 +60,11 @@ export type DashboardData = {
     overdueInvoices: number;
 }
 
+export type EmailTemplate = {
+    subject: string;
+    body: string;
+}
+
 export type CompanyProfile = {
     id?: string;
     userId: string;
@@ -73,4 +78,8 @@ export type CompanyProfile = {
     country?: string;
     terms?: string;
     defaultTaxes?: InvoiceTax[];
+    templates?: {
+        newInvoice: EmailTemplate;
+        reminder: EmailTemplate;
+    }
 }

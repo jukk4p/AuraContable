@@ -38,11 +38,21 @@ export default function SettingsPage() {
                 setIsLoading(true);
                 const existingProfile = await getCompanyProfile(user.uid);
                 if (existingProfile) {
-                    setCompanyProfile(existingProfile);
+                    setCompanyProfile({
+                        ...existingProfile,
+                        templates: existingProfile.templates || {
+                            newInvoice: { subject: '', body: '' },
+                            reminder: { subject: '', body: '' }
+                        }
+                    });
                 } else {
                     setCompanyProfile({
                         userId: user.uid,
-                        name: '', taxId: '', address: '', billingEmail: '', iban: '', fiscalData: '', logoUrl: '', terms: '', defaultTaxes: []
+                        name: '', taxId: '', address: '', billingEmail: '', iban: '', fiscalData: '', logoUrl: '', terms: '', defaultTaxes: [],
+                        templates: {
+                            newInvoice: { subject: '', body: '' },
+                            reminder: { subject: '', body: '' }
+                        }
                     });
                 }
                 setIsLoading(false);
@@ -125,7 +135,11 @@ export default function SettingsPage() {
                         />
                     </TabsContent>
                     <TabsContent value="templates" className="m-0">
-                        <TemplateSettings />
+                        <TemplateSettings 
+                             profile={companyProfile}
+                            onProfileChange={handleProfileChange}
+                            isLoading={isLoading}
+                        />
                     </TabsContent>
                     <TabsContent value="security" className="m-0">
                         <SecuritySettings />
@@ -413,8 +427,34 @@ function InvoicingSettings({ profile, onProfileChange, isLoading }: InvoicingSet
     );
 }
 
-function TemplateSettings() {
+type TemplateSettingsProps = {
+  profile: CompanyProfile | null;
+  onProfileChange: (profile: CompanyProfile) => void;
+  isLoading: boolean;
+};
+
+function TemplateSettings({ profile, onProfileChange, isLoading }: TemplateSettingsProps) {
     const { t } = useLocale();
+
+    const handleChange = (template: 'newInvoice' | 'reminder', field: 'subject' | 'body', value: string) => {
+        if (!profile) return;
+        
+        onProfileChange({
+            ...profile,
+            templates: {
+                ...profile.templates,
+                [template]: {
+                    ...profile.templates?.[template],
+                    [field]: value
+                }
+            }
+        });
+    };
+
+    if (isLoading || !profile) {
+        return <p>Cargando plantillas...</p>;
+    }
+    
     return (
         <Card>
             <CardHeader>
@@ -424,22 +464,37 @@ function TemplateSettings() {
             <CardContent className="space-y-6">
                 <div className="space-y-2">
                     <Label>{t('settings.templates.newInvoice.title')}</Label>
-                    <Input placeholder={t('settings.templates.newInvoice.subjectPlaceholder')} />
-                    <Textarea rows={5} placeholder={t('settings.templates.newInvoice.bodyPlaceholder')} />
+                    <Input 
+                        placeholder={t('settings.templates.newInvoice.subjectPlaceholder')} 
+                        value={profile.templates?.newInvoice.subject || ''}
+                        onChange={(e) => handleChange('newInvoice', 'subject', e.target.value)}
+                    />
+                    <Textarea 
+                        rows={5} 
+                        placeholder={t('settings.templates.newInvoice.bodyPlaceholder')} 
+                        value={profile.templates?.newInvoice.body || ''}
+                        onChange={(e) => handleChange('newInvoice', 'body', e.target.value)}
+                    />
                 </div>
                  <div className="space-y-2">
                     <Label>{t('settings.templates.reminder.title')}</Label>
-                    <Input placeholder={t('settings.templates.reminder.subjectPlaceholder')} />
-                    <Textarea rows={5} placeholder={t('settings.templates.reminder.bodyPlaceholder')} />
+                    <Input 
+                        placeholder={t('settings.templates.reminder.subjectPlaceholder')} 
+                        value={profile.templates?.reminder.subject || ''}
+                        onChange={(e) => handleChange('reminder', 'subject', e.target.value)}
+                    />
+                    <Textarea 
+                        rows={5} 
+                        placeholder={t('settings.templates.reminder.bodyPlaceholder')}
+                        value={profile.templates?.reminder.body || ''}
+                        onChange={(e) => handleChange('reminder', 'body', e.target.value)}
+                    />
                 </div>
                 <div>
                     <p className="text-sm text-muted-foreground">{t('settings.templates.variablesInfo')}</p>
                     <p className="text-sm font-mono text-muted-foreground">{"{{clientName}} {{invoiceNumber}} {{invoiceTotal}} {{dueDate}}"}</p>
                 </div>
             </CardContent>
-            <CardFooter>
-                <Button>{t('common.saveChanges')}</Button>
-            </CardFooter>
         </Card>
     )
 }
