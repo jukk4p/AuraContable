@@ -18,13 +18,63 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/lib/firebase/config";
 import { updateProfile, updateEmail } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
-import type { CompanyProfile } from "@/lib/types";
+import type { CompanyProfile, InvoiceTax } from "@/lib/types";
 import { getCompanyProfile, saveCompanyProfile } from "@/lib/firebase/firestore";
 import Image from "next/image";
 
 
 export default function SettingsPage() {
     const { t } = useLocale();
+    const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [user] = useAuthState(auth);
+    const { toast } = useToast();
+
+
+    useEffect(() => {
+        async function fetchProfile() {
+            if (user) {
+                setIsLoading(true);
+                const existingProfile = await getCompanyProfile(user.uid);
+                if (existingProfile) {
+                    setCompanyProfile(existingProfile);
+                } else {
+                    setCompanyProfile({
+                        userId: user.uid,
+                        name: '', taxId: '', address: '', billingEmail: '', iban: '', fiscalData: '', logoUrl: '', terms: '', defaultTaxes: []
+                    });
+                }
+                setIsLoading(false);
+            }
+        }
+        fetchProfile();
+    }, [user]);
+
+    const handleProfileChange = (updatedProfile: CompanyProfile) => {
+        setCompanyProfile(updatedProfile);
+    }
+    
+    const handleSaveAllChanges = async () => {
+        if (!user || !companyProfile) return;
+        setIsSaving(true);
+        try {
+            await saveCompanyProfile(companyProfile);
+            toast({
+                title: "Ajustes guardados",
+                description: "Todos tus cambios se han guardado correctamente.",
+            });
+        } catch (error) {
+             toast({
+                title: "Error",
+                description: "Hubo un problema al guardar los ajustes.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
 
     const tabs = [
         { value: "profile", label: t('settings.profile.title'), icon: User },
@@ -39,7 +89,12 @@ export default function SettingsPage() {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-semibold font-headline">{t('nav.settings')}</h1>
+            <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-semibold font-headline">{t('nav.settings')}</h1>
+                <Button onClick={handleSaveAllChanges} disabled={isSaving || isLoading}>
+                    {isSaving ? "Guardando..." : t('common.saveChanges')}
+                </Button>
+            </div>
             
             <Tabs defaultValue="profile" className="grid md:grid-cols-[180px_1fr] lg:grid-cols-[250px_1fr] gap-6 items-start">
                 <TabsList className="w-full h-auto bg-transparent p-0 flex-col items-start" orientation="vertical">
@@ -56,10 +111,18 @@ export default function SettingsPage() {
                         <ProfileSettings />
                     </TabsContent>
                     <TabsContent value="company" className="m-0">
-                        <CompanySettings />
+                        <CompanySettings 
+                            profile={companyProfile}
+                            onProfileChange={handleProfileChange}
+                            isLoading={isLoading}
+                        />
                     </TabsContent>
                     <TabsContent value="invoicing" className="m-0">
-                        <InvoicingSettings />
+                        <InvoicingSettings 
+                            profile={companyProfile}
+                            onProfileChange={handleProfileChange}
+                            isLoading={isLoading}
+                        />
                     </TabsContent>
                     <TabsContent value="templates" className="m-0">
                         <TemplateSettings />
@@ -170,135 +233,138 @@ function ProfileSettings() {
     )
 }
 
-function CompanySettings() {
+type CompanySettingsProps = {
+  profile: CompanyProfile | null;
+  onProfileChange: (profile: CompanyProfile) => void;
+  isLoading: boolean;
+};
+
+
+function CompanySettings({ profile, onProfileChange, isLoading }: CompanySettingsProps) {
     const { t } = useLocale();
-    const [user, loading] = useAuthState(auth);
-    const { toast } = useToast();
-    const [profile, setProfile] = useState<Omit<CompanyProfile, 'id' | 'userId'>>({
-        name: '', taxId: '', address: '', billingEmail: '', iban: '', fiscalData: '', logoUrl: ''
-    });
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => {
-        async function fetchProfile() {
-            if (user) {
-                setIsLoading(true);
-                const existingProfile = await getCompanyProfile(user.uid);
-                if (existingProfile) {
-                    setProfile(existingProfile);
-                }
-                setIsLoading(false);
-            }
-        }
-        fetchProfile();
-    }, [user]);
-
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setProfile({ ...profile, [e.target.id]: e.target.value });
+        if (!profile) return;
+        onProfileChange({ ...profile, [e.target.id]: e.target.value });
     };
 
     const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!profile) return;
         const file = e.target.files?.[0];
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
-                setProfile({ ...profile, logoUrl: reader.result as string });
+                onProfileChange({ ...profile, logoUrl: reader.result as string });
             };
             reader.readAsDataURL(file);
         }
     };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!user) return;
-        setIsSaving(true);
-        try {
-            await saveCompanyProfile({ ...profile, userId: user.uid });
-            toast({
-                title: "Perfil de empresa guardado",
-                description: "La información de tu empresa se ha actualizado correctamente.",
-            });
-        } catch (error) {
-            toast({
-                title: "Error",
-                description: "Hubo un problema al guardar el perfil de la empresa.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsSaving(false);
-        }
-    };
     
-    if (loading || isLoading) {
+    if (isLoading || !profile) {
         return <p>Cargando datos de la empresa...</p>
     }
 
     return (
         <Card>
-            <form onSubmit={handleSubmit}>
-                <CardHeader>
-                    <CardTitle>{t('settings.company.title')}</CardTitle>
-                    <CardDescription>{t('settings.company.description')}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="name">{t('settings.company.name')}</Label>
-                            <Input id="name" placeholder="Acme Inc." value={profile.name} onChange={handleChange} disabled={isSaving}/>
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="taxId">{t('settings.company.taxId')}</Label>
-                            <Input id="taxId" placeholder="ESB12345678" value={profile.taxId} onChange={handleChange} disabled={isSaving}/>
-                        </div>
+            <CardHeader>
+                <CardTitle>{t('settings.company.title')}</CardTitle>
+                <CardDescription>{t('settings.company.description')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="name">{t('settings.company.name')}</Label>
+                        <Input id="name" placeholder="Acme Inc." value={profile.name} onChange={handleChange}/>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="taxId">{t('settings.company.taxId')}</Label>
+                        <Input id="taxId" placeholder="ESB12345678" value={profile.taxId} onChange={handleChange}/>
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="address">{t('settings.company.address')}</Label>
+                    <Input id="address" placeholder="123 Main St, Anytown" value={profile.address} onChange={handleChange}/>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                     <div className="space-y-2">
+                        <Label htmlFor="billingEmail">{t('settings.company.billingEmail')}</Label>
+                        <Input id="billingEmail" type="email" placeholder="billing@acme.com" value={profile.billingEmail} onChange={handleChange}/>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="address">{t('settings.company.address')}</Label>
-                        <Input id="address" placeholder="123 Main St, Anytown" value={profile.address} onChange={handleChange} disabled={isSaving}/>
+                        <Label htmlFor="iban">{t('settings.company.iban')}</Label>
+                        <Input id="iban" placeholder="ES91 2100 0418 4502 0005 1332" value={profile.iban} onChange={handleChange}/>
                     </div>
-                    <div className="grid md:grid-cols-2 gap-4">
-                         <div className="space-y-2">
-                            <Label htmlFor="billingEmail">{t('settings.company.billingEmail')}</Label>
-                            <Input id="billingEmail" type="email" placeholder="billing@acme.com" value={profile.billingEmail} onChange={handleChange} disabled={isSaving}/>
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="fiscalData">{t('settings.company.fiscalData')}</Label>
+                    <Textarea id="fiscalData" placeholder={t('settings.company.fiscalDataPlaceholder')} value={profile.fiscalData} onChange={handleChange}/>
+                </div>
+                 <div className="space-y-2">
+                    <Label>{t('settings.company.logo')}</Label>
+                    <div className="flex items-center gap-4">
+                        <div className="w-24 h-24 rounded-md border flex items-center justify-center bg-muted/50 overflow-hidden">
+                            {profile.logoUrl ? (
+                                <Image src={profile.logoUrl} alt="Company Logo" width={96} height={96} className="object-contain" />
+                            ) : (
+                                <ImageIcon className="w-10 h-10 text-muted-foreground" />
+                            )}
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="iban">{t('settings.company.iban')}</Label>
-                            <Input id="iban" placeholder="ES91 2100 0418 4502 0005 1332" value={profile.iban} onChange={handleChange} disabled={isSaving}/>
-                        </div>
+                        <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                            {t('settings.company.uploadLogo')}
+                        </Button>
+                        <Input ref={fileInputRef} id="company-logo" type="file" className="hidden" onChange={handleLogoChange} accept="image/png, image/jpeg, image/gif"/>
                     </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="fiscalData">{t('settings.company.fiscalData')}</Label>
-                        <Textarea id="fiscalData" placeholder={t('settings.company.fiscalDataPlaceholder')} value={profile.fiscalData} onChange={handleChange} disabled={isSaving}/>
-                    </div>
-                     <div className="space-y-2">
-                        <Label>{t('settings.company.logo')}</Label>
-                        <div className="flex items-center gap-4">
-                            <div className="w-24 h-24 rounded-md border flex items-center justify-center bg-muted/50 overflow-hidden">
-                                {profile.logoUrl ? (
-                                    <Image src={profile.logoUrl} alt="Company Logo" width={96} height={96} className="object-contain" />
-                                ) : (
-                                    <ImageIcon className="w-10 h-10 text-muted-foreground" />
-                                )}
-                            </div>
-                            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
-                                {t('settings.company.uploadLogo')}
-                            </Button>
-                            <Input ref={fileInputRef} id="company-logo" type="file" className="hidden" onChange={handleLogoChange} accept="image/png, image/jpeg, image/gif"/>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{t('settings.company.logoHint')}</p>
-                    </div>
-                </CardContent>
-                <CardFooter>
-                    <Button type="submit" disabled={isSaving}>{isSaving ? "Guardando..." : t('common.saveChanges')}</Button>
-                </CardFooter>
-            </form>
+                    <p className="text-xs text-muted-foreground">{t('settings.company.logoHint')}</p>
+                </div>
+            </CardContent>
         </Card>
     )
 }
 
-function InvoicingSettings() {
+type InvoicingSettingsProps = {
+  profile: CompanyProfile | null;
+  onProfileChange: (profile: CompanyProfile) => void;
+  isLoading: boolean;
+};
+
+function InvoicingSettings({ profile, onProfileChange, isLoading }: InvoicingSettingsProps) {
     const { t } = useLocale();
+
+    const handleFieldChange = (field: keyof CompanyProfile, value: any) => {
+        if (!profile) return;
+        onProfileChange({ ...profile, [field]: value });
+    };
+
+    const handleTaxChange = (index: number, field: keyof InvoiceTax, value: string | number) => {
+        if (!profile || !profile.defaultTaxes) return;
+        const newTaxes = [...profile.defaultTaxes];
+        const taxToUpdate = { ...newTaxes[index], [field]: value };
+        
+        if(field === 'percentage' && typeof value === 'string') {
+            taxToUpdate.percentage = parseFloat(value) || 0;
+        }
+
+        newTaxes[index] = taxToUpdate;
+        onProfileChange({ ...profile, defaultTaxes: newTaxes });
+    };
+
+    const addTax = () => {
+        if (!profile) return;
+        const newTaxes = [...(profile.defaultTaxes || []), { id: `new-${Date.now()}`, name: '', percentage: 0 }];
+        onProfileChange({ ...profile, defaultTaxes: newTaxes });
+    };
+
+    const removeTax = (index: number) => {
+        if (!profile || !profile.defaultTaxes) return;
+        const newTaxes = profile.defaultTaxes.filter((_, i) => i !== index);
+        onProfileChange({ ...profile, defaultTaxes: newTaxes });
+    };
+
+     if (isLoading || !profile) {
+        return <p>Cargando ajustes de facturación...</p>
+    }
+
     return (
         <Card>
             <CardHeader>
@@ -306,74 +372,43 @@ function InvoicingSettings() {
                 <CardDescription>{t('settings.invoicing.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
-                <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="invoice-prefix">{t('settings.invoicing.prefix')}</Label>
-                        <Input id="invoice-prefix" placeholder="FAC-" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="invoice-startNumber">{t('settings.invoicing.startNumber')}</Label>
-                        <Input id="invoice-startNumber" type="number" placeholder="1" />
-                    </div>
-                </div>
                 <div className="space-y-2">
                     <Label>{t('settings.invoicing.defaultTaxes')}</Label>
                     <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                            <Input placeholder="IVA" className="w-1/3" />
-                            <Input type="number" placeholder="21" className="w-1/4" />
-                            <span className="text-muted-foreground">%</span>
-                            <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4" /></Button>
-                        </div>
-                         <div className="flex items-center gap-2">
-                            <Input placeholder="IRPF" className="w-1/3" />
-                            <Input type="number" placeholder="-15" className="w-1/4" />
-                            <span className="text-muted-foreground">%</span>
-                            <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4" /></Button>
-                        </div>
+                        {(profile.defaultTaxes || []).map((tax, index) => (
+                             <div key={index} className="flex items-center gap-2">
+                                <Input 
+                                    placeholder="IVA" 
+                                    className="w-1/3" 
+                                    value={tax.name}
+                                    onChange={(e) => handleTaxChange(index, 'name', e.target.value)}
+                                />
+                                <Input 
+                                    type="number" 
+                                    placeholder="21" 
+                                    className="w-1/4" 
+                                    value={tax.percentage}
+                                    onChange={(e) => handleTaxChange(index, 'percentage', e.target.value)}
+                                />
+                                <span className="text-muted-foreground">%</span>
+                                <Button variant="ghost" size="icon" onClick={() => removeTax(index)}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                        ))}
                     </div>
-                     <Button variant="outline" size="sm"><PlusCircle className="h-4 w-4 mr-2" /> {t('settings.invoicing.addTax')}</Button>
+                     <Button variant="outline" size="sm" onClick={addTax}><PlusCircle className="h-4 w-4 mr-2" /> {t('settings.invoicing.addTax')}</Button>
                 </div>
-                <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="default-currency">{t('settings.invoicing.defaultCurrency')}</Label>
-                        <Select>
-                            <SelectTrigger id="default-currency">
-                                <SelectValue placeholder={t('settings.invoicing.selectCurrency')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="EUR">€ EUR - Euro</SelectItem>
-                                <SelectItem value="USD">$ USD - Dólar estadounidense</SelectItem>
-                                <SelectItem value="GBP">£ GBP - Libra esterlina</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="date-format">{t('settings.invoicing.dateFormat')}</Label>
-                        <Select>
-                            <SelectTrigger id="date-format">
-                                <SelectValue placeholder={t('settings.invoicing.selectDateFormat')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="dd/mm/yyyy">DD/MM/YYYY</SelectItem>
-                                <SelectItem value="mm/dd/yyyy">MM/DD/YYYY</SelectItem>
-                                <SelectItem value="yyyy/mm/dd">YYYY/MM/DD</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
+
                 <div className="space-y-2">
-                    <Label htmlFor="default-notes">{t('settings.invoicing.defaultNotes')}</Label>
-                    <Textarea id="default-notes" placeholder={t('settings.invoicing.defaultNotesPlaceholder')} />
+                    <Label htmlFor="default-terms">{t('settings.invoicing.defaultTerms')}</Label>
+                    <Textarea 
+                        id="default-terms" 
+                        placeholder={t('settings.invoicing.defaultTermsPlaceholder')} 
+                        value={profile.terms || ''}
+                        onChange={(e) => handleFieldChange('terms', e.target.value)}
+                    />
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="invoice-logo">{t('settings.company.logo')}</Label>
-                    <Input id="invoice-logo" type="file" />
-                </div>
+
             </CardContent>
-             <CardFooter>
-                <Button>{t('common.saveChanges')}</Button>
-            </CardFooter>
         </Card>
     );
 }
@@ -542,3 +577,6 @@ function AppearanceSettings() {
         </Card>
     )
 }
+
+
+    
