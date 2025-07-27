@@ -1,6 +1,6 @@
 
 "use client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowUpRight, Banknote, Users, FileWarning, CheckCircle2, AlertCircle, MailWarning } from "lucide-react";
 import Link from 'next/link';
@@ -15,6 +15,9 @@ import { getInvoices } from "@/lib/firebase/firestore";
 import type { Invoice } from "@/lib/types";
 import { format } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+
 
 export default function DashboardPage() {
     const { t, formatCurrency } = useLocale();
@@ -41,23 +44,47 @@ export default function DashboardPage() {
         fetchInvoices();
     }, [user, authLoading]);
 
-    const dashboardData = React.useMemo(() => {
-        const totalRevenue = invoices
-            .filter(inv => inv.status === 'Paid')
-            .reduce((sum, inv) => sum + inv.total, 0);
+    const { dashboardData, chartData } = React.useMemo(() => {
+        const paidInvoices = invoices.filter(inv => inv.status === 'Paid');
+        const pendingInvoices = invoices.filter(inv => inv.status === 'Pending');
+        const overdueInvoices = invoices.filter(inv => inv.status === 'Overdue');
+        
+        const totalRevenue = paidInvoices.reduce((sum, inv) => sum + inv.total, 0);
 
-        const paidInvoices = invoices.filter(inv => inv.status === 'Paid').length;
-        const pendingInvoices = invoices.filter(inv => inv.status === 'Pending').length;
-        const overdueInvoices = invoices.filter(inv => inv.status === 'Overdue').length;
-
-        return {
+        const dashboardData = {
             totalRevenue,
-            paidInvoices,
-            pendingInvoices,
-            overdueInvoices,
+            paidInvoices: paidInvoices.length,
+            pendingInvoices: pendingInvoices.length,
+            overdueInvoices: overdueInvoices.length,
         };
-    }, [invoices]);
+
+        const chartData = [
+            { status: t('invoices.statusPaid'), count: paidInvoices.length, fill: "hsl(var(--chart-2))" },
+            { status: t('invoices.statusPending'), count: pendingInvoices.length, fill: "hsl(var(--chart-4))" },
+            { status: t('invoices.statusOverdue'), count: overdueInvoices.length, fill: "hsl(var(--destructive))" },
+        ];
+
+        return { dashboardData, chartData };
+    }, [invoices, t]);
     
+     const chartConfig = {
+        count: {
+            label: "Facturas",
+        },
+        [t('invoices.statusPaid')]: {
+            label: t('invoices.statusPaid'),
+            color: "hsl(var(--chart-2))",
+        },
+        [t('invoices.statusPending')]: {
+            label: t('invoices.statusPending'),
+            color: "hsl(var(--chart-4))",
+        },
+        [t('invoices.statusOverdue')]: {
+            label: t('invoices.statusOverdue'),
+            color: "hsl(var(--destructive))",
+        },
+    } satisfies ChartConfig
+
     const recentInvoices = invoices
         .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime())
         .slice(0, 5);
@@ -141,51 +168,85 @@ export default function DashboardPage() {
           </Card>
         </div>
         
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>{t('dashboard.recentInvoices')}</CardTitle>
-                <Link href="/dashboard/invoices">
-                    <Button variant="outline" size="sm">
-                        {t('common.viewAll')}
-                        <ArrowUpRight className="w-4 h-4 ml-2" />
-                    </Button>
-                </Link>
-            </CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>{t('invoices.client')}</TableHead>
-                            <TableHead className="hidden md:table-cell">{t('invoices.invoiceNumber')}</TableHead>
-                            <TableHead>{t('invoices.amount')}</TableHead>
-                            <TableHead>{t('invoices.status')}</TableHead>
-                            <TableHead className="hidden md:table-cell">{t('invoices.dueDate')}</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {recentInvoices.map((invoice) => (
-                            <TableRow key={invoice.id}>
-                                <TableCell>
-                                    <div className="flex items-center gap-3">
-                                        <Avatar className="hidden h-9 w-9 sm:flex">
-                                            <AvatarImage src={invoice.client.avatarUrl} alt="Avatar" data-ai-hint="person avatar" />
-                                            <AvatarFallback>{invoice.client.name.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                        <div className="font-medium">{invoice.client.name}</div>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="hidden md:table-cell">{invoice.invoiceNumber}</TableCell>
-                                <TableCell>{formatCurrency(invoice.total)}</TableCell>
-                                <TableCell>
-                                    <InvoiceStatusBadge status={invoice.status} />
-                                </TableCell>
-                                <TableCell className="hidden md:table-cell">{format(invoice.dueDate, 'PPP')}</TableCell>
+         <div className="grid gap-4 md:grid-cols-2">
+            <Card className="col-span-1">
+                 <CardHeader>
+                    <CardTitle>Resumen de Facturas</CardTitle>
+                    <CardDescription>Un conteo rápido del estado de tus facturas.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                         <BarChart accessibilityLayer data={chartData} margin={{ top: 20 }}>
+                            <CartesianGrid vertical={false} />
+                            <XAxis
+                                dataKey="status"
+                                tickLine={false}
+                                tickMargin={10}
+                                axisLine={false}
+                            />
+                             <YAxis
+                                tickLine={false}
+                                axisLine={false}
+                                tickMargin={10}
+                                allowDecimals={false}
+                             />
+                            <ChartTooltip
+                                cursor={false}
+                                content={<ChartTooltipContent hideLabel />}
+                            />
+                            <Bar dataKey="count" radius={8}>
+                                {chartData.map((entry) => (
+                                    <Bar key={entry.status} dataKey="count" fill={entry.fill} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ChartContainer>
+                </CardContent>
+            </Card>
+
+            <Card className="col-span-1">
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>{t('dashboard.recentInvoices')}</CardTitle>
+                    <Link href="/dashboard/invoices">
+                        <Button variant="outline" size="sm">
+                            {t('common.viewAll')}
+                            <ArrowUpRight className="w-4 h-4 ml-2" />
+                        </Button>
+                    </Link>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>{t('invoices.client')}</TableHead>
+                                <TableHead>{t('invoices.status')}</TableHead>
+                                <TableHead className="text-right">{t('invoices.amount')}</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
+                        </TableHeader>
+                        <TableBody>
+                            {recentInvoices.map((invoice) => (
+                                <TableRow key={invoice.id}>
+                                    <TableCell>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="hidden h-9 w-9 sm:flex">
+                                                <AvatarImage src={invoice.client.avatarUrl} alt="Avatar" data-ai-hint="person avatar" />
+                                                <AvatarFallback>{invoice.client.name.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="font-medium">{invoice.client.name}</div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <InvoiceStatusBadge status={invoice.status} />
+                                    </TableCell>
+                                    <TableCell className="text-right">{formatCurrency(invoice.total)}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        </div>
       </div>
     );
-}
+
+    
