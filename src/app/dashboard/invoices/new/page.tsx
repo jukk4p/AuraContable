@@ -19,6 +19,14 @@ import { useToast } from "@/hooks/use-toast"
 import { es } from "date-fns/locale"
 import { useLocale } from "@/lib/i18n/locale-provider"
 
+// Note: Using mockClients here temporarily. This should fetch real clients.
+const clients = [
+  { id: '1', name: 'Acme Inc.', email: 'contact@acme.com', avatarUrl: 'https://placehold.co/40x40' },
+  { id: '2', name: 'Stark Industries', email: 'tony@starkindustries.com', avatarUrl: 'https://placehold.co/40x40' },
+  { id: '3', name: 'Wayne Enterprises', email: 'bruce@wayne.com', avatarUrl: 'https://placehold.co/40x40' },
+];
+
+
 const invoiceFormSchema = z.object({
     invoiceNumber: z.string().min(1, "El número de factura es obligatorio"),
     clientId: z.string().min(1, "El cliente es obligatorio"),
@@ -94,7 +102,7 @@ export default function NewInvoicePage() {
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {mockClients.map(client => (
+                                                {clients.map(client => (
                                                     <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
                                                 ))}
                                             </SelectContent>

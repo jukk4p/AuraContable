@@ -89,7 +89,9 @@
         "addNewClient": "Afegeix un Client Nou",
         "addNewClientDescription": "Introdueix els detalls del teu nou client.",
         "name": "Nom",
-        "email": "Correu electrònic"
+        "email": "Correu electrònic",
+        "editClient": "Edita el Client",
+        "editClientDescription": "Actualitza els detalls del teu client."
     },
     "expenses": {
         "searchPlaceholder": "Cerca per proveïdor o descripció",

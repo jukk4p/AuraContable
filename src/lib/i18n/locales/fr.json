@@ -45,7 +45,7 @@
         "awaitingPayment": "En attente de paiement",
         "overdueInvoices": "Factures en retard",
         "paymentOverdue": "Date de paiement dépassée",
-        "recentInvoices": "Factures récentes"
+        "recentInvoices": "Factures recentes"
     },
     "invoices": {
         "allInvoices": "Toutes les factures",
@@ -89,7 +89,9 @@
         "addNewClient": "Ajouter un nouveau client",
         "addNewClientDescription": "Entrez les détails de votre nouveau client.",
         "name": "Nom",
-        "email": "Email"
+        "email": "Email",
+        "editClient": "Modifier le client",
+        "editClientDescription": "Mettez à jour les détails de votre client."
     },
     "expenses": {
         "searchPlaceholder": "Rechercher par fournisseur ou description",

@@ -1,18 +1,13 @@
 import type { Client, Invoice, DashboardData, InvoiceStatus } from "./types";
 
 export const mockClients: Client[] = [
-  { id: '1', name: 'Acme Inc.', email: 'contact@acme.com', avatarUrl: 'https://placehold.co/40x40' },
-  { id: '2', name: 'Stark Industries', email: 'tony@starkindustries.com', avatarUrl: 'https://placehold.co/40x40' },
-  { id: '3', name: 'Wayne Enterprises', email: 'bruce@wayne.com', avatarUrl: 'https://placehold.co/40x40' },
-  { id: '4', name: 'Ollivanders Wand Shop', email: 'sales@ollivanders.co.uk', avatarUrl: 'https://placehold.co/40x40' },
-  { id: '5', name: 'Gekko & Co.', email: 'gordon@gekko.com', avatarUrl: 'https://placehold.co/40x40' },
 ];
 
 export const mockInvoices: Invoice[] = [
   {
     id: 'inv-001',
     invoiceNumber: 'INV-2024-001',
-    client: mockClients[0],
+    client: { id: '1', name: 'Acme Inc.', email: 'contact@acme.com', avatarUrl: 'https://placehold.co/40x40' },
     items: [{ id: 'item-1', description: 'Web Development Services', quantity: 1, price: 2500 }],
     subtotal: 2500,
     tax: 250,
@@ -25,7 +20,7 @@ export const mockInvoices: Invoice[] = [
   {
     id: 'inv-002',
     invoiceNumber: 'INV-2024-002',
-    client: mockClients[1],
+    client: { id: '2', name: 'Stark Industries', email: 'tony@starkindustries.com', avatarUrl: 'https://placehold.co/40x40' },
     items: [{ id: 'item-1', description: 'Arc Reactor Maintenance', quantity: 1, price: 10000 }],
     subtotal: 10000,
     tax: 1000,
@@ -38,7 +33,7 @@ export const mockInvoices: Invoice[] = [
   {
     id: 'inv-003',
     invoiceNumber: 'INV-2024-003',
-    client: mockClients[2],
+    client: { id: '3', name: 'Wayne Enterprises', email: 'bruce@wayne.com', avatarUrl: 'https://placehold.co/40x40' },
     items: [{ id: 'item-1', description: 'Security Consulting', quantity: 10, price: 500 }],
     subtotal: 5000,
     tax: 500,
@@ -51,7 +46,7 @@ export const mockInvoices: Invoice[] = [
   {
     id: 'inv-004',
     invoiceNumber: 'INV-2024-004',
-    client: mockClients[3],
+    client: { id: '4', name: 'Ollivanders Wand Shop', email: 'sales@ollivanders.co.uk', avatarUrl: 'https://placehold.co/40x40' },
     items: [{ id: 'item-1', description: 'Phoenix Feather Wand', quantity: 1, price: 700 }],
     subtotal: 700,
     tax: 70,
@@ -64,7 +59,7 @@ export const mockInvoices: Invoice[] = [
   {
     id: 'inv-005',
     invoiceNumber: 'INV-2024-005',
-    client: mockClients[0],
+    client: { id: '1', name: 'Acme Inc.', email: 'contact@acme.com', avatarUrl: 'https://placehold.co/40x40' },
     items: [{ id: 'item-1', description: 'Monthly Retainer - Marketing', quantity: 1, price: 1500 }],
     subtotal: 1500,
     tax: 150,
@@ -77,7 +72,7 @@ export const mockInvoices: Invoice[] = [
     {
     id: 'inv-006',
     invoiceNumber: 'INV-2024-006',
-    client: mockClients[4],
+    client: { id: '5', name: 'Gekko & Co.', email: 'gordon@gekko.com', avatarUrl: 'https://placehold.co/40x40' },
     items: [{ id: 'item-1', description: 'Financial Advisory', quantity: 1, price: 5000 }],
     subtotal: 5000,
     tax: 500,

@@ -89,7 +89,9 @@
         "addNewClient": "Add New Client",
         "addNewClientDescription": "Enter the details of your new client.",
         "name": "Name",
-        "email": "Email"
+        "email": "Email",
+        "editClient": "Edit Client",
+        "editClientDescription": "Update your client's details."
     },
     "expenses": {
         "searchPlaceholder": "Search by provider or description",

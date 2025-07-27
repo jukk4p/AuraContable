@@ -89,7 +89,9 @@
         "addNewClient": "Aggiungi Nuovo Cliente",
         "addNewClientDescription": "Inserisci i dettagli del tuo nuovo cliente.",
         "name": "Nome",
-        "email": "Email"
+        "email": "Email",
+        "editClient": "Modifica Cliente",
+        "editClientDescription": "Aggiorna i dettagli del tuo cliente."
     },
     "expenses": {
         "searchPlaceholder": "Cerca per fornitore o descrizione",

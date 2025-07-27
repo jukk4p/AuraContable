@@ -8,25 +8,102 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { mockClients } from '@/lib/data';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useLocale } from '@/lib/i18n/locale-provider';
+import type { Client } from '@/lib/types';
+
+// Initial dummy data. This will be replaced by Firestore data.
+const initialClients: Client[] = [
+  { id: '1', name: 'Acme Inc.', email: 'contact@acme.com', avatarUrl: 'https://placehold.co/40x40' },
+  { id: '2', name: 'Stark Industries', email: 'tony@starkindustries.com', avatarUrl: 'https://placehold.co/40x40' },
+  { id: '3', name: 'Wayne Enterprises', email: 'bruce@wayne.com', avatarUrl: 'https://placehold.co/40x40' },
+];
+
+function ClientForm({ client, onSave, onCancel }: { client?: Client | null, onSave: (client: Omit<Client, 'id' | 'avatarUrl'> & { id?: string }) => void, onCancel: () => void }) {
+    const { t } = useLocale();
+    const [name, setName] = useState(client?.name || '');
+    const [email, setEmail] = useState(client?.email || '');
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave({ id: client?.id, name, email });
+    };
+
+    return (
+        <form onSubmit={handleSubmit}>
+            <DialogHeader>
+                <DialogTitle>{client ? t('clients.editClient') : t('clients.addNewClient')}</DialogTitle>
+                <DialogDescription>
+                    {client ? t('clients.editClientDescription') : t('clients.addNewClientDescription')}
+                </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="name" className="text-right">
+                        {t('clients.name')}
+                    </Label>
+                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme Inc." className="col-span-3" required />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="email" className="text-right">
+                        {t('clients.email')}
+                    </Label>
+                    <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contact@acme.com" className="col-span-3" required />
+                </div>
+            </div>
+            <DialogFooter>
+                <Button type="button" variant="outline" onClick={onCancel}>{t('common.cancel')}</Button>
+                <Button type="submit">{t('common.save')}</Button>
+            </DialogFooter>
+        </form>
+    );
+}
 
 export default function ClientList() {
     const { t } = useLocale();
+    const [clients, setClients] = useState<Client[]>(initialClients);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [editingClient, setEditingClient] = useState<Client | null>(null);
 
     const filteredClients = useMemo(() => {
-        let clients = [...mockClients];
-        if (searchTerm) {
-            clients = clients.filter(client =>
-                client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                client.email.toLowerCase().includes(searchTerm.toLowerCase())
-            );
+        return clients.filter(client =>
+            client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            client.email.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [searchTerm, clients]);
+
+    const handleSaveClient = (clientData: Omit<Client, 'id' | 'avatarUrl'> & { id?: string }) => {
+        if (clientData.id) {
+            // Edit existing client
+            setClients(clients.map(c => c.id === clientData.id ? { ...c, name: clientData.name, email: clientData.email } : c));
+        } else {
+            // Add new client
+            const newClient: Client = {
+                id: (clients.length + 1).toString(),
+                ...clientData,
+                avatarUrl: `https://placehold.co/40x40?text=${clientData.name.charAt(0)}`
+            };
+            setClients([...clients, newClient]);
         }
-        return clients;
-    }, [searchTerm]);
+        setIsFormOpen(false);
+        setEditingClient(null);
+    };
+
+    const handleDeleteClient = (clientId: string) => {
+        setClients(clients.filter(c => c.id !== clientId));
+    };
+
+    const handleOpenForm = (client: Client | null = null) => {
+        setEditingClient(client);
+        setIsFormOpen(true);
+    };
+
+    const handleCloseForm = () => {
+        setIsFormOpen(false);
+        setEditingClient(null);
+    };
 
     return (
         <Card>
@@ -40,37 +117,15 @@ export default function ClientList() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-64"
                         />
-                        <Dialog>
+                        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                             <DialogTrigger asChild>
-                                <Button>
+                                <Button onClick={() => handleOpenForm()}>
                                     <PlusCircle className="w-4 h-4 mr-2" />
                                     {t('clients.newClient')}
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-[425px]">
-                                <DialogHeader>
-                                <DialogTitle>{t('clients.addNewClient')}</DialogTitle>
-                                <DialogDescription>
-                                    {t('clients.addNewClientDescription')}
-                                </DialogDescription>
-                                </DialogHeader>
-                                <div className="grid gap-4 py-4">
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="name" className="text-right">
-                                    {t('clients.name')}
-                                    </Label>
-                                    <Input id="name" placeholder="Acme Inc." className="col-span-3" />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="email" className="text-right">
-                                    {t('clients.email')}
-                                    </Label>
-                                    <Input id="email" type="email" placeholder="contact@acme.com" className="col-span-3" />
-                                </div>
-                                </div>
-                                <DialogFooter>
-                                <Button type="submit">{t('common.save')}</Button>
-                                </DialogFooter>
+                            <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={handleCloseForm}>
+                                <ClientForm client={editingClient} onSave={handleSaveClient} onCancel={handleCloseForm} />
                             </DialogContent>
                         </Dialog>
                     </div>
@@ -110,8 +165,8 @@ export default function ClientList() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
-                                            <DropdownMenuItem>{t('common.edit')}</DropdownMenuItem>
-                                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">{t('common.delete')}</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleOpenForm(client)}>{t('common.edit')}</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleDeleteClient(client.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">{t('common.delete')}</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </TableCell>
