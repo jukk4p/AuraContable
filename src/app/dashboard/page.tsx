@@ -2,7 +2,7 @@
 "use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowUpRight, Banknote, Users, FileWarning, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowUpRight, Banknote, Users, FileWarning, CheckCircle2, AlertCircle, MailWarning } from "lucide-react";
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import InvoiceStatusBadge from "@/components/invoice-status-badge";
@@ -24,7 +24,7 @@ export default function DashboardPage() {
 
     useEffect(() => {
         const fetchInvoices = async () => {
-            if (user) {
+            if (user && user.emailVerified) {
                 setDbLoading(true);
                 try {
                     const userInvoices = await getInvoices(user.uid);
@@ -62,8 +62,8 @@ export default function DashboardPage() {
         .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime())
         .slice(0, 5);
 
-    if (authLoading || dbLoading) {
-        return <p>Cargando panel...</p>;
+    if (authLoading) {
+        return <p>Cargando...</p>;
     }
     
     if (authError) {
@@ -78,6 +78,22 @@ export default function DashboardPage() {
                 <AlertDescription>Debes iniciar sesión para ver esta página.</AlertDescription>
             </Alert>
         )
+    }
+
+    if (!user.emailVerified) {
+        return (
+            <Alert variant="destructive">
+                <MailWarning className="h-4 w-4" />
+                <AlertTitle>Verifica tu correo electrónico</AlertTitle>
+                <AlertDescription>
+                    Hemos enviado un correo de verificación a tu dirección. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta y poder continuar.
+                </AlertDescription>
+            </Alert>
+        )
+    }
+
+    if (dbLoading) {
+        return <p>Cargando panel...</p>;
     }
 
     return (
@@ -173,5 +189,3 @@ export default function DashboardPage() {
       </div>
     );
 }
-
-    

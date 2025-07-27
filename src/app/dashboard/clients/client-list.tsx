@@ -18,7 +18,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { getClients, addClient, updateClient, deleteClient } from '@/lib/firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, MailWarning } from 'lucide-react';
 
 function ClientForm({ client, onSave, onCancel, isSaving }: { client?: Client | null, onSave: (client: Omit<Client, 'id' | 'avatarUrl' | 'userId'> & { id?: string }) => void, onCancel: () => void, isSaving: boolean }) {
     const { t } = useLocale();
@@ -74,7 +74,7 @@ export default function ClientList() {
 
     useEffect(() => {
         const fetchClients = async () => {
-            if (user) {
+            if (user && user.emailVerified) {
                 setDbLoading(true);
                 setDbError(null);
                 try {
@@ -107,8 +107,8 @@ export default function ClientList() {
     }, [searchTerm, clients]);
 
     const handleSaveClient = async (clientData: Omit<Client, 'id' | 'avatarUrl' | 'userId'> & { id?: string }) => {
-        if (!user) {
-            toast({ title: "Error", description: "Debes iniciar sesión para realizar esta acción.", variant: "destructive" });
+        if (!user || !user.emailVerified) {
+            toast({ title: "Error", description: "Debes iniciar sesión y verificar tu correo para realizar esta acción.", variant: "destructive" });
             return;
         }
         
@@ -162,8 +162,8 @@ export default function ClientList() {
         setEditingClient(null);
     };
     
-    if (authLoading || dbLoading) {
-        return <p>Cargando clientes...</p>
+    if (authLoading) {
+        return <p>Cargando...</p>
     }
 
     if (authError) {
@@ -176,6 +176,18 @@ export default function ClientList() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Acceso Denegado</AlertTitle>
                 <AlertDescription>Debes iniciar sesión para ver esta página.</AlertDescription>
+            </Alert>
+        )
+    }
+
+    if (!user.emailVerified) {
+        return (
+            <Alert variant="destructive">
+                <MailWarning className="h-4 w-4" />
+                <AlertTitle>Verifica tu correo electrónico</AlertTitle>
+                <AlertDescription>
+                    Hemos enviado un correo de verificación a tu dirección. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta y poder continuar.
+                </AlertDescription>
             </Alert>
         )
     }
@@ -194,7 +206,7 @@ export default function ClientList() {
                         />
                         <Dialog open={isFormOpen} onOpenChange={(isOpen) => { if(!isOpen) handleCloseForm(); else setIsFormOpen(true); }}>
                             <DialogTrigger asChild>
-                                <Button onClick={() => handleOpenForm()}>
+                                <Button onClick={() => handleOpenForm()} disabled={isSaving}>
                                     <PlusCircle className="w-4 h-4 mr-2" />
                                     {t('clients.newClient')}
                                 </Button>
@@ -207,6 +219,7 @@ export default function ClientList() {
                 </div>
             </CardHeader>
             <CardContent>
+                {dbLoading && <p>Cargando clientes...</p>}
                 {dbError && (
                     <Alert variant="destructive" className="mb-4">
                         <AlertCircle className="h-4 w-4" />
@@ -214,49 +227,51 @@ export default function ClientList() {
                         <AlertDescription>{dbError}</AlertDescription>
                     </Alert>
                 )}
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>{t('clients.name')}</TableHead>
-                            <TableHead>{t('clients.email')}</TableHead>
-                            <TableHead>
-                                <span className="sr-only">{t('common.actions')}</span>
-                            </TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredClients.map((client) => (
-                            <TableRow key={client.id}>
-                                <TableCell>
-                                    <div className="flex items-center gap-3">
-                                        <Avatar className="hidden h-9 w-9 sm:flex">
-                                            <AvatarImage src={client.avatarUrl} alt="Avatar" data-ai-hint="person avatar"/>
-                                            <AvatarFallback>{client.name.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                        <div className="font-medium">{client.name}</div>
-                                    </div>
-                                </TableCell>
-                                <TableCell>{client.email}</TableCell>
-                                <TableCell>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">{t('common.toggleMenu')}</span>
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
-                                            <DropdownMenuItem onClick={() => handleOpenForm(client)}>{t('common.edit')}</DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleDeleteClient(client.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">{t('common.delete')}</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
+                {!dbLoading && !dbError && (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>{t('clients.name')}</TableHead>
+                                <TableHead>{t('clients.email')}</TableHead>
+                                <TableHead>
+                                    <span className="sr-only">{t('common.actions')}</span>
+                                </TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-                 {!dbError && filteredClients.length === 0 && (
+                        </TableHeader>
+                        <TableBody>
+                            {filteredClients.map((client) => (
+                                <TableRow key={client.id}>
+                                    <TableCell>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="hidden h-9 w-9 sm:flex">
+                                                <AvatarImage src={client.avatarUrl} alt="Avatar" data-ai-hint="person avatar"/>
+                                                <AvatarFallback>{client.name.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="font-medium">{client.name}</div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>{client.email}</TableCell>
+                                    <TableCell>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                    <span className="sr-only">{t('common.toggleMenu')}</span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
+                                                <DropdownMenuItem onClick={() => handleOpenForm(client)}>{t('common.edit')}</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleDeleteClient(client.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">{t('common.delete')}</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+                 {!dbError && !dbLoading && filteredClients.length === 0 && (
                     <div className="text-center py-10">
                         <p className="text-muted-foreground">{t('clients.noClients')}</p>
                     </div>
@@ -265,5 +280,3 @@ export default function ClientList() {
         </Card>
     );
 }
-
-    

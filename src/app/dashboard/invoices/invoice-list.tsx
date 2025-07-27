@@ -20,7 +20,7 @@ import { getInvoices, deleteInvoice } from '@/lib/firebase/firestore';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, MailWarning } from "lucide-react";
 
 
 export default function InvoiceList() {
@@ -34,7 +34,7 @@ export default function InvoiceList() {
 
     useEffect(() => {
         const fetchInvoices = async () => {
-            if (user) {
+            if (user && user.emailVerified) {
                 setDbLoading(true);
                 try {
                     const userInvoices = await getInvoices(user.uid);
@@ -127,8 +127,8 @@ export default function InvoiceList() {
         return <ArrowUpDown className="ml-2 h-4 w-4" />; 
       };
 
-    if (authLoading || dbLoading) {
-        return <p>Cargando facturas...</p>;
+    if (authLoading) {
+        return <p>Cargando...</p>;
     }
     
     if (authError) {
@@ -141,6 +141,18 @@ export default function InvoiceList() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Acceso Denegado</AlertTitle>
                 <AlertDescription>Debes iniciar sesión para ver esta página.</AlertDescription>
+            </Alert>
+        )
+    }
+
+    if (!user.emailVerified) {
+        return (
+            <Alert variant="destructive">
+                <MailWarning className="h-4 w-4" />
+                <AlertTitle>Verifica tu correo electrónico</AlertTitle>
+                <AlertDescription>
+                    Hemos enviado un correo de verificación a tu dirección. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta y poder continuar.
+                </AlertDescription>
             </Alert>
         )
     }
@@ -170,79 +182,82 @@ export default function InvoiceList() {
                 </div>
             </CardHeader>
             <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('client.name')}>
-                                    {t('invoices.client')} {getSortIcon('client.name')}
-                                </Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('invoiceNumber')}>
-                                    {t('invoices.invoiceNumberShort')} {getSortIcon('invoiceNumber')}
-                                </Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('subtotal')}>
-                                    {t('invoices.amount')} {getSortIcon('subtotal')}
-                                </Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('status')}>
-                                    {t('invoices.status')} {getSortIcon('status')}
-                                </Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('dueDate')}>
-                                    {t('invoices.dueDate')} {getSortIcon('dueDate')}
-                                </Button>
-                            </TableHead>
-                            <TableHead>
-                                <span className="sr-only">{t('common.actions')}</span>
-                            </TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {sortedInvoices.map((invoice) => (
-                            <TableRow key={invoice.id}>
-                                <TableCell>
-                                    <div className="flex items-center gap-3">
-                                        <Avatar className="hidden h-9 w-9 sm:flex">
-                                            <AvatarImage src={invoice.client.avatarUrl} alt="Avatar" data-ai-hint="person avatar" />
-                                            <AvatarFallback>{invoice.client.name.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                        <div className="font-medium">{invoice.client.name}</div>
-                                    </div>
-                                </TableCell>
-                                <TableCell>{invoice.invoiceNumber}</TableCell>
-                                <TableCell>{formatCurrency(invoice.subtotal)}</TableCell>
-                                <TableCell>
-                                    <InvoiceStatusBadge status={invoice.status} />
-                                </TableCell>
-                                <TableCell>{format(invoice.dueDate, 'PPP')}</TableCell>
-                                <TableCell>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">{t('common.menu')}</span>
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
-                                            <DropdownMenuItem asChild><Link href={`/dashboard/invoices/${invoice.id}`}>{t('common.viewDetails')}</Link></DropdownMenuItem>
-                                            <DropdownMenuItem>{t('invoices.markAsPaid')}</DropdownMenuItem>
-                                            <DropdownMenuItem>{t('invoices.downloadPdf')}</DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleDeleteInvoice(invoice.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">{t('invoices.deleteInvoice')}</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
+                {dbLoading && <p>Cargando facturas...</p>}
+                {!dbLoading && (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>
+                                    <Button variant="ghost" onClick={() => requestSort('client.name')}>
+                                        {t('invoices.client')} {getSortIcon('client.name')}
+                                    </Button>
+                                </TableHead>
+                                <TableHead>
+                                    <Button variant="ghost" onClick={() => requestSort('invoiceNumber')}>
+                                        {t('invoices.invoiceNumberShort')} {getSortIcon('invoiceNumber')}
+                                    </Button>
+                                </TableHead>
+                                <TableHead>
+                                    <Button variant="ghost" onClick={() => requestSort('subtotal')}>
+                                        {t('invoices.amount')} {getSortIcon('subtotal')}
+                                    </Button>
+                                </TableHead>
+                                <TableHead>
+                                    <Button variant="ghost" onClick={() => requestSort('status')}>
+                                        {t('invoices.status')} {getSortIcon('status')}
+                                    </Button>
+                                </TableHead>
+                                <TableHead>
+                                    <Button variant="ghost" onClick={() => requestSort('dueDate')}>
+                                        {t('invoices.dueDate')} {getSortIcon('dueDate')}
+                                    </Button>
+                                </TableHead>
+                                <TableHead>
+                                    <span className="sr-only">{t('common.actions')}</span>
+                                </TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-                {sortedInvoices.length === 0 && (
+                        </TableHeader>
+                        <TableBody>
+                            {sortedInvoices.map((invoice) => (
+                                <TableRow key={invoice.id}>
+                                    <TableCell>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="hidden h-9 w-9 sm:flex">
+                                                <AvatarImage src={invoice.client.avatarUrl} alt="Avatar" data-ai-hint="person avatar" />
+                                                <AvatarFallback>{invoice.client.name.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="font-medium">{invoice.client.name}</div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>{invoice.invoiceNumber}</TableCell>
+                                    <TableCell>{formatCurrency(invoice.subtotal)}</TableCell>
+                                    <TableCell>
+                                        <InvoiceStatusBadge status={invoice.status} />
+                                    </TableCell>
+                                    <TableCell>{format(invoice.dueDate, 'PPP')}</TableCell>
+                                    <TableCell>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                    <span className="sr-only">{t('common.menu')}</span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
+                                                <DropdownMenuItem asChild><Link href={`/dashboard/invoices/${invoice.id}`}>{t('common.viewDetails')}</Link></DropdownMenuItem>
+                                                <DropdownMenuItem>{t('invoices.markAsPaid')}</DropdownMenuItem>
+                                                <DropdownMenuItem>{t('invoices.downloadPdf')}</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleDeleteInvoice(invoice.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">{t('invoices.deleteInvoice')}</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+                {!dbLoading && sortedInvoices.length === 0 && (
                     <div className="text-center py-10">
                         <p className="text-muted-foreground">No tienes facturas todavía.</p>
                     </div>
@@ -251,5 +266,3 @@ export default function InvoiceList() {
         </Card>
     );
 }
-
-    

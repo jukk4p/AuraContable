@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -8,9 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { FileText, AlertCircle } from "lucide-react";
+import { FileText, AlertCircle, MailCheck } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { auth } from "@/lib/firebase/config";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -45,17 +46,29 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleAuthAction = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setIsLoading(true);
+
     try {
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await sendEmailVerification(userCredential.user);
+        setVerificationSent(true);
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        if (!userCredential.user.emailVerified) {
+            setError("Por favor, verifica tu correo electrónico antes de iniciar sesión.");
+            // Optional: sign out the user if you don't want them to be in a partially logged-in state.
+            await auth.signOut();
+        } else {
+            router.push('/dashboard');
+        }
       }
-      router.push('/dashboard');
     } catch (err: any) {
         switch (err.code) {
             case 'auth/user-not-found':
@@ -74,8 +87,33 @@ export default function LoginPage() {
                 setError("Ha ocurrido un error. Por favor, inténtalo de nuevo.");
                 break;
         }
+    } finally {
+        setIsLoading(false);
     }
   };
+  
+  if (verificationSent) {
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-background p-4">
+             <Card className="w-full max-w-md">
+                <CardHeader className="text-center">
+                    <div className="flex justify-center mb-4">
+                        <MailCheck className="h-12 w-12 text-green-500" />
+                    </div>
+                    <CardTitle className="text-2xl">¡Verifica tu correo!</CardTitle>
+                    <CardDescription>
+                        Hemos enviado un enlace de verificación a <strong>{email}</strong>. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                     <Button variant="link" onClick={() => {setVerificationSent(false); setIsSignUp(false);}} className="w-full">
+                        Volver a inicio de sesión
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+    )
+  }
 
 
   return (
@@ -101,25 +139,27 @@ export default function LoginPage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">{t('login.email')}</Label>
-                  <Input id="email" type="email" placeholder="nombre@ejemplo.com" required value={email} onChange={e => setEmail(e.target.value)} />
+                  <Input id="email" type="email" placeholder="nombre@ejemplo.com" required value={email} onChange={e => setEmail(e.target.value)} disabled={isLoading} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">{t('login.password')}</Label>
-                  <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)}/>
+                  <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading}/>
                 </div>
               </div>
-              <Button type="submit" className="w-full mt-6">{isSignUp ? t('login.signUp') : t('login.signIn')}</Button>
+              <Button type="submit" className="w-full mt-6" disabled={isLoading}>
+                {isLoading ? "Cargando..." : (isSignUp ? t('login.signUp') : t('login.signIn'))}
+                </Button>
             </form>
             <Separator className="my-6">
               <span className="px-2 text-muted-foreground bg-background">{t('login.or')}</span>
             </Separator>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" disabled={isLoading}>
               <GoogleIcon className="mr-2 h-4 w-4" />
               {t('login.googleSignIn')}
             </Button>
             <div className="mt-4 text-center text-sm">
                 {isSignUp ? "¿Ya tienes una cuenta?" : t('login.noAccount')}{" "}
-                <Button variant="link" onClick={() => {setIsSignUp(!isSignUp); setError(null);}} className="p-0 h-auto">
+                <Button variant="link" onClick={() => {setIsSignUp(!isSignUp); setError(null);}} className="p-0 h-auto" disabled={isLoading}>
                     {isSignUp ? t('login.signIn') : t('login.signUp')}
                 </Button>
             </div>
@@ -129,3 +169,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
