@@ -281,6 +281,7 @@ export default function NewInvoicePage() {
                                             name={`items.${index}.description`}
                                             render={({ field }) => (
                                                 <FormItem>
+                                                    <FormLabel className="sr-only">Description</FormLabel>
                                                      <FormControl>
                                                         <Input placeholder={t('newInvoice.itemDescription')} {...field} />
                                                      </FormControl>
@@ -293,6 +294,7 @@ export default function NewInvoicePage() {
                                             name={`items.${index}.quantity`}
                                             render={({ field }) => (
                                                 <FormItem>
+                                                    <FormLabel className="sr-only">Quantity</FormLabel>
                                                     <FormControl>
                                                         <Input type="number" placeholder={t('newInvoice.itemQuantity')} {...field} />
                                                     </FormControl>
@@ -305,6 +307,7 @@ export default function NewInvoicePage() {
                                             name={`items.${index}.price`}
                                             render={({ field }) => (
                                                 <FormItem>
+                                                    <FormLabel className="sr-only">Price</FormLabel>
                                                     <FormControl>
                                                         <Input type="number" placeholder={t('newInvoice.itemPrice')} {...field} />
                                                     </FormControl>
@@ -359,3 +362,5 @@ export default function NewInvoicePage() {
         </Form>
     )
 }
+
+    
