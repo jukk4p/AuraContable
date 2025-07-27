@@ -21,6 +21,7 @@
         "newInvoice": "Nova Factura",
         "invoiceDetails": "Detalls de la Factura",
         "clients": "Clients",
+        "expenses": "Despeses",
         "settings": "Configuració",
         "myAccount": "El meu compte",
         "support": "Suport",
@@ -89,6 +90,21 @@
         "addNewClientDescription": "Introdueix els detalls del teu nou client.",
         "name": "Nom",
         "email": "Correu electrònic"
+    },
+    "expenses": {
+        "searchPlaceholder": "Cerca per proveïdor o descripció",
+        "newExpense": "Nova Despesa",
+        "addNewExpense": "Registra una Nova Despesa",
+        "addNewExpenseDescription": "Introdueix els detalls de la teva nova despesa.",
+        "date": "Data",
+        "category": "Categoria",
+        "selectCategory": "Selecciona una categoria",
+        "provider": "Proveïdor",
+        "description": "Descripció",
+        "descriptionPlaceholder": "Ex: Subscripció de programari",
+        "amount": "Import",
+        "tax": "Impost",
+        "attachment": "Justificant (Opcional)"
     },
     "settings": {
         "profile": {

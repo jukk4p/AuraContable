@@ -21,6 +21,7 @@
         "newInvoice": "Nueva Factura",
         "invoiceDetails": "Detalles de Factura",
         "clients": "Clientes",
+        "expenses": "Gastos",
         "settings": "Ajustes",
         "myAccount": "Mi Cuenta",
         "support": "Soporte",
@@ -89,6 +90,21 @@
         "addNewClientDescription": "Introduce los detalles de tu nuevo cliente.",
         "name": "Nombre",
         "email": "Email"
+    },
+    "expenses": {
+        "searchPlaceholder": "Buscar por proveedor o descripción",
+        "newExpense": "Nuevo Gasto",
+        "addNewExpense": "Registrar Nuevo Gasto",
+        "addNewExpenseDescription": "Introduce los detalles de tu nuevo gasto.",
+        "date": "Fecha",
+        "category": "Categoría",
+        "selectCategory": "Selecciona una categoría",
+        "provider": "Proveedor",
+        "description": "Descripción",
+        "descriptionPlaceholder": "Ej: Suscripción a software",
+        "amount": "Importe",
+        "tax": "Impuesto",
+        "attachment": "Justificante (Opcional)"
     },
     "settings": {
         "profile": {
