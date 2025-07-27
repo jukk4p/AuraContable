@@ -1,5 +1,4 @@
 
-
 "use server"
 
 import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, DocumentData, QueryDocumentSnapshot, Timestamp, getDoc, setDoc } from "firebase/firestore";
@@ -8,11 +7,11 @@ import type { Client, Invoice, Expense, CompanyProfile } from "@/lib/types";
 
 // Type guard for Client
 function isClient(doc: DocumentData): doc is Client {
+    const data = doc as Client;
     return (
-        typeof doc.name === 'string' &&
-        typeof doc.email === 'string' &&
-        typeof doc.avatarUrl === 'string' &&
-        typeof doc.userId === 'string'
+        typeof data.name === 'string' &&
+        typeof data.email === 'string' &&
+        typeof data.userId === 'string'
     );
 }
 
@@ -26,8 +25,11 @@ const clientFromSnapshot = (snapshot: QueryDocumentSnapshot<DocumentData>): Clie
         id: snapshot.id,
         name: data.name,
         email: data.email,
-        avatarUrl: data.avatarUrl,
+        avatarUrl: data.avatarUrl || '',
         userId: data.userId,
+        address: data.address || '',
+        taxId: data.taxId || '',
+        country: data.country || '',
     };
 };
 
@@ -43,7 +45,7 @@ export async function addClient(client: Omit<Client, 'id'>): Promise<Client> {
     return { id: docRef.id, ...client };
 }
 
-export async function updateClient(clientId: string, client: Partial<Omit<Client, 'id'>>): Promise<void> {
+export async function updateClient(clientId: string, client: Partial<Omit<Client, 'id' | 'userId'>>): Promise<void> {
     const clientRef = doc(db, "clients", clientId);
     await updateDoc(clientRef, client);
 }
@@ -55,20 +57,17 @@ export async function deleteClient(clientId: string): Promise<void> {
 
 // Type guard for Invoice
 function isInvoice(doc: DocumentData): doc is Omit<Invoice, 'id' | 'issueDate' | 'dueDate'> & { issueDate: Timestamp, dueDate: Timestamp } {
+     const data = doc as Invoice & { issueDate: Timestamp, dueDate: Timestamp };
      return (
-        typeof doc.invoiceNumber === 'string' &&
-        doc.client && typeof doc.client.name === 'string' &&
-        // doc.clientId is now optional in some flows
-        // typeof doc.clientId === 'string' &&
-        Array.isArray(doc.items) &&
-        typeof doc.subtotal === 'number' &&
-        typeof doc.total === 'number' &&
-        // taxes can be optional
-        // Array.isArray(doc.taxes) &&
-        ['Paid', 'Pending', 'Overdue'].includes(doc.status) &&
-        doc.issueDate instanceof Timestamp &&
-        doc.dueDate instanceof Timestamp &&
-        typeof doc.userId === 'string'
+        typeof data.invoiceNumber === 'string' &&
+        data.client && typeof data.client.name === 'string' &&
+        Array.isArray(data.items) &&
+        typeof data.subtotal === 'number' &&
+        typeof data.total === 'number' &&
+        ['Paid', 'Pending', 'Overdue'].includes(data.status) &&
+        data.issueDate instanceof Timestamp &&
+        data.dueDate instanceof Timestamp &&
+        typeof data.userId === 'string'
     );
 }
 
@@ -128,7 +127,9 @@ export async function addInvoice(invoice: Omit<Invoice, 'id'>): Promise<Invoice>
 
 export async function updateInvoice(invoiceId: string, invoice: Partial<Omit<Invoice, 'id'>>): Promise<void> {
     const invoiceRef = doc(db, "invoices", invoiceId);
-    await updateDoc(invoiceRef, invoice);
+    // Firestore does not allow undefined values. We need to clean the object.
+    const cleanInvoice = Object.fromEntries(Object.entries(invoice).filter(([_, v]) => v !== undefined));
+    await updateDoc(invoiceRef, cleanInvoice);
 }
 
 export async function deleteInvoice(invoiceId: string): Promise<void> {

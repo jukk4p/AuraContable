@@ -19,15 +19,20 @@ import { getClients, addClient, updateClient, deleteClient } from '@/lib/firebas
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, MailWarning } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 
 function ClientForm({ client, onSave, onCancel, isSaving }: { client?: Client | null, onSave: (client: Omit<Client, 'id' | 'avatarUrl' | 'userId'> & { id?: string }) => void, onCancel: () => void, isSaving: boolean }) {
     const { t } = useLocale();
     const [name, setName] = useState(client?.name || '');
     const [email, setEmail] = useState(client?.email || '');
+    const [taxId, setTaxId] = useState(client?.taxId || '');
+    const [address, setAddress] = useState(client?.address || '');
+    const [country, setCountry] = useState(client?.country || '');
+
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ id: client?.id, name, email });
+        onSave({ id: client?.id, name, email, taxId, address, country });
     };
 
     return (
@@ -39,17 +44,25 @@ function ClientForm({ client, onSave, onCancel, isSaving }: { client?: Client | 
                 </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">
-                        {t('clients.name')}
-                    </Label>
-                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme Inc." className="col-span-3" required />
+                <div className="space-y-2">
+                    <Label htmlFor="name">{t('clients.name')}</Label>
+                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme Inc." required disabled={isSaving}/>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="email" className="text-right">
-                        {t('clients.email')}
-                    </Label>
-                    <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contact@acme.com" className="col-span-3" required />
+                <div className="space-y-2">
+                    <Label htmlFor="email">{t('clients.email')}</Label>
+                    <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contact@acme.com" required disabled={isSaving}/>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="taxId">{t('settings.company.taxId')}</Label>
+                    <Input id="taxId" value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder="ESB12345678" disabled={isSaving}/>
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="address">{t('settings.company.address')}</Label>
+                    <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St, Anytown" disabled={isSaving}/>
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="country">País</Label>
+                    <Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="España" disabled={isSaving}/>
                 </div>
             </div>
             <DialogFooter>
@@ -116,15 +129,14 @@ export default function ClientList() {
         try {
             if (clientData.id) {
                 // Edit existing client
-                const updatedClient = { name: clientData.name, email: clientData.email };
-                await updateClient(clientData.id, updatedClient);
-                setClients(clients.map(c => c.id === clientData.id ? { ...c, ...updatedClient } : c));
+                const { id, ...updatedClientData } = clientData;
+                await updateClient(id, updatedClientData);
+                setClients(clients.map(c => c.id === id ? { ...c, ...updatedClientData } : c));
                 toast({ title: "Cliente Actualizado", description: "Los detalles del cliente han sido actualizados." });
             } else {
                 // Add new client
                 const newClientData = {
-                    name: clientData.name,
-                    email: clientData.email,
+                    ...clientData,
                     avatarUrl: `https://placehold.co/40x40?text=${clientData.name.charAt(0)}`,
                     userId: user.uid,
                 };
@@ -187,7 +199,8 @@ export default function ClientList() {
                 <AlertTitle>Verifica tu correo electrónico</AlertTitle>
                 <AlertDescription>
                     Hemos enviado un correo de verificación a tu dirección. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta y poder continuar.
-                </AlertDescription>
+                </Aler
+tDescription>
             </Alert>
         )
     }
@@ -211,7 +224,7 @@ export default function ClientList() {
                                     {t('clients.newClient')}
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => { if (isFormOpen) e.preventDefault()}} onEscapeKeyDown={handleCloseForm}>
+                            <DialogContent className="sm:max-w-md" onInteractOutside={(e) => { if (isSaving || isFormOpen) e.preventDefault()}} onEscapeKeyDown={handleCloseForm}>
                                 <ClientForm client={editingClient} onSave={handleSaveClient} onCancel={handleCloseForm} isSaving={isSaving} />
                             </DialogContent>
                         </Dialog>

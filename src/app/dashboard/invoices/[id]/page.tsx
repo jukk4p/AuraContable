@@ -197,8 +197,9 @@ export default function InvoiceDetailsPage() {
                         <div className="text-right">
                              <h3 className="font-semibold text-muted-foreground mb-2">Para:</h3>
                              <p className="font-bold">{invoice.client.name}</p>
+                             <p>{invoice.client.address}</p>
+                             <p>{invoice.client.taxId}</p>
                              <p>{invoice.client.email}</p>
-                             {/* TODO: Add client address and taxId here once available */}
                         </div>
                     </div>
                     
@@ -374,5 +375,3 @@ function InvoiceDetailsSkeleton() {
         </div>
     )
 }
-
-    

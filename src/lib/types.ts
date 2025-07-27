@@ -7,7 +7,9 @@ export type Client = {
   email: string;
   avatarUrl: string;
   userId: string;
-  // TODO: Add address, taxId, country fields to client form and data
+  address?: string;
+  taxId?: string;
+  country?: string;
 };
 
 export type InvoiceItem = {

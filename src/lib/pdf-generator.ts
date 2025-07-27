@@ -61,6 +61,8 @@ export async function generateInvoicePdf(
 
     // --- Company & Client Info ---
     const infoStartY = detailsY + 30;
+    let companyInfoY = infoStartY + 6;
+    let clientInfoY = infoStartY + 6;
     
     // Company Info (From)
     doc.setFont('helvetica', 'bold');
@@ -68,10 +70,12 @@ export async function generateInvoicePdf(
     doc.text('De:', 20, infoStartY);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(textColor);
-    doc.text(company?.name || 'Your Company Name', 20, infoStartY + 6);
-    doc.text(company?.address || 'Your Address', 20, infoStartY + 11);
-    doc.text(company?.taxId || 'Your Tax ID', 20, infoStartY + 16);
-    doc.text(company?.billingEmail || 'your-email@company.com', 20, infoStartY + 21);
+    
+    if (company?.name) doc.text(company.name, 20, companyInfoY);
+    if (company?.address) { companyInfoY += 5; doc.text(company.address, 20, companyInfoY); }
+    if (company?.taxId) { companyInfoY += 5; doc.text(company.taxId, 20, companyInfoY); }
+    if (company?.billingEmail) { companyInfoY += 5; doc.text(company.billingEmail, 20, companyInfoY); }
+
 
     // Client Info (To)
     doc.setFont('helvetica', 'bold');
@@ -79,8 +83,11 @@ export async function generateInvoicePdf(
     doc.text('Para:', pageWidth / 2 + 20, infoStartY);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(textColor);
-    doc.text(invoice.client.name, pageWidth / 2 + 20, infoStartY + 6);
-    doc.text(invoice.client.email, pageWidth / 2 + 20, infoStartY + 11);
+
+    if (invoice.client.name) doc.text(invoice.client.name, pageWidth / 2 + 20, clientInfoY);
+    if (invoice.client.address) { clientInfoY += 5; doc.text(invoice.client.address, pageWidth / 2 + 20, clientInfoY); }
+    if (invoice.client.taxId) { clientInfoY += 5; doc.text(invoice.client.taxId, pageWidth / 2 + 20, clientInfoY); }
+    if (invoice.client.email) { clientInfoY += 5; doc.text(invoice.client.email, pageWidth / 2 + 20, clientInfoY); }
 
 
     // --- Items Table ---
@@ -99,7 +106,7 @@ export async function generateInvoicePdf(
     ]);
 
     doc.autoTable({
-        startY: infoStartY + 35,
+        startY: Math.max(companyInfoY, clientInfoY) + 15,
         head: [tableHeaders],
         body: tableData,
         theme: 'striped',
