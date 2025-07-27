@@ -31,29 +31,36 @@ export async function generateInvoicePdf(
     // --- Header ---
     doc.setFontSize(26);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(textColor);
+    doc.setTextColor(primaryColor);
     doc.text(t('nav.invoices').toUpperCase(), 20, 30);
-
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(mutedColor);
-    doc.text(`${t('invoices.invoiceNumberShort')}: #${invoice.invoiceNumber}`, 20, 38);
 
     if (company?.logoUrl && company.logoUrl.startsWith('data:image')) {
         try {
-            doc.addImage(company.logoUrl, 'PNG', pageWidth - 60, 20, 40, 15);
+            doc.addImage(company.logoUrl, 'PNG', pageWidth - 60, 20, 40, 15, undefined, 'FAST');
         } catch(e) {
             console.error("Error adding logo to PDF:", e);
         }
     }
 
-    // --- Company & Client Info ---
-    const infoStartY = 60;
-    doc.setLineWidth(0.5);
-    doc.setDrawColor(mutedColor);
-    doc.line(20, infoStartY - 10, pageWidth - 20, infoStartY - 10);
-    
+    // --- Invoice Details ---
+    const detailsY = 50;
     doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(mutedColor);
+    
+    doc.text(`${t('invoices.invoiceNumberShort')}:`, 20, detailsY);
+    doc.text(t('invoices.issueDate').toUpperCase(), 20, detailsY + 7);
+    doc.text(t('invoices.dueDate').toUpperCase(), 20, detailsY + 14);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(textColor);
+
+    doc.text(invoice.invoiceNumber, 60, detailsY);
+    doc.text(format(invoice.issueDate, 'PPP'), 60, detailsY + 7);
+    doc.text(format(invoice.dueDate, 'PPP'), 60, detailsY + 14);
+
+    // --- Company & Client Info ---
+    const infoStartY = detailsY + 30;
     
     // Company Info (From)
     doc.setFont('helvetica', 'bold');
@@ -69,27 +76,11 @@ export async function generateInvoicePdf(
     // Client Info (To)
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(mutedColor);
-    doc.text('Para:', pageWidth / 2, infoStartY);
+    doc.text('Para:', pageWidth / 2 + 20, infoStartY);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(textColor);
-    doc.text(invoice.client.name, pageWidth / 2, infoStartY + 6);
-    doc.text(invoice.client.email, pageWidth / 2, infoStartY + 11);
-
-    // Invoice Dates
-    const datesY = infoStartY + 35;
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(mutedColor);
-    doc.text(t('invoices.issueDate').toUpperCase(), 20, datesY);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(textColor);
-    doc.text(format(invoice.issueDate, 'PPP'), 20, datesY + 6);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(mutedColor);
-    doc.text(t('invoices.dueDate').toUpperCase(), pageWidth / 2, datesY);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(textColor);
-    doc.text(format(invoice.dueDate, 'PPP'), pageWidth / 2, datesY + 6);
+    doc.text(invoice.client.name, pageWidth / 2 + 20, infoStartY + 6);
+    doc.text(invoice.client.email, pageWidth / 2 + 20, infoStartY + 11);
 
 
     // --- Items Table ---
@@ -108,7 +99,7 @@ export async function generateInvoicePdf(
     ]);
 
     doc.autoTable({
-        startY: datesY + 15,
+        startY: infoStartY + 35,
         head: [tableHeaders],
         body: tableData,
         theme: 'striped',
@@ -129,30 +120,38 @@ export async function generateInvoicePdf(
         },
         didDrawPage: (data) => {
             // Footer
-            if (company?.iban || invoice.notes) {
-                 const footerY = pageHeight - 35;
-                 doc.setLineWidth(0.5);
-                 doc.setDrawColor(mutedColor);
-                 doc.line(20, footerY, pageWidth - 20, footerY);
+            const footerY = pageHeight - 45;
+             doc.setLineWidth(0.2);
+             doc.setDrawColor(mutedColor);
+             doc.line(20, footerY, pageWidth - 20, footerY);
 
-                 let currentY = footerY + 10;
-                 doc.setFontSize(9);
-                 doc.setTextColor(mutedColor);
+             let currentY = footerY + 10;
+             doc.setFontSize(9);
+             doc.setTextColor(mutedColor);
 
-                 if(company?.iban) {
-                     doc.setFont('helvetica', 'bold');
-                     doc.text('Detalles de Pago:', 20, currentY);
-                     doc.setFont('helvetica', 'normal');
-                     doc.text(`IBAN: ${company.iban}`, 20, currentY + 5);
-                     currentY += 15;
-                 }
-                  if (invoice.notes) {
-                     doc.setFont('helvetica', 'bold');
-                     doc.text(`${t('newInvoice.notes')}:`, 20, currentY);
-                     doc.setFont('helvetica', 'normal');
-                     doc.text(invoice.notes, 20, currentY + 5, { maxWidth: pageWidth - 40 });
-                 }
-            }
+             if (company?.iban) {
+                 doc.setFont('helvetica', 'bold');
+                 doc.text('Detalles de Pago:', 20, currentY);
+                 doc.setFont('helvetica', 'normal');
+                 doc.text(`IBAN: ${company.iban}`, 20, currentY + 5);
+             }
+             
+             if (invoice.terms) {
+                const termsText = doc.splitTextToSize(invoice.terms, pageWidth - 140);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`${t('settings.invoicing.defaultTerms')}:`, 100, currentY);
+                doc.setFont('helvetica', 'normal');
+                doc.text(termsText, 100, currentY + 5);
+             }
+             
+             if (invoice.notes) {
+                const notesY = footerY - 15;
+                const notesText = doc.splitTextToSize(invoice.notes, pageWidth - 40);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`${t('newInvoice.notes')}:`, 20, notesY);
+                doc.setFont('helvetica', 'normal');
+                doc.text(notesText, 20, notesY + 5);
+             }
         }
     });
 
@@ -160,21 +159,31 @@ export async function generateInvoicePdf(
     const finalY = (doc as any).lastAutoTable.finalY;
     const totalX = pageWidth - 80;
     const totalValueX = pageWidth - 20;
+    let currentY = finalY + 10;
     
-    doc.setFontSize(12);
+    doc.setFontSize(10);
     doc.setTextColor(textColor);
     
-    doc.text(`${t('newInvoice.subtotal')}:`, totalX, finalY + 15, { align: 'left'});
-    doc.text(formatCurrency(invoice.subtotal), totalValueX, finalY + 15, { align: 'right' });
+    doc.text(`${t('newInvoice.subtotal')}:`, totalX, currentY, { align: 'left'});
+    doc.text(formatCurrency(invoice.subtotal), totalValueX, currentY, { align: 'right' });
+    currentY += 7;
+
+    (invoice.taxes || []).forEach(tax => {
+        const taxAmount = invoice.subtotal * (tax.percentage / 100);
+        doc.text(`${tax.name} (${tax.percentage}%):`, totalX, currentY, { align: 'left'});
+        doc.text(formatCurrency(taxAmount), totalValueX, currentY, { align: 'right' });
+        currentY += 7;
+    });
+
+    doc.setLineWidth(0.3);
+    doc.setDrawColor(textColor);
+    doc.line(totalX - 5, currentY, totalValueX, currentY);
+    currentY += 7;
     
-    // Example for tax and total, assuming you add them to the invoice object
-    // doc.text(`IVA (21%):`, totalX, finalY + 22, { align: 'left'});
-    // doc.text(formatCurrency(invoice.tax), totalValueX, finalY + 22, { align: 'right' });
-    
-    // doc.setFontSize(14);
-    // doc.setFont('helvetica', 'bold');
-    // doc.text(`TOTAL:`, totalX, finalY + 30, { align: 'left'});
-    // doc.text(formatCurrency(invoice.total), totalValueX, finalY + 30, { align: 'right' });
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`TOTAL:`, totalX, currentY, { align: 'left'});
+    doc.text(formatCurrency(invoice.total), totalValueX, currentY, { align: 'right' });
 
 
     // --- Save PDF ---

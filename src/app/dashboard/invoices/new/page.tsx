@@ -18,11 +18,11 @@ import { format } from "date-fns"
 import { useToast } from "@/hooks/use-toast"
 import { es } from "date-fns/locale"
 import { useLocale } from "@/lib/i18n/locale-provider"
-import { Client, InvoiceStatus } from "@/lib/types"
-import React, { useState, useEffect } from 'react'
+import { Client, InvoiceStatus, InvoiceTax } from "@/lib/types"
+import React, { useState, useEffect, useCallback } from 'react'
 import { auth } from "@/lib/firebase/config"
 import { useAuthState } from "react-firebase-hooks/auth"
-import { getClients, addInvoice, getInvoices } from "@/lib/firebase/firestore"
+import { getClients, addInvoice, getInvoices, getCompanyProfile } from "@/lib/firebase/firestore"
 import { useRouter } from "next/navigation"
 
 const invoiceFormSchema = z.object({
@@ -36,7 +36,13 @@ const invoiceFormSchema = z.object({
         quantity: z.coerce.number().min(1, "La cantidad debe ser al menos 1"),
         price: z.coerce.number().min(0, "El precio no puede ser negativo"),
     })).min(1, "Se requiere al menos un concepto"),
+    taxes: z.array(z.object({
+        id: z.string(),
+        name: z.string(),
+        percentage: z.coerce.number(),
+    })).optional(),
     notes: z.string().optional(),
+    terms: z.string().optional(),
 })
 
 type InvoiceFormValues = z.infer<typeof invoiceFormSchema>
@@ -56,7 +62,9 @@ export default function NewInvoicePage() {
             invoiceNumber: "",
             status: "Pending",
             items: [{ description: "", quantity: 1, price: 0 }],
+            taxes: [],
             notes: "",
+            terms: "",
         },
     })
     
@@ -65,9 +73,10 @@ export default function NewInvoicePage() {
             if(user) {
                 setIsLoading(true);
                 try {
-                    const [userClients, userInvoices] = await Promise.all([
+                    const [userClients, userInvoices, companyProfile] = await Promise.all([
                         getClients(user.uid),
-                        getInvoices(user.uid)
+                        getInvoices(user.uid),
+                        getCompanyProfile(user.uid)
                     ]);
                     
                     setClients(userClients);
@@ -92,6 +101,8 @@ export default function NewInvoicePage() {
                     form.reset({
                         ...form.getValues(),
                         invoiceNumber: newInvoiceNumber,
+                        terms: companyProfile?.terms || "",
+                        taxes: companyProfile?.defaultTaxes || [],
                     });
 
                 } catch (error) {
@@ -108,19 +119,35 @@ export default function NewInvoicePage() {
     }, [user, form, toast]);
 
 
-    const { fields, append, remove } = useFieldArray({
+    const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({
         control: form.control,
         name: "items"
     });
 
+    const { fields: taxFields, append: appendTax, remove: removeTax } = useFieldArray({
+        control: form.control,
+        name: "taxes"
+    });
+
     const watchedItems = form.watch("items");
+    const watchedTaxes = form.watch("taxes");
 
-    const calculateTotals = () => {
+    const calculateTotals = useCallback(() => {
         const subtotal = watchedItems.reduce((acc, item) => acc + ((item.quantity || 0) * (item.price || 0)), 0);
-        return { subtotal };
-    }
+        
+        const taxAmounts = (watchedTaxes || []).map(tax => ({
+            ...tax,
+            amount: subtotal * (tax.percentage / 100)
+        }));
 
-    const { subtotal } = calculateTotals();
+        const totalTaxAmount = taxAmounts.reduce((acc, tax) => acc + tax.amount, 0);
+
+        const total = subtotal + totalTaxAmount;
+
+        return { subtotal, taxAmounts, total };
+    }, [watchedItems, watchedTaxes]);
+
+    const { subtotal, taxAmounts, total } = calculateTotals();
 
     async function onSubmit(data: InvoiceFormValues) {
         if (!user) {
@@ -141,7 +168,11 @@ export default function NewInvoicePage() {
             await addInvoice({
                 ...data,
                 client: selectedClient,
-                subtotal: subtotal,
+                subtotal,
+                total,
+                taxes: data.taxes || [],
+                notes: data.notes || '',
+                terms: data.terms || '',
                 userId: user.uid,
             });
 
@@ -174,8 +205,9 @@ export default function NewInvoicePage() {
                     <CardHeader>
                         <CardTitle>{t('newInvoice.title')}</CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-4">
+                    <CardContent className="space-y-8">
+                        {/* Top Section */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             <FormField
                                 control={form.control}
                                 name="clientId"
@@ -198,7 +230,7 @@ export default function NewInvoicePage() {
                                     </FormItem>
                                 )}
                             />
-                            <FormField
+                             <FormField
                                 control={form.control}
                                 name="invoiceNumber"
                                 render={({ field }) => (
@@ -211,86 +243,6 @@ export default function NewInvoicePage() {
                                     </FormItem>
                                 )}
                             />
-                             <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="issueDate"
-                                    render={({ field }) => (
-                                        <FormItem className="flex flex-col">
-                                            <FormLabel>{t('invoices.issueDate')}</FormLabel>
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                <FormControl>
-                                                    <Button
-                                                    variant={"outline"}
-                                                    className={cn(
-                                                        "w-full pl-3 text-left font-normal",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                    >
-                                                    {field.value ? (
-                                                        format(field.value, "PPP", { locale: localeMap[currentLocale as keyof typeof localeMap] || undefined })
-                                                    ) : (
-                                                        <span>{t('newInvoice.pickDate')}</span>
-                                                    )}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                    </Button>
-                                                </FormControl>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={field.value}
-                                                    onSelect={field.onChange}
-                                                    initialFocus
-                                                    locale={localeMap[currentLocale as keyof typeof localeMap] || undefined}
-                                                />
-                                                </PopoverContent>
-                                            </Popover>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                 <FormField
-                                    control={form.control}
-                                    name="dueDate"
-                                    render={({ field }) => (
-                                        <FormItem className="flex flex-col">
-                                            <FormLabel>{t('invoices.dueDate')}</FormLabel>
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                <FormControl>
-                                                    <Button
-                                                    variant={"outline"}
-                                                    className={cn(
-                                                        "w-full pl-3 text-left font-normal",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                    >
-                                                    {field.value ? (
-                                                        format(field.value, "PPP", { locale: localeMap[currentLocale as keyof typeof localeMap] || undefined })
-                                                    ) : (
-                                                        <span>{t('newInvoice.pickDate')}</span>
-                                                    )}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                    </Button>
-                                                </FormControl>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={field.value}
-                                                    onSelect={field.onChange}
-                                                    initialFocus
-                                                    locale={localeMap[currentLocale as keyof typeof localeMap] || undefined}
-                                                />
-                                                </PopoverContent>
-                                            </Popover>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
                             <FormField
                                 control={form.control}
                                 name="status"
@@ -313,91 +265,185 @@ export default function NewInvoicePage() {
                                     </FormItem>
                                 )}
                             />
-                        </div>
-                        <div className="space-y-4">
-                            <FormLabel>{t('newInvoice.items')}</FormLabel>
-                            <div className="space-y-4">
-                                {fields.map((field, index) => (
-                                    <div key={field.id} className="grid grid-cols-[1fr_80px_100px_auto] gap-2 items-start">
-                                        <FormField
-                                            control={form.control}
-                                            name={`items.${index}.description`}
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className="sr-only">Description</FormLabel>
-                                                     <FormControl>
-                                                        <Input placeholder={t('newInvoice.itemDescription')} {...field} />
-                                                     </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name={`items.${index}.quantity`}
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className="sr-only">Quantity</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="number" placeholder={t('newInvoice.itemQuantity')} {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name={`items.${index}.price`}
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className="sr-only">Price</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="number" placeholder={t('newInvoice.itemPrice')} {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                ))}
-                            </div>
-                             <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => append({ description: "", quantity: 1, price: 0 })}
-                            >
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                {t('newInvoice.addItem')}
-                            </Button>
-
-                            <div className="flex justify-end mt-4">
-                                <div className="text-right">
-                                    <p className="text-muted-foreground">{t('newInvoice.subtotal')}</p>
-                                    <p className="font-semibold text-lg">{formatCurrency(subtotal)}</p>
-                                </div>
-                            </div>
                              <FormField
                                 control={form.control}
-                                name="notes"
+                                name="issueDate"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>{t('newInvoice.notes')}</FormLabel>
-                                        <FormControl>
-                                            <Textarea placeholder={t('newInvoice.notesPlaceholder')} {...field} />
-                                        </FormControl>
+                                    <FormItem className="flex flex-col">
+                                        <FormLabel>{t('invoices.issueDate')}</FormLabel>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                            <FormControl>
+                                                <Button
+                                                variant={"outline"}
+                                                className={cn( "w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                                >
+                                                {field.value ? ( format(field.value, "PPP", { locale: localeMap[currentLocale as keyof typeof localeMap] || undefined }) ) : ( <span>{t('newInvoice.pickDate')}</span> )}
+                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={localeMap[currentLocale as keyof typeof localeMap] || undefined} />
+                                            </PopoverContent>
+                                        </Popover>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="dueDate"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-col">
+                                        <FormLabel>{t('invoices.dueDate')}</FormLabel>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                            <FormControl>
+                                                <Button
+                                                variant={"outline"}
+                                                className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground" )}
+                                                >
+                                                {field.value ? ( format(field.value, "PPP", { locale: localeMap[currentLocale as keyof typeof localeMap] || undefined }) ) : ( <span>{t('newInvoice.pickDate')}</span> )}
+                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={localeMap[currentLocale as keyof typeof localeMap] || undefined} />
+                                            </PopoverContent>
+                                        </Popover>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
                         </div>
 
+                        {/* Items Section */}
+                        <div className="space-y-4">
+                            <FormLabel>{t('newInvoice.items')}</FormLabel>
+                             <div className="grid grid-cols-[1fr_100px_120px_120px_auto] gap-2 items-center text-sm font-medium text-muted-foreground px-2">
+                                <span>{t('newInvoice.itemDescription')}</span>
+                                <span className="text-center">{t('newInvoice.itemQuantity')}</span>
+                                <span className="text-right">{t('newInvoice.itemPrice')}</span>
+                                <span className="text-right">Total</span>
+                                <span className="sr-only">Delete</span>
+                            </div>
+                            <div className="space-y-2">
+                                {itemFields.map((field, index) => (
+                                    <div key={field.id} className="grid grid-cols-[1fr_100px_120px_120px_auto] gap-2 items-start">
+                                        <FormField
+                                            control={form.control}
+                                            name={`items.${index}.description`}
+                                            render={({ field }) => (
+                                                <FormItem><FormControl><Input placeholder={t('newInvoice.itemDescription')} {...field} /></FormControl><FormMessage /></FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name={`items.${index}.quantity`}
+                                            render={({ field }) => (
+                                                <FormItem><FormControl><Input type="number" placeholder="1" {...field} className="text-center"/></FormControl><FormMessage /></FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name={`items.${index}.price`}
+                                            render={({ field }) => (
+                                                <FormItem><FormControl><Input type="number" placeholder="0.00" {...field} className="text-right"/></FormControl><FormMessage /></FormItem>
+                                            )}
+                                        />
+                                        <div className="text-right font-medium py-2 px-3">
+                                            {formatCurrency((form.getValues(`items.${index}.quantity`) || 0) * (form.getValues(`items.${index}.price`) || 0))}
+                                        </div>
+                                        <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)}><Trash2 className="h-4 w-4" /></Button>
+                                    </div>
+                                ))}
+                            </div>
+                             <Button type="button" variant="outline" size="sm" onClick={() => appendItem({ description: "", quantity: 1, price: 0 })}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                {t('newInvoice.addItem')}
+                            </Button>
+                        </div>
+
+                        {/* Totals and Notes Section */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                            <div className="space-y-4">
+                                <FormField
+                                    control={form.control}
+                                    name="notes"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>{t('newInvoice.notes')}</FormLabel>
+                                            <FormControl><Textarea placeholder={t('newInvoice.notesPlaceholder')} {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="terms"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>{t('settings.invoicing.defaultTerms')}</FormLabel>
+                                            <FormControl><Textarea placeholder={t('settings.invoicing.defaultTermsPlaceholder')} {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <div className="space-y-4">
+                                <div className="space-y-2 p-4 rounded-lg border">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-muted-foreground">{t('newInvoice.subtotal')}</span>
+                                        <span className="font-medium">{formatCurrency(subtotal)}</span>
+                                    </div>
+
+                                    {taxFields.map((field, index) => (
+                                        <div key={field.id} className="grid grid-cols-[1fr_80px_auto] gap-2 items-center">
+                                            <FormField
+                                                control={form.control}
+                                                name={`taxes.${index}.name`}
+                                                render={({ field }) => <FormItem><FormControl><Input placeholder="Impuesto" {...field} /></FormControl></FormItem>}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name={`taxes.${index}.percentage`}
+                                                render={({ field }) => <FormItem><FormControl><Input type="number" placeholder="%" {...field} className="text-right" /></FormControl></FormItem>}
+                                            />
+                                            <Button type="button" variant="ghost" size="icon" onClick={() => removeTax(index)}><Trash2 className="h-4 w-4" /></Button>
+                                        </div>
+                                    ))}
+                                    {taxAmounts.map((tax, index) => (
+                                        <div key={tax.id} className="flex justify-between items-center">
+                                            <span className="text-muted-foreground">{tax.name} ({tax.percentage}%)</span>
+                                            <span className="font-medium">{formatCurrency(tax.amount)}</span>
+                                        </div>
+                                    ))}
+
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="mt-2"
+                                        onClick={() => appendTax({ id: `tax-${Date.now()}`, name: "", percentage: 0 })}
+                                    >
+                                        <PlusCircle className="mr-2 h-4 w-4" />
+                                        {t('settings.invoicing.addTax')}
+                                    </Button>
+
+                                    <hr className="my-2" />
+                                    <div className="flex justify-between items-center text-lg font-bold">
+                                        <span>Total</span>
+                                        <span>{formatCurrency(total)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </CardContent>
                     <CardFooter className="justify-end gap-2">
-                         <Button variant="outline" type="button" onClick={() => form.reset()} disabled={isSubmitting}>{t('common.cancel')}</Button>
+                         <Button variant="outline" type="button" onClick={() => router.back()} disabled={isSubmitting}>{t('common.cancel')}</Button>
                         <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Guardando..." : t('common.save')}</Button>
                     </CardFooter>
                 </Card>
@@ -405,5 +451,3 @@ export default function NewInvoicePage() {
         </Form>
     )
 }
-
-    

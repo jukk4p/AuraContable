@@ -70,9 +70,9 @@
         "pickDate": "Elige una fecha",
         "selectStatus": "Selecciona un estado",
         "items": "Conceptos",
-        "itemDescription": "Descripción del concepto",
+        "itemDescription": "Descripción",
         "itemQuantity": "Cant.",
-        "itemPrice": "Precio",
+        "itemPrice": "Precio Unit.",
         "addItem": "Añadir Concepto",
         "subtotal": "Subtotal",
         "notes": "Notas",
@@ -142,7 +142,9 @@
             "dateFormat": "Formato de fecha",
             "selectDateFormat": "Selecciona un formato",
             "defaultNotes": "Notas por defecto",
-            "defaultNotesPlaceholder": "Ej: Gracias por su confianza."
+            "defaultNotesPlaceholder": "Ej: Gracias por su confianza.",
+            "defaultTerms": "Términos y condiciones por defecto",
+            "defaultTermsPlaceholder": "Ej: Pago a 30 días."
         },
         "templates": {
             "title": "Plantillas de Email",

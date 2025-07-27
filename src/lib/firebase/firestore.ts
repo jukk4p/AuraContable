@@ -60,6 +60,8 @@ function isInvoice(doc: DocumentData): doc is Omit<Invoice, 'id' | 'issueDate' |
         typeof doc.clientId === 'string' &&
         Array.isArray(doc.items) &&
         typeof doc.subtotal === 'number' &&
+        typeof doc.total === 'number' &&
+        Array.isArray(doc.taxes) &&
         ['Paid', 'Pending', 'Overdue'].includes(doc.status) &&
         doc.issueDate instanceof Timestamp &&
         doc.dueDate instanceof Timestamp &&

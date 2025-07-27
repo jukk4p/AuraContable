@@ -44,7 +44,7 @@ export default function DashboardPage() {
     const dashboardData = React.useMemo(() => {
         const totalRevenue = invoices
             .filter(inv => inv.status === 'Paid')
-            .reduce((sum, inv) => sum + inv.subtotal, 0);
+            .reduce((sum, inv) => sum + inv.total, 0);
 
         const paidInvoices = invoices.filter(inv => inv.status === 'Paid').length;
         const pendingInvoices = invoices.filter(inv => inv.status === 'Pending').length;
@@ -175,7 +175,7 @@ export default function DashboardPage() {
                                     </div>
                                 </TableCell>
                                 <TableCell className="hidden md:table-cell">{invoice.invoiceNumber}</TableCell>
-                                <TableCell>{formatCurrency(invoice.subtotal)}</TableCell>
+                                <TableCell>{formatCurrency(invoice.total)}</TableCell>
                                 <TableCell>
                                     <InvoiceStatusBadge status={invoice.status} />
                                 </TableCell>

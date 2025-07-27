@@ -7,6 +7,7 @@ export type Client = {
   email: string;
   avatarUrl: string;
   userId: string;
+  // TODO: Add address, taxId, country fields to client form and data
 };
 
 export type InvoiceItem = {
@@ -15,17 +16,26 @@ export type InvoiceItem = {
   price: number;
 };
 
+export type InvoiceTax = {
+  id: string; // e.g., 'iva-21'
+  name: string; // e.g., 'IVA'
+  percentage: number; // e.g., 21
+}
+
 export type Invoice = {
   id: string;
   invoiceNumber: string;
   client: Client;
   clientId: string;
   items: InvoiceItem[];
+  taxes: InvoiceTax[];
   subtotal: number;
+  total: number;
   status: InvoiceStatus;
   issueDate: Date;
   dueDate: Date;
   notes: string;
+  terms: string;
   userId: string;
 };
 
@@ -58,4 +68,7 @@ export type CompanyProfile = {
     iban: string;
     fiscalData: string;
     logoUrl?: string;
+    country?: string;
+    terms?: string;
+    defaultTaxes?: InvoiceTax[];
 }

@@ -220,8 +220,8 @@ export default function InvoiceList() {
                                     </Button>
                                 </TableHead>
                                 <TableHead>
-                                    <Button variant="ghost" onClick={() => requestSort('subtotal')}>
-                                        {t('invoices.amount')} {getSortIcon('subtotal')}
+                                    <Button variant="ghost" onClick={() => requestSort('total')}>
+                                        {t('invoices.amount')} {getSortIcon('total')}
                                     </Button>
                                 </TableHead>
                                 <TableHead>
@@ -252,7 +252,7 @@ export default function InvoiceList() {
                                         </div>
                                     </TableCell>
                                     <TableCell>{invoice.invoiceNumber}</TableCell>
-                                    <TableCell>{formatCurrency(invoice.subtotal)}</TableCell>
+                                    <TableCell>{formatCurrency(invoice.total)}</TableCell>
                                     <TableCell>
                                         <InvoiceStatusBadge status={invoice.status} />
                                     </TableCell>
