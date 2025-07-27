@@ -47,3 +47,15 @@ export type DashboardData = {
     pendingInvoices: number;
     overdueInvoices: number;
 }
+
+export type CompanyProfile = {
+    id?: string;
+    userId: string;
+    name: string;
+    taxId: string;
+    address: string;
+    billingEmail: string;
+    iban: string;
+    fiscalData: string;
+    logoUrl?: string;
+}

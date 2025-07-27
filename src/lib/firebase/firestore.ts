@@ -1,9 +1,9 @@
 
 "use server"
 
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, DocumentData, QueryDocumentSnapshot, Timestamp } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, DocumentData, QueryDocumentSnapshot, Timestamp, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./config";
-import type { Client, Invoice, Expense } from "@/lib/types";
+import type { Client, Invoice, Expense, CompanyProfile } from "@/lib/types";
 
 // Type guard for Client
 function isClient(doc: DocumentData): doc is Client {
@@ -150,4 +150,22 @@ export async function updateExpense(expenseId: string, expense: Partial<Omit<Exp
 
 export async function deleteExpense(expenseId: string): Promise<void> {
     await deleteDoc(doc(db, "expenses", expenseId));
+}
+
+// Company Profile functions
+export async function getCompanyProfile(userId: string): Promise<CompanyProfile | null> {
+    if (!userId) return null;
+    const docRef = doc(db, "companyProfiles", userId);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as CompanyProfile;
+    } else {
+        return null;
+    }
+}
+
+export async function saveCompanyProfile(profile: Omit<CompanyProfile, 'id'>): Promise<void> {
+    const docRef = doc(db, "companyProfiles", profile.userId);
+    await setDoc(docRef, profile, { merge: true });
 }

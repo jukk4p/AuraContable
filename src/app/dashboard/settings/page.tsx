@@ -18,6 +18,8 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/lib/firebase/config";
 import { updateProfile, updateEmail } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
+import type { CompanyProfile } from "@/lib/types";
+import { getCompanyProfile, saveCompanyProfile } from "@/lib/firebase/firestore";
 
 
 export default function SettingsPage() {
@@ -106,9 +108,6 @@ function ProfileSettings() {
             }
             if (email !== user.email) {
                 await updateEmail(user, email);
-                // Note: updating email might require re-authentication.
-                // For simplicity, we'll assume it works directly here.
-                // In a production app, handle re-authentication errors.
             }
             toast({
                 title: "Perfil actualizado",
@@ -172,49 +171,102 @@ function ProfileSettings() {
 
 function CompanySettings() {
     const { t } = useLocale();
+    const [user, loading] = useAuthState(auth);
+    const { toast } = useToast();
+    const [profile, setProfile] = useState<Omit<CompanyProfile, 'id' | 'userId'>>({
+        name: '', taxId: '', address: '', billingEmail: '', iban: '', fiscalData: ''
+    });
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        async function fetchProfile() {
+            if (user) {
+                setIsLoading(true);
+                const existingProfile = await getCompanyProfile(user.uid);
+                if (existingProfile) {
+                    setProfile(existingProfile);
+                }
+                setIsLoading(false);
+            }
+        }
+        fetchProfile();
+    }, [user]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setProfile({ ...profile, [e.target.id]: e.target.value });
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user) return;
+        setIsSaving(true);
+        try {
+            await saveCompanyProfile({ ...profile, userId: user.uid });
+            toast({
+                title: "Perfil de empresa guardado",
+                description: "La información de tu empresa se ha actualizado correctamente.",
+            });
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Hubo un problema al guardar el perfil de la empresa.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    if (loading || isLoading) {
+        return <p>Cargando datos de la empresa...</p>
+    }
+
     return (
         <Card>
-            <CardHeader>
-                <CardTitle>{t('settings.company.title')}</CardTitle>
-                <CardDescription>{t('settings.company.description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="company-name">{t('settings.company.name')}</Label>
-                        <Input id="company-name" placeholder="Acme Inc." />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="company-tax-id">{t('settings.company.taxId')}</Label>
-                        <Input id="company-tax-id" placeholder="ESB12345678" />
-                    </div>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="company-address">{t('settings.company.address')}</Label>
-                    <Input id="company-address" placeholder="123 Main St, Anytown" />
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                     <div className="space-y-2">
-                        <Label htmlFor="company-billing-email">{t('settings.company.billingEmail')}</Label>
-                        <Input id="company-billing-email" type="email" placeholder="billing@acme.com" />
+            <form onSubmit={handleSubmit}>
+                <CardHeader>
+                    <CardTitle>{t('settings.company.title')}</CardTitle>
+                    <CardDescription>{t('settings.company.description')}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="name">{t('settings.company.name')}</Label>
+                            <Input id="name" placeholder="Acme Inc." value={profile.name} onChange={handleChange} disabled={isSaving}/>
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="taxId">{t('settings.company.taxId')}</Label>
+                            <Input id="taxId" placeholder="ESB12345678" value={profile.taxId} onChange={handleChange} disabled={isSaving}/>
+                        </div>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="company-iban">{t('settings.company.iban')}</Label>
-                        <Input id="company-iban" placeholder="ES91 2100 0418 4502 0005 1332" />
+                        <Label htmlFor="address">{t('settings.company.address')}</Label>
+                        <Input id="address" placeholder="123 Main St, Anytown" value={profile.address} onChange={handleChange} disabled={isSaving}/>
                     </div>
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="company-fiscal-data">{t('settings.company.fiscalData')}</Label>
-                    <Textarea id="company-fiscal-data" placeholder={t('settings.company.fiscalDataPlaceholder')} />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="company-logo">{t('settings.company.logo')}</Label>
-                    <Input id="company-logo" type="file" />
-                </div>
-            </CardContent>
-            <CardFooter>
-                <Button>{t('common.saveChanges')}</Button>
-            </CardFooter>
+                    <div className="grid md:grid-cols-2 gap-4">
+                         <div className="space-y-2">
+                            <Label htmlFor="billingEmail">{t('settings.company.billingEmail')}</Label>
+                            <Input id="billingEmail" type="email" placeholder="billing@acme.com" value={profile.billingEmail} onChange={handleChange} disabled={isSaving}/>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="iban">{t('settings.company.iban')}</Label>
+                            <Input id="iban" placeholder="ES91 2100 0418 4502 0005 1332" value={profile.iban} onChange={handleChange} disabled={isSaving}/>
+                        </div>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="fiscalData">{t('settings.company.fiscalData')}</Label>
+                        <Textarea id="fiscalData" placeholder={t('settings.company.fiscalDataPlaceholder')} value={profile.fiscalData} onChange={handleChange} disabled={isSaving}/>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="company-logo">{t('settings.company.logo')}</Label>
+                        <Input id="company-logo" type="file" disabled={isSaving} />
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button type="submit" disabled={isSaving}>{isSaving ? "Guardando..." : t('common.saveChanges')}</Button>
+                </CardFooter>
+            </form>
         </Card>
     )
 }
@@ -464,5 +516,3 @@ function AppearanceSettings() {
         </Card>
     )
 }
-
-    
