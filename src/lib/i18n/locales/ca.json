@@ -141,6 +141,21 @@
             "defaultNotes": "Notes per defecte",
             "defaultNotesPlaceholder": "Ex: Gràcies per la seva confiança."
         },
+        "templates": {
+            "title": "Plantilles d'Email",
+            "description": "Personalitza els correus electrònics que s'envien als teus clients.",
+            "newInvoice": {
+                "title": "Email de nova factura",
+                "subjectPlaceholder": "Assumpte: Factura {{invoiceNumber}} de La Teva Empresa",
+                "bodyPlaceholder": "Cos del correu electrònic..."
+            },
+            "reminder": {
+                "title": "Email de recordatori de pagament",
+                "subjectPlaceholder": "Assumpte: Recordatori de pagament de la factura {{invoiceNumber}}",
+                "bodyPlaceholder": "Cos del correu electrònic..."
+            },
+            "variablesInfo": "Pots utilitzar les següents variables:"
+        },
         "security": {
             "title": "Seguretat",
             "description": "Gestiona la configuració de seguretat del teu compte.",

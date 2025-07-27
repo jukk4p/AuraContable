@@ -141,6 +141,21 @@
             "defaultNotes": "Note predefinite",
             "defaultNotesPlaceholder": "Es: Grazie per la vostra fiducia."
         },
+        "templates": {
+            "title": "Modelli di email",
+            "description": "Personalizza le email inviate ai tuoi clienti.",
+            "newInvoice": {
+                "title": "Email di nuova fattura",
+                "subjectPlaceholder": "Oggetto: Fattura {{invoiceNumber}} da La Tua Azienda",
+                "bodyPlaceholder": "Corpo dell'email..."
+            },
+            "reminder": {
+                "title": "Email di promemoria di pagamento",
+                "subjectPlaceholder": "Oggetto: Promemoria di pagamento per la fattura {{invoiceNumber}}",
+                "bodyPlaceholder": "Corpo dell'email..."
+            },
+            "variablesInfo": "Puoi usare le seguenti variabili:"
+        },
         "security": {
             "title": "Sicurezza",
             "description": "Gestisci le impostazioni di sicurezza del tuo account.",

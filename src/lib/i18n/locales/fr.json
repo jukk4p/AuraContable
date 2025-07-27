@@ -141,6 +141,21 @@
             "defaultNotes": "Notes par défaut",
             "defaultNotesPlaceholder": "Ex: Merci pour votre confiance."
         },
+        "templates": {
+            "title": "Modèles d'e-mails",
+            "description": "Personnalisez les e-mails envoyés à vos clients.",
+            "newInvoice": {
+                "title": "E-mail de nouvelle facture",
+                "subjectPlaceholder": "Objet : Facture {{invoiceNumber}} de Votre Entreprise",
+                "bodyPlaceholder": "Corps de l'e-mail..."
+            },
+            "reminder": {
+                "title": "E-mail de rappel de paiement",
+                "subjectPlaceholder": "Objet : Rappel de paiement pour la facture {{invoiceNumber}}",
+                "bodyPlaceholder": "Corps de l'e-mail..."
+            },
+            "variablesInfo": "Vous pouvez utiliser les variables suivantes :"
+        },
         "security": {
             "title": "Sécurité",
             "description": "Gérez les paramètres de sécurité de votre compte.",

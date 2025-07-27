@@ -141,6 +141,21 @@
             "defaultNotes": "Default notes",
             "defaultNotesPlaceholder": "E.g. Thank you for your business."
         },
+        "templates": {
+            "title": "Email Templates",
+            "description": "Customize the emails that are sent to your customers.",
+            "newInvoice": {
+                "title": "New invoice email",
+                "subjectPlaceholder": "Subject: Invoice {{invoiceNumber}} from Your Company",
+                "bodyPlaceholder": "Email body..."
+            },
+            "reminder": {
+                "title": "Payment reminder email",
+                "subjectPlaceholder": "Subject: Payment reminder for invoice {{invoiceNumber}}",
+                "bodyPlaceholder": "Email body..."
+            },
+            "variablesInfo": "You can use the following variables:"
+        },
         "security": {
             "title": "Security",
             "description": "Manage your account security settings.",

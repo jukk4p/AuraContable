@@ -141,6 +141,21 @@
             "defaultNotes": "Notas por defecto",
             "defaultNotesPlaceholder": "Ej: Gracias por su confianza."
         },
+        "templates": {
+            "title": "Plantillas de Email",
+            "description": "Personaliza los emails que se envían a tus clientes.",
+            "newInvoice": {
+                "title": "Email de nueva factura",
+                "subjectPlaceholder": "Asunto: Factura {{invoiceNumber}} de Tu Empresa",
+                "bodyPlaceholder": "Cuerpo del email..."
+            },
+            "reminder": {
+                "title": "Email de recordatorio de pago",
+                "subjectPlaceholder": "Asunto: Recordatorio de pago de la factura {{invoiceNumber}}",
+                "bodyPlaceholder": "Cuerpo del email..."
+            },
+            "variablesInfo": "Puedes usar las siguientes variables:"
+        },
         "security": {
             "title": "Seguridad",
             "description": "Gestiona los ajustes de seguridad de tu cuenta.",

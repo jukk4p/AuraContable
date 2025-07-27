@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import type { Locale } from "@/lib/i18n/locales";
-import { Building, Languages, Shield, User, Bell, Palette, FileText, Moon, Sun, Monitor, PlusCircle, Trash2 } from "lucide-react";
+import { Building, Languages, Shield, User, Bell, Palette, FileText, Moon, Sun, Monitor, PlusCircle, Trash2, Mail } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Switch } from "@/components/ui/switch";
 
@@ -22,10 +22,11 @@ export default function SettingsPage() {
         { value: "profile", label: t('settings.profile.title'), icon: User },
         { value: "company", label: t('settings.company.title'), icon: Building },
         { value: "invoicing", label: t('settings.invoicing.title'), icon: FileText },
-        { value: "security", label: t('settings.security.title'), icon: Shield },
-        { value: "notifications", label: t('settings.notifications.title'), icon: Bell },
+        { value: "templates", label: t('settings.templates.title'), icon: Mail },
         { value: "appearance", label: t('settings.appearance.title'), icon: Palette },
+        { value: "notifications", label: t('settings.notifications.title'), icon: Bell },
         { value: "language", label: t('settings.language.title'), icon: Languages },
+        { value: "security", label: t('settings.security.title'), icon: Shield },
     ];
 
     return (
@@ -51,6 +52,9 @@ export default function SettingsPage() {
                     </TabsContent>
                     <TabsContent value="invoicing" className="m-0">
                         <InvoicingSettings />
+                    </TabsContent>
+                    <TabsContent value="templates" className="m-0">
+                        <TemplateSettings />
                     </TabsContent>
                     <TabsContent value="security" className="m-0">
                         <SecuritySettings />
@@ -228,6 +232,37 @@ function InvoicingSettings() {
     );
 }
 
+function TemplateSettings() {
+    const { t } = useLocale();
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>{t('settings.templates.title')}</CardTitle>
+                <CardDescription>{t('settings.templates.description')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="space-y-2">
+                    <Label>{t('settings.templates.newInvoice.title')}</Label>
+                    <Input placeholder={t('settings.templates.newInvoice.subjectPlaceholder')} />
+                    <Textarea rows={5} placeholder={t('settings.templates.newInvoice.bodyPlaceholder')} />
+                </div>
+                 <div className="space-y-2">
+                    <Label>{t('settings.templates.reminder.title')}</Label>
+                    <Input placeholder={t('settings.templates.reminder.subjectPlaceholder')} />
+                    <Textarea rows={5} placeholder={t('settings.templates.reminder.bodyPlaceholder')} />
+                </div>
+                <div>
+                    <p className="text-sm text-muted-foreground">{t('settings.templates.variablesInfo')}</p>
+                    <p className="text-sm font-mono text-muted-foreground">{"{{clientName}} {{invoiceNumber}} {{invoiceTotal}} {{dueDate}}"}</p>
+                </div>
+            </CardContent>
+            <CardFooter>
+                <Button>{t('common.saveChanges')}</Button>
+            </CardFooter>
+        </Card>
+    )
+}
+
 
 function SecuritySettings() {
     const { t } = useLocale();
@@ -361,5 +396,3 @@ function AppearanceSettings() {
         </Card>
     )
 }
-
-    
