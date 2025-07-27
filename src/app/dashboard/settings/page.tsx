@@ -220,7 +220,7 @@ function LanguageSettings() {
 
 function AppearanceSettings() {
     const { t } = useLocale();
-    const { setTheme } = useTheme();
+    const { theme, setTheme } = useTheme();
 
     return (
         <Card>
@@ -229,20 +229,33 @@ function AppearanceSettings() {
                 <CardDescription>{t('settings.appearance.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                <Label>{t('settings.appearance.theme')}</Label>
-                <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setTheme("light")}>
-                        <Sun className="mr-2" />
-                        {t('settings.appearance.light')}
-                    </Button>
-                    <Button variant="outline" onClick={() => setTheme("dark")}>
-                        <Moon className="mr-2" />
-                        {t('settings.appearance.dark')}
-                    </Button>
-                    <Button variant="outline" onClick={() => setTheme("system")}>
-                        <Monitor className="mr-2" />
-                        {t('settings.appearance.system')}
-                    </Button>
+                <div className="w-full max-w-xs space-y-2">
+                    <Label htmlFor="theme-select">{t('settings.appearance.theme')}</Label>
+                     <Select value={theme} onValueChange={setTheme}>
+                        <SelectTrigger id="theme-select">
+                            <SelectValue placeholder={t('settings.appearance.theme')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="light">
+                                <div className="flex items-center gap-2">
+                                    <Sun className="h-4 w-4"/>
+                                    {t('settings.appearance.light')}
+                                </div>
+                            </SelectItem>
+                            <SelectItem value="dark">
+                                <div className="flex items-center gap-2">
+                                    <Moon className="h-4 w-4"/>
+                                    {t('settings.appearance.dark')}
+                                </div>
+                            </SelectItem>
+                            <SelectItem value="system">
+                                <div className="flex items-center gap-2">
+                                    <Monitor className="h-4 w-4"/>
+                                    {t('settings.appearance.system')}
+                                </div>
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
             </CardContent>
         </Card>
