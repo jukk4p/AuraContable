@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { MoreHorizontal, PlusCircle, CalendarIcon } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, CalendarIcon, AlertCircle, MailWarning } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -18,28 +18,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-
-interface Expense {
-    id: string;
-    date: Date;
-    category: string;
-    provider: string;
-    description: string;
-    amount: number;
-    tax: number;
-}
-
-// Mock data for expenses - replace with real data from Firestore
-const initialExpenses: Expense[] = [
-  { id: 'exp-1', date: new Date('2024-07-15'), category: 'Software', provider: 'Adobe', description: 'Creative Cloud Subscription', amount: 59.99, tax: 12.60 },
-  { id: 'exp-2', date: new Date('2024-07-12'), category: 'Office Supplies', provider: 'Amazon', description: 'Printer Paper', amount: 25.50, tax: 5.36 },
-  { id: 'exp-3', date: new Date('2024-07-10'), category: 'Travel', provider: 'Uber', description: 'Trip to client meeting', amount: 35.00, tax: 7.35 },
-  { id: 'exp-4', date: new Date('2024-06-28'), category: 'Marketing', provider: 'Google Ads', description: 'Ad Campaign', amount: 250.00, tax: 52.50 },
-];
+import type { Expense } from '@/lib/types';
+import { auth } from '@/lib/firebase/config';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { getExpenses, addExpense, updateExpense, deleteExpense } from '@/lib/firebase/firestore';
+import { toast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const expenseCategories = ['Software', 'Marketing', 'Office Supplies', 'Travel', 'Utilities', 'Other'];
 
-function ExpenseForm({ expense, onSave, onCancel }: { expense?: Expense | null, onSave: (expense: Omit<Expense, 'id'> & { id?: string }) => void, onCancel: () => void }) {
+function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: Expense | null, onSave: (expense: Omit<Expense, 'id' | 'userId'> & { id?: string }) => void, onCancel: () => void, isSaving: boolean }) {
     const { t, locale } = useLocale();
     const [date, setDate] = useState<Date | undefined>(expense?.date || new Date());
     const [category, setCategory] = useState(expense?.category || '');
@@ -68,7 +56,7 @@ function ExpenseForm({ expense, onSave, onCancel }: { expense?: Expense | null, 
         <form onSubmit={handleSubmit}>
             <DialogHeader>
                 <DialogTitle>{expense ? t('common.edit') + ' ' + t('nav.expenses') : t('expenses.addNewExpense')}</DialogTitle>
-                <DialogDescription>{expense ? t('expenses.addNewExpenseDescription') : t('expenses.addNewExpenseDescription')}</DialogDescription>
+                <DialogDescription>{t('expenses.addNewExpenseDescription')}</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
                 <div className="space-y-2">
@@ -78,6 +66,7 @@ function ExpenseForm({ expense, onSave, onCancel }: { expense?: Expense | null, 
                             <Button
                                 variant={"outline"}
                                 className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
+                                disabled={isSaving}
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {date ? format(date, "PPP", { locale: localeMap[locale as keyof typeof localeMap] || undefined }) : <span>{t('newInvoice.pickDate')}</span>}
@@ -90,7 +79,7 @@ function ExpenseForm({ expense, onSave, onCancel }: { expense?: Expense | null, 
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="category">{t('expenses.category')}</Label>
-                     <Select value={category} onValueChange={setCategory}>
+                     <Select value={category} onValueChange={setCategory} disabled={isSaving}>
                         <SelectTrigger>
                             <SelectValue placeholder={t('expenses.selectCategory')} />
                         </SelectTrigger>
@@ -101,30 +90,30 @@ function ExpenseForm({ expense, onSave, onCancel }: { expense?: Expense | null, 
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="provider">{t('expenses.provider')}</Label>
-                    <Input id="provider" value={provider} onChange={e => setProvider(e.target.value)} placeholder="e.g. Amazon, Google" required />
+                    <Input id="provider" value={provider} onChange={e => setProvider(e.target.value)} placeholder="e.g. Amazon, Google" required disabled={isSaving}/>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="description">{t('expenses.description')}</Label>
-                    <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder={t('expenses.descriptionPlaceholder')} required />
+                    <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder={t('expenses.descriptionPlaceholder')} required disabled={isSaving}/>
                 </div>
                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="amount">{t('expenses.amount')}</Label>
-                        <Input id="amount" type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" required />
+                        <Input id="amount" type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" required disabled={isSaving}/>
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="tax">{t('expenses.tax')}</Label>
-                        <Input id="tax" type="number" value={tax} onChange={e => setTax(e.target.value)} placeholder="0.00" required />
+                        <Input id="tax" type="number" value={tax} onChange={e => setTax(e.target.value)} placeholder="0.00" required disabled={isSaving}/>
                     </div>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="attachment">{t('expenses.attachment')}</Label>
-                    <Input id="attachment" type="file" />
+                    <Input id="attachment" type="file" disabled={isSaving}/>
                 </div>
             </div>
             <DialogFooter>
-                <Button type="button" variant="outline" onClick={onCancel}>{t('common.cancel')}</Button>
-                <Button type="submit">{t('common.save')}</Button>
+                <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving}>{t('common.cancel')}</Button>
+                <Button type="submit" disabled={isSaving}>{isSaving ? t('common.save') + "..." : t('common.save')}</Button>
             </DialogFooter>
         </form>
     )
@@ -132,12 +121,37 @@ function ExpenseForm({ expense, onSave, onCancel }: { expense?: Expense | null, 
 
 export default function ExpensesPage() {
     const { t, formatCurrency, locale } = useLocale();
-    const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
+    const [user, authLoading, authError] = useAuthState(auth);
+    const [expenses, setExpenses] = useState<Expense[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+    const [dbLoading, setDbLoading] = useState(true);
+    const [dbError, setDbError] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     const localeMap = { es: es };
+
+    useEffect(() => {
+        const fetchExpenses = async () => {
+            if (user && user.emailVerified) {
+                setDbLoading(true);
+                setDbError(null);
+                try {
+                    const userExpenses = await getExpenses(user.uid);
+                    setExpenses(userExpenses);
+                } catch (e: any) {
+                    console.error("Error fetching expenses: ", e);
+                    setDbError("Ha ocurrido un error al cargar los gastos.");
+                } finally {
+                    setDbLoading(false);
+                }
+            } else if (!authLoading) {
+                setDbLoading(false);
+            }
+        };
+        fetchExpenses();
+    }, [user, authLoading]);
 
     const filteredExpenses = useMemo(() => {
         return expenses.filter(expense =>
@@ -146,22 +160,44 @@ export default function ExpensesPage() {
         );
     }, [searchTerm, expenses]);
 
-    const handleSaveExpense = (expenseData: Omit<Expense, 'id'> & { id?: string }) => {
-        if (expenseData.id) {
-            setExpenses(expenses.map(e => e.id === expenseData.id ? { ...e, ...expenseData } as Expense : e));
-        } else {
-            const newExpense: Expense = {
-                id: `exp-${Date.now()}`,
-                ...expenseData,
-            } as Expense;
-            setExpenses([...expenses, newExpense]);
+    const handleSaveExpense = async (expenseData: Omit<Expense, 'id' | 'userId'> & { id?: string }) => {
+        if (!user || !user.emailVerified) {
+            toast({ title: "Error", description: "Debes iniciar sesión y verificar tu correo para realizar esta acción.", variant: "destructive" });
+            return;
         }
-        setIsFormOpen(false);
-        setEditingExpense(null);
+
+        setIsSaving(true);
+        try {
+            if (expenseData.id) {
+                const updatedData = { ...expenseData };
+                delete updatedData.id;
+                await updateExpense(expenseData.id, updatedData as Omit<Expense, 'id' | 'userId'>);
+                setExpenses(expenses.map(e => e.id === expenseData.id ? { ...e, ...updatedData } as Expense : e));
+                toast({ title: "Gasto Actualizado", description: "El gasto ha sido actualizado." });
+            } else {
+                const newExpenseData = { ...expenseData, userId: user.uid };
+                const newExpense = await addExpense(newExpenseData as Omit<Expense, 'id'>);
+                setExpenses([...expenses, newExpense]);
+                toast({ title: "Gasto Añadido", description: "El nuevo gasto ha sido añadido." });
+            }
+            handleCloseForm();
+        } catch (error) {
+            console.error("Error saving expense: ", error);
+            toast({ title: "Error", description: "Hubo un problema al guardar el gasto.", variant: "destructive" });
+        } finally {
+            setIsSaving(false);
+        }
     };
 
-    const handleDeleteExpense = (expenseId: string) => {
-        setExpenses(expenses.filter(e => e.id !== expenseId));
+    const handleDeleteExpense = async (expenseId: string) => {
+        try {
+            await deleteExpense(expenseId);
+            setExpenses(expenses.filter(e => e.id !== expenseId));
+            toast({ title: "Gasto Eliminado", description: "El gasto ha sido eliminado." });
+        } catch (error) {
+            console.error("Error deleting expense: ", error);
+            toast({ title: "Error", description: "Hubo un problema al eliminar el gasto.", variant: "destructive" });
+        }
     };
 
     const handleOpenForm = (expense: Expense | null = null) => {
@@ -173,6 +209,29 @@ export default function ExpensesPage() {
         setIsFormOpen(false);
         setEditingExpense(null);
     };
+    
+    if (authLoading) return <p>Cargando...</p>;
+    if (authError) return <p>Error de autenticación: {authError.message}</p>;
+    if (!user) {
+        return (
+           <Alert variant="destructive">
+               <AlertCircle className="h-4 w-4" />
+               <AlertTitle>Acceso Denegado</AlertTitle>
+               <AlertDescription>Debes iniciar sesión para ver esta página.</AlertDescription>
+           </Alert>
+       )
+    }
+    if (!user.emailVerified) {
+       return (
+           <Alert variant="destructive">
+               <MailWarning className="h-4 w-4" />
+               <AlertTitle>Verifica tu correo electrónico</AlertTitle>
+               <AlertDescription>
+                   Hemos enviado un correo de verificación a tu dirección. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta y poder continuar.
+               </AlertDescription>
+           </Alert>
+       )
+    }
 
     return (
         <Card>
@@ -186,62 +245,75 @@ export default function ExpensesPage() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-64"
                         />
-                        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                        <Dialog open={isFormOpen} onOpenChange={(isOpen) => { if(!isOpen) handleCloseForm(); else setIsFormOpen(true); }}>
                             <DialogTrigger asChild>
-                                <Button onClick={() => handleOpenForm()}>
+                                <Button onClick={() => handleOpenForm()} disabled={isSaving || authLoading}>
                                     <PlusCircle className="w-4 h-4 mr-2" />
                                     {t('expenses.newExpense')}
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={handleCloseForm}>
-                                <ExpenseForm expense={editingExpense} onSave={handleSaveExpense} onCancel={handleCloseForm} />
+                            <DialogContent className="sm:max-w-md" onInteractOutside={(e) => { if(isFormOpen) e.preventDefault()}} onEscapeKeyDown={handleCloseForm}>
+                                <ExpenseForm expense={editingExpense} onSave={handleSaveExpense} onCancel={handleCloseForm} isSaving={isSaving} />
                             </DialogContent>
                         </Dialog>
                     </div>
                 </div>
             </CardHeader>
             <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>{t('expenses.date')}</TableHead>
-                            <TableHead>{t('expenses.category')}</TableHead>
-                            <TableHead>{t('expenses.provider')}</TableHead>
-                            <TableHead>{t('expenses.amount')}</TableHead>
-                            <TableHead>
-                                <span className="sr-only">{t('common.actions')}</span>
-                            </TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredExpenses.map((expense) => (
-                            <TableRow key={expense.id}>
-                                <TableCell>{format(expense.date, 'PPP', { locale: localeMap[locale as keyof typeof localeMap] || undefined })}</TableCell>
-                                <TableCell>{expense.category}</TableCell>
-                                <TableCell className="font-medium">{expense.provider}</TableCell>
-                                <TableCell>{formatCurrency(expense.amount)}</TableCell>
-                                <TableCell>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">{t('common.toggleMenu')}</span>
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
-                                            <DropdownMenuItem onClick={() => handleOpenForm(expense)}>{t('common.edit')}</DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleDeleteExpense(expense.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">{t('common.delete')}</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
+                {dbLoading && <p>Cargando gastos...</p>}
+                {dbError && (
+                    <Alert variant="destructive" className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Error de Conexión</AlertTitle>
+                        <AlertDescription>{dbError}</AlertDescription>
+                    </Alert>
+                )}
+                {!dbLoading && !dbError && (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>{t('expenses.date')}</TableHead>
+                                <TableHead>{t('expenses.category')}</TableHead>
+                                <TableHead>{t('expenses.provider')}</TableHead>
+                                <TableHead>{t('expenses.amount')}</TableHead>
+                                <TableHead>
+                                    <span className="sr-only">{t('common.actions')}</span>
+                                </TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredExpenses.map((expense) => (
+                                <TableRow key={expense.id}>
+                                    <TableCell>{format(expense.date, 'PPP', { locale: localeMap[locale as keyof typeof localeMap] || undefined })}</TableCell>
+                                    <TableCell>{expense.category}</TableCell>
+                                    <TableCell className="font-medium">{expense.provider}</TableCell>
+                                    <TableCell>{formatCurrency(expense.amount)}</TableCell>
+                                    <TableCell>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                    <span className="sr-only">{t('common.toggleMenu')}</span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
+                                                <DropdownMenuItem onClick={() => handleOpenForm(expense)}>{t('common.edit')}</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleDeleteExpense(expense.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">{t('common.delete')}</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+                 {!dbError && !dbLoading && filteredExpenses.length === 0 && (
+                    <div className="text-center py-10">
+                        <p className="text-muted-foreground">No tienes gastos registrados.</p>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );
 }
-
-    

@@ -1,5 +1,4 @@
 
-
 export type InvoiceStatus = 'Paid' | 'Pending' | 'Overdue';
 
 export type Client = {
@@ -29,6 +28,17 @@ export type Invoice = {
   notes: string;
   userId: string;
 };
+
+export type Expense = {
+    id: string;
+    date: Date;
+    category: string;
+    provider: string;
+    description: string;
+    amount: number;
+    tax: number;
+    userId: string;
+}
 
 export type DashboardData = {
     totalRevenue: number;

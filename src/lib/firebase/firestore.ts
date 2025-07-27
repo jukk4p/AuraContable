@@ -3,7 +3,7 @@
 
 import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, DocumentData, QueryDocumentSnapshot, Timestamp } from "firebase/firestore";
 import { db } from "./config";
-import type { Client, Invoice, InvoiceItem } from "@/lib/types";
+import type { Client, Invoice, Expense } from "@/lib/types";
 
 // Type guard for Client
 function isClient(doc: DocumentData): doc is Client {
@@ -104,3 +104,50 @@ export async function deleteInvoice(invoiceId: string): Promise<void> {
     await deleteDoc(doc(db, "invoices", invoiceId));
 }
 
+// Type guard for Expense
+function isExpense(doc: DocumentData): doc is Omit<Expense, 'id' | 'date'> & { date: Timestamp } {
+    return (
+        doc.date instanceof Timestamp &&
+        typeof doc.category === 'string' &&
+        typeof doc.provider === 'string' &&
+        typeof doc.description === 'string' &&
+        typeof doc.amount === 'number' &&
+        typeof doc.tax === 'number' &&
+        typeof doc.userId === 'string'
+    );
+}
+
+// Helper to convert snapshot to Expense
+const expenseFromSnapshot = (snapshot: QueryDocumentSnapshot<DocumentData>): Expense => {
+    const data = snapshot.data();
+    if (!isExpense(data)) {
+        throw new Error("Invalid expense data from Firestore.");
+    }
+    return {
+        id: snapshot.id,
+        ...data,
+        date: data.date.toDate(),
+    };
+};
+
+// Expense functions
+export async function getExpenses(userId: string): Promise<Expense[]> {
+    if (!userId) return [];
+    const q = query(collection(db, "expenses"), where("userId", "==", userId));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(expenseFromSnapshot);
+}
+
+export async function addExpense(expense: Omit<Expense, 'id'>): Promise<Expense> {
+    const docRef = await addDoc(collection(db, "expenses"), expense);
+    return { id: docRef.id, ...expense };
+}
+
+export async function updateExpense(expenseId: string, expense: Partial<Omit<Expense, 'id'>>): Promise<void> {
+    const expenseRef = doc(db, "expenses", expenseId);
+    await updateDoc(expenseRef, expense);
+}
+
+export async function deleteExpense(expenseId: string): Promise<void> {
+    await deleteDoc(doc(db, "expenses", expenseId));
+}
