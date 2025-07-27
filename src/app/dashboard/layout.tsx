@@ -36,7 +36,7 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
   const [user, loading, error] = useAuthState(auth);
 
   const navItems = [
-    { href: "/dashboard", icon: LayoutGrid, label: t('nav.dashboard') },
+    { href: "/dashboard", icon: LayoutGrid, label: t('nav.dashboard'), exact: true },
     { href: "/dashboard/invoices", icon: FileText, label: t('nav.invoices') },
     { href: "/dashboard/clients", icon: Users, label: t('nav.clients') },
     { href: "/dashboard/expenses", icon: Receipt, label: t('nav.expenses') },
@@ -97,7 +97,9 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
             {navItems.map((item) => (
               <SidebarMenuItem key={item.href}>
                 <Link href={item.href}>
-                  <SidebarMenuButton isActive={pathname.startsWith(item.href)} tooltip={item.label}>
+                  <SidebarMenuButton 
+                    isActive={item.exact ? pathname === item.href : pathname.startsWith(item.href)} 
+                    tooltip={item.label}>
                     <item.icon />
                     <span>{item.label}</span>
                   </SidebarMenuButton>
