@@ -1,4 +1,5 @@
 
+
 export type InvoiceStatus = 'Paid' | 'Pending' | 'Overdue';
 
 export type Client = {

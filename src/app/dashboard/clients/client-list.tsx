@@ -17,6 +17,8 @@ import { auth } from '@/lib/firebase/config';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { getClients, addClient, updateClient, deleteClient } from '@/lib/firebase/firestore';
 import { toast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 function ClientForm({ client, onSave, onCancel }: { client?: Client | null, onSave: (client: Omit<Client, 'id' | 'avatarUrl' | 'userId'> & { id?: string }) => void, onCancel: () => void }) {
     const { t } = useLocale();
@@ -66,14 +68,29 @@ export default function ClientList() {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
 
     useEffect(() => {
         const fetchClients = async () => {
             if (user) {
                 setLoading(true);
-                const userClients = await getClients(user.uid);
-                setClients(userClients);
+                setError(null);
+                try {
+                    const userClients = await getClients(user.uid);
+                    setClients(userClients);
+                } catch (e: any) {
+                    console.error("Error fetching clients: ", e);
+                    if(e.code === 'failed-precondition') {
+                        setError("La base de datos de Firestore no está creada o configurada. Por favor, créala desde la consola de Firebase.");
+                    } else {
+                        setError("Ha ocurrido un error al cargar los clientes.");
+                    }
+                } finally {
+                    setLoading(false);
+                }
+            } else if (!user) {
+                // Not logged in, stop loading.
                 setLoading(false);
             }
         };
@@ -89,16 +106,17 @@ export default function ClientList() {
 
     const handleSaveClient = async (clientData: Omit<Client, 'id' | 'avatarUrl' | 'userId'> & { id?: string }) => {
         if (!user) {
-            toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
+            toast({ title: "Error", description: "Debes iniciar sesión para realizar esta acción.", variant: "destructive" });
             return;
         }
 
         try {
             if (clientData.id) {
                 // Edit existing client
-                await updateClient(clientData.id, { name: clientData.name, email: clientData.email });
-                setClients(clients.map(c => c.id === clientData.id ? { ...c, name: clientData.name, email: clientData.email } : c));
-                toast({ title: "Client Updated", description: "Client details have been updated." });
+                const updatedClient = { name: clientData.name, email: clientData.email };
+                await updateClient(clientData.id, updatedClient);
+                setClients(clients.map(c => c.id === clientData.id ? { ...c, ...updatedClient } : c));
+                toast({ title: "Cliente Actualizado", description: "Los detalles del cliente han sido actualizados." });
             } else {
                 // Add new client
                 const newClientData = {
@@ -109,12 +127,12 @@ export default function ClientList() {
                 };
                 const newClient = await addClient(newClientData);
                 setClients([...clients, newClient]);
-                toast({ title: "Client Added", description: "New client has been added." });
+                toast({ title: "Cliente Añadido", description: "El nuevo cliente ha sido añadido." });
             }
             handleCloseForm();
         } catch (error) {
             console.error("Error saving client: ", error);
-            toast({ title: "Error", description: "There was a problem saving the client.", variant: "destructive" });
+            toast({ title: "Error", description: "Hubo un problema al guardar el cliente.", variant: "destructive" });
         }
     };
 
@@ -122,10 +140,10 @@ export default function ClientList() {
         try {
             await deleteClient(clientId);
             setClients(clients.filter(c => c.id !== clientId));
-            toast({ title: "Client Deleted", description: "The client has been deleted." });
+            toast({ title: "Cliente Eliminado", description: "El cliente ha sido eliminado." });
         } catch (error) {
             console.error("Error deleting client: ", error);
-            toast({ title: "Error", description: "There was a problem deleting the client.", variant: "destructive" });
+            toast({ title: "Error", description: "Hubo un problema al eliminar el cliente.", variant: "destructive" });
         }
     };
 
@@ -140,7 +158,7 @@ export default function ClientList() {
     };
     
     if (loading) {
-        return <p>Loading clients...</p>
+        return <p>Cargando clientes...</p>
     }
 
     return (
@@ -155,7 +173,7 @@ export default function ClientList() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-64"
                         />
-                        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                        <Dialog open={isFormOpen} onOpenChange={(isOpen) => { if(!isOpen) handleCloseForm(); else setIsFormOpen(true); }}>
                             <DialogTrigger asChild>
                                 <Button onClick={() => handleOpenForm()}>
                                     <PlusCircle className="w-4 h-4 mr-2" />
@@ -170,6 +188,13 @@ export default function ClientList() {
                 </div>
             </CardHeader>
             <CardContent>
+                {error && (
+                    <Alert variant="destructive" className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Error de Conexión</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -212,7 +237,7 @@ export default function ClientList() {
                         ))}
                     </TableBody>
                 </Table>
-                 {filteredClients.length === 0 && (
+                 {!error && filteredClients.length === 0 && (
                     <div className="text-center py-10">
                         <p className="text-muted-foreground">{t('clients.noClients')}</p>
                     </div>
@@ -221,3 +246,4 @@ export default function ClientList() {
         </Card>
     );
 }
+
