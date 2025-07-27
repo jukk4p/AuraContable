@@ -26,12 +26,11 @@ export default function SettingsPage() {
     ];
 
     return (
-        <div className="grid md:grid-cols-[180px_1fr] lg:grid-cols-[250px_1fr] gap-6 items-start">
-            <h1 className="text-2xl font-semibold font-headline md:hidden">{t('nav.settings')}</h1>
+        <div className="space-y-6">
+            <h1 className="text-2xl font-semibold font-headline">{t('nav.settings')}</h1>
             
-            {/* Desktop View */}
-            <Tabs defaultValue="profile" orientation="vertical" className="hidden md:block">
-                <TabsList className="w-full h-auto bg-transparent p-0">
+            <Tabs defaultValue="profile" className="grid md:grid-cols-[180px_1fr] lg:grid-cols-[250px_1fr] gap-6 items-start">
+                <TabsList className="w-full h-auto bg-transparent p-0 flex-col items-start" orientation="vertical">
                     {tabs.map((tab) => (
                          <TabsTrigger key={tab.value} value={tab.value} className="w-full justify-start gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
                             <tab.icon className="h-4 w-4" />
@@ -40,60 +39,44 @@ export default function SettingsPage() {
                     ))}
                 </TabsList>
                 
-                <TabsContent value="profile" className="m-0">
-                    <ProfileSettings />
-                </TabsContent>
-                <TabsContent value="company" className="m-0">
-                    <CompanySettings />
-                </TabsContent>
-                <TabsContent value="invoicing" className="m-0">
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>{t('settings.invoicing.title')}</CardTitle>
-                            <CardDescription>{t('settings.invoicing.description')}</CardDescription>
-                        </CardHeader>
-                    </Card>
-                </TabsContent>
-                 <TabsContent value="security" className="m-0">
-                    <SecuritySettings />
-                </TabsContent>
-                <TabsContent value="notifications" className="m-0">
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>{t('settings.notifications.title')}</CardTitle>
-                            <CardDescription>{t('settings.notifications.description')}</CardDescription>
-                        </CardHeader>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="appearance" className="m-0">
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>{t('settings.appearance.title')}</CardTitle>
-                            <CardDescription>{t('settings.appearance.description')}</CardDescription>
-                        </CardHeader>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="language" className="m-0">
-                    <LanguageSettings />
-                </TabsContent>
-            </Tabs>
-
-            {/* Mobile View */}
-            <Tabs defaultValue="profile" className="md:hidden">
-                <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="profile">{t('settings.profile.title')}</TabsTrigger>
-                    <TabsTrigger value="company">{t('settings.company.title')}</TabsTrigger>
-                    <TabsTrigger value="language">{t('settings.language.title')}</TabsTrigger>
-                </TabsList>
-                 <TabsContent value="profile">
-                    <ProfileSettings />
-                </TabsContent>
-                <TabsContent value="company">
-                    <CompanySettings />
-                </TabsContent>
-                <TabsContent value="language">
-                    <LanguageSettings />
-                </TabsContent>
+                <div className="col-span-1">
+                    <TabsContent value="profile" className="m-0">
+                        <ProfileSettings />
+                    </TabsContent>
+                    <TabsContent value="company" className="m-0">
+                        <CompanySettings />
+                    </TabsContent>
+                    <TabsContent value="invoicing" className="m-0">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>{t('settings.invoicing.title')}</CardTitle>
+                                <CardDescription>{t('settings.invoicing.description')}</CardDescription>
+                            </CardHeader>
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="security" className="m-0">
+                        <SecuritySettings />
+                    </TabsContent>
+                    <TabsContent value="notifications" className="m-0">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>{t('settings.notifications.title')}</CardTitle>
+                                <CardDescription>{t('settings.notifications.description')}</CardDescription>
+                            </CardHeader>
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="appearance" className="m-0">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>{t('settings.appearance.title')}</CardTitle>
+                                <CardDescription>{t('settings.appearance.description')}</CardDescription>
+                            </CardHeader>
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="language" className="m-0">
+                        <LanguageSettings />
+                    </TabsContent>
+                </div>
             </Tabs>
         </div>
     );
