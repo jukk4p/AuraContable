@@ -267,7 +267,9 @@ export default function InvoiceList() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
-                                                <DropdownMenuItem asChild><Link href={`/dashboard/invoices/${invoice.id}`}>{t('common.viewDetails')}</Link></DropdownMenuItem>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/dashboard/invoices/${invoice.id}`}>{t('common.viewDetails')}</Link>
+                                                </DropdownMenuItem>
                                                 <DropdownMenuItem>{t('invoices.markAsPaid')}</DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handleDownloadPdf(invoice.id)} disabled={isDownloading === invoice.id}>
                                                     {isDownloading === invoice.id ? "Descargando..." : t('invoices.downloadPdf')}
