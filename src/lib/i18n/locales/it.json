@@ -22,6 +22,7 @@
         "invoiceDetails": "Dettagli Fattura",
         "clients": "Clienti",
         "expenses": "Spese",
+        "reports": "Rapporti",
         "settings": "Impostazioni",
         "myAccount": "Il mio account",
         "support": "Supporto",
@@ -109,6 +110,9 @@
         "amount": "Importo",
         "tax": "Imposta",
         "attachment": "Allegato (Opzionale)"
+    },
+     "reports": {
+        "description": "Analizza i tuoi dati di fatturazione e spesa."
     },
     "settings": {
         "profile": {

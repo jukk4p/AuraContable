@@ -22,6 +22,7 @@
         "invoiceDetails": "Detalles de Factura",
         "clients": "Clientes",
         "expenses": "Gastos",
+        "reports": "Informes",
         "settings": "Ajustes",
         "myAccount": "Mi Cuenta",
         "support": "Soporte",
@@ -109,6 +110,9 @@
         "amount": "Importe",
         "tax": "Impuesto",
         "attachment": "Justificante (Opcional)"
+    },
+    "reports": {
+        "description": "Analiza tus datos de facturación y gastos."
     },
     "settings": {
         "profile": {

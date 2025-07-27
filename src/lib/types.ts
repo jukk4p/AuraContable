@@ -1,4 +1,5 @@
 
+
 export type InvoiceStatus = 'Paid' | 'Pending' | 'Overdue';
 
 export type Client = {
@@ -93,4 +94,15 @@ export type CompanyProfile = {
         reminder: EmailTemplate;
     },
     notifications?: NotificationPreferences;
+}
+
+export type ReportData = {
+    totalAmount: number;
+    totalPaid: number;
+    totalTaxes: number;
+    paidCount: number;
+    pendingCount: number;
+    overdueCount: number;
+    totalCount: number;
+    monthlyData: { month: string; total: number; paid: number; pending: number; overdue: number }[];
 }

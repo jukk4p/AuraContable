@@ -22,6 +22,7 @@
         "invoiceDetails": "Detalls de la Factura",
         "clients": "Clients",
         "expenses": "Despeses",
+        "reports": "Informes",
         "settings": "Configuració",
         "myAccount": "El meu compte",
         "support": "Suport",
@@ -109,6 +110,9 @@
         "amount": "Import",
         "tax": "Impost",
         "attachment": "Justificant (Opcional)"
+    },
+     "reports": {
+        "description": "Analitza les teves dades de facturació i despeses."
     },
     "settings": {
         "profile": {

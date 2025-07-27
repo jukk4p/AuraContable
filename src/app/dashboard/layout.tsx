@@ -2,7 +2,7 @@
 "use client"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { FileText, LayoutGrid, Settings, Users, PanelLeft, Search, PlusCircle, Receipt } from "lucide-react"
+import { FileText, LayoutGrid, Settings, Users, PanelLeft, Search, PlusCircle, Receipt, AreaChart } from "lucide-react"
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -41,6 +41,7 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
     { href: "/dashboard/invoices", icon: FileText, label: t('nav.invoices') },
     { href: "/dashboard/clients", icon: Users, label: t('nav.clients') },
     { href: "/dashboard/expenses", icon: Receipt, label: t('nav.expenses') },
+    { href: "/dashboard/reports", icon: AreaChart, label: t('nav.reports') },
     { href: "/dashboard/settings", icon: Settings, label: t('nav.settings') },
   ]
   
@@ -56,6 +57,8 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
         return t('nav.clients');
       case '/dashboard/expenses':
         return t('nav.expenses');
+      case '/dashboard/reports':
+        return t('nav.reports');
       case '/dashboard/settings':
         return t('nav.settings');
       default:

@@ -22,6 +22,7 @@
         "invoiceDetails": "Invoice Details",
         "clients": "Clients",
         "expenses": "Expenses",
+        "reports": "Reports",
         "settings": "Settings",
         "myAccount": "My Account",
         "support": "Support",
@@ -109,6 +110,9 @@
         "amount": "Amount",
         "tax": "Tax",
         "attachment": "Attachment (Optional)"
+    },
+    "reports": {
+        "description": "Analyze your invoicing and expense data."
     },
     "settings": {
         "profile": {
