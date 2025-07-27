@@ -15,7 +15,7 @@ import type { Invoice, InvoiceStatus } from '@/lib/types';
 import InvoiceStatusBadge from '@/components/invoice-status-badge';
 
 const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
 }
 
 export default function InvoiceList() {
@@ -87,20 +87,20 @@ export default function InvoiceList() {
         <Card>
             <CardHeader>
                 <div className="flex items-center justify-between gap-4">
-                    <CardTitle>All Invoices</CardTitle>
+                    <CardTitle>Todas las Facturas</CardTitle>
                     <div className="flex items-center gap-2">
                         <Input
-                            placeholder="Search by client or invoice #"
+                            placeholder="Buscar por cliente o nº de factura"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-64"
                         />
                         <Tabs value={statusFilter} onValueChange={(value) => setStatusFilter(value as InvoiceStatus | 'All')}>
                             <TabsList>
-                                <TabsTrigger value="All">All</TabsTrigger>
-                                <TabsTrigger value="Paid">Paid</TabsTrigger>
-                                <TabsTrigger value="Pending">Pending</TabsTrigger>
-                                <TabsTrigger value="Overdue">Overdue</TabsTrigger>
+                                <TabsTrigger value="All">Todas</TabsTrigger>
+                                <TabsTrigger value="Paid">Pagadas</TabsTrigger>
+                                <TabsTrigger value="Pending">Pendientes</TabsTrigger>
+                                <TabsTrigger value="Overdue">Vencidas</TabsTrigger>
                             </TabsList>
                         </Tabs>
                     </div>
@@ -112,31 +112,31 @@ export default function InvoiceList() {
                         <TableRow>
                             <TableHead>
                                 <Button variant="ghost" onClick={() => requestSort('client.name')}>
-                                    Client {getSortIcon('client.name')}
+                                    Cliente {getSortIcon('client.name')}
                                 </Button>
                             </TableHead>
                             <TableHead>
                                 <Button variant="ghost" onClick={() => requestSort('invoiceNumber')}>
-                                    Invoice # {getSortIcon('invoiceNumber')}
+                                    Nº Factura {getSortIcon('invoiceNumber')}
                                 </Button>
                             </TableHead>
                             <TableHead>
                                 <Button variant="ghost" onClick={() => requestSort('total')}>
-                                    Amount {getSortIcon('total')}
+                                    Importe {getSortIcon('total')}
                                 </Button>
                             </TableHead>
                             <TableHead>
                                 <Button variant="ghost" onClick={() => requestSort('status')}>
-                                    Status {getSortIcon('status')}
+                                    Estado {getSortIcon('status')}
                                 </Button>
                             </TableHead>
                             <TableHead>
                                 <Button variant="ghost" onClick={() => requestSort('dueDate')}>
-                                    Due Date {getSortIcon('dueDate')}
+                                    Vencimiento {getSortIcon('dueDate')}
                                 </Button>
                             </TableHead>
                             <TableHead>
-                                <span className="sr-only">Actions</span>
+                                <span className="sr-only">Acciones</span>
                             </TableHead>
                         </TableRow>
                     </TableHeader>
@@ -163,15 +163,15 @@ export default function InvoiceList() {
                                         <DropdownMenuTrigger asChild>
                                             <Button aria-haspopup="true" size="icon" variant="ghost">
                                                 <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">Toggle menu</span>
+                                                <span className="sr-only">Menú</span>
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuItem asChild><Link href={`/dashboard/invoices/${invoice.id}`}>View Details</Link></DropdownMenuItem>
-                                            <DropdownMenuItem>Mark as Paid</DropdownMenuItem>
-                                            <DropdownMenuItem>Download PDF</DropdownMenuItem>
-                                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">Delete Invoice</DropdownMenuItem>
+                                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                            <DropdownMenuItem asChild><Link href={`/dashboard/invoices/${invoice.id}`}>Ver Detalles</Link></DropdownMenuItem>
+                                            <DropdownMenuItem>Marcar como Pagada</DropdownMenuItem>
+                                            <DropdownMenuItem>Descargar PDF</DropdownMenuItem>
+                                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">Eliminar Factura</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </TableCell>

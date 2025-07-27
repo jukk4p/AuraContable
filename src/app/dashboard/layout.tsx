@@ -17,24 +17,26 @@ export default function DashboardLayout({
   const pathname = usePathname()
 
   const navItems = [
-    { href: "/dashboard", icon: LayoutGrid, label: "Dashboard" },
-    { href: "/dashboard/invoices", icon: FileText, label: "Invoices" },
-    { href: "/dashboard/clients", icon: Users, label: "Clients" },
-    { href: "/dashboard/settings", icon: Settings, label: "Settings" },
+    { href: "/dashboard", icon: LayoutGrid, label: "Panel" },
+    { href: "/dashboard/invoices", icon: FileText, label: "Facturas" },
+    { href: "/dashboard/clients", icon: Users, label: "Clientes" },
+    { href: "/dashboard/settings", icon: Settings, label: "Ajustes" },
   ]
   
   const getPageTitle = () => {
     switch (pathname) {
       case '/dashboard':
-        return 'Dashboard';
+        return 'Panel';
       case '/dashboard/invoices':
-        return 'Invoices';
+        return 'Facturas';
+      case '/dashboard/invoices/new':
+        return 'Nueva Factura';
       case '/dashboard/clients':
-        return 'Clients';
+        return 'Clientes';
       case '/dashboard/settings':
-        return 'Settings';
+        return 'Ajustes';
       default:
-        if (pathname.startsWith('/dashboard/invoices/')) return 'Invoice Details';
+        if (pathname.startsWith('/dashboard/invoices/')) return 'Detalles de Factura';
         return 'InvoiceFlow';
     }
   };
@@ -72,12 +74,12 @@ export default function DashboardLayout({
           <div className="flex items-center gap-4">
             <div className="relative hidden md:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search..." className="pl-9" />
+              <Input placeholder="Buscar..." className="pl-9" />
             </div>
             <Link href="/dashboard/invoices/new">
                 <Button>
                     <PlusCircle className="w-4 h-4 mr-2"/>
-                    Create Invoice
+                    Crear Factura
                 </Button>
             </Link>
             <DropdownMenu>
@@ -90,12 +92,12 @@ export default function DashboardLayout({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild><Link href="/dashboard/settings">Settings</Link></DropdownMenuItem>
-                <DropdownMenuItem>Support</DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href="/dashboard/settings">Ajustes</Link></DropdownMenuItem>
+                <DropdownMenuItem>Soporte</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild><Link href="/">Logout</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href="/">Cerrar Sesión</Link></DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

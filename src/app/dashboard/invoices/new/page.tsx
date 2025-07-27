@@ -16,18 +16,19 @@ import { CalendarIcon, PlusCircle, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { useToast } from "@/hooks/use-toast"
+import { es } from "date-fns/locale"
 
 const invoiceFormSchema = z.object({
-    invoiceNumber: z.string().min(1, "Invoice number is required"),
-    clientId: z.string().min(1, "Client is required"),
+    invoiceNumber: z.string().min(1, "El número de factura es obligatorio"),
+    clientId: z.string().min(1, "El cliente es obligatorio"),
     issueDate: z.date(),
     dueDate: z.date(),
-    status: z.enum(["Pending", "Paid", "Overdue"]),
+    status: z.enum(["Pendiente", "Pagada", "Vencida"]),
     items: z.array(z.object({
-        description: z.string().min(1, "Description is required"),
-        quantity: z.coerce.number().min(1, "Quantity must be at least 1"),
-        price: z.coerce.number().min(0, "Price cannot be negative"),
-    })).min(1, "At least one item is required"),
+        description: z.string().min(1, "La descripción es obligatoria"),
+        quantity: z.coerce.number().min(1, "La cantidad debe ser al menos 1"),
+        price: z.coerce.number().min(0, "El precio no puede ser negativo"),
+    })).min(1, "Se requiere al menos un concepto"),
     notes: z.string().optional(),
 })
 
@@ -39,8 +40,8 @@ export default function NewInvoicePage() {
     const form = useForm<InvoiceFormValues>({
         resolver: zodResolver(invoiceFormSchema),
         defaultValues: {
-            invoiceNumber: `INV-${new Date().getFullYear()}-`,
-            status: "Pending",
+            invoiceNumber: `FAC-${new Date().getFullYear()}-`,
+            status: "Pendiente",
             issueDate: new Date(),
             items: [{ description: "", quantity: 1, price: 0 }],
             notes: "",
@@ -64,8 +65,8 @@ export default function NewInvoicePage() {
     function onSubmit(data: InvoiceFormValues) {
         console.log(data)
         toast({
-            title: "Invoice Created",
-            description: `Invoice ${data.invoiceNumber} has been successfully created.`,
+            title: "Factura Creada",
+            description: `La factura ${data.invoiceNumber} ha sido creada con éxito.`,
         })
     }
     
@@ -74,7 +75,7 @@ export default function NewInvoicePage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Create New Invoice</CardTitle>
+                        <CardTitle>Crear Nueva Factura</CardTitle>
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-4">
@@ -83,11 +84,11 @@ export default function NewInvoicePage() {
                                 name="clientId"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Client</FormLabel>
+                                        <FormLabel>Cliente</FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder="Select a client" />
+                                                    <SelectValue placeholder="Selecciona un cliente" />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
@@ -105,9 +106,9 @@ export default function NewInvoicePage() {
                                 name="invoiceNumber"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Invoice Number</FormLabel>
+                                        <FormLabel>Número de Factura</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="INV-2024-001" {...field} />
+                                            <Input placeholder="FAC-2024-001" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -119,7 +120,7 @@ export default function NewInvoicePage() {
                                     name="issueDate"
                                     render={({ field }) => (
                                         <FormItem className="flex flex-col">
-                                            <FormLabel>Issue Date</FormLabel>
+                                            <FormLabel>Fecha de Emisión</FormLabel>
                                             <Popover>
                                                 <PopoverTrigger asChild>
                                                 <FormControl>
@@ -131,9 +132,9 @@ export default function NewInvoicePage() {
                                                     )}
                                                     >
                                                     {field.value ? (
-                                                        format(field.value, "PPP")
+                                                        format(field.value, "PPP", { locale: es })
                                                     ) : (
-                                                        <span>Pick a date</span>
+                                                        <span>Elige una fecha</span>
                                                     )}
                                                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                                     </Button>
@@ -145,6 +146,7 @@ export default function NewInvoicePage() {
                                                     selected={field.value}
                                                     onSelect={field.onChange}
                                                     initialFocus
+                                                    locale={es}
                                                 />
                                                 </PopoverContent>
                                             </Popover>
@@ -157,7 +159,7 @@ export default function NewInvoicePage() {
                                     name="dueDate"
                                     render={({ field }) => (
                                         <FormItem className="flex flex-col">
-                                            <FormLabel>Due Date</FormLabel>
+                                            <FormLabel>Fecha de Vencimiento</FormLabel>
                                             <Popover>
                                                 <PopoverTrigger asChild>
                                                 <FormControl>
@@ -169,9 +171,9 @@ export default function NewInvoicePage() {
                                                     )}
                                                     >
                                                     {field.value ? (
-                                                        format(field.value, "PPP")
+                                                        format(field.value, "PPP", { locale: es })
                                                     ) : (
-                                                        <span>Pick a date</span>
+                                                        <span>Elige una fecha</span>
                                                     )}
                                                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                                     </Button>
@@ -183,6 +185,7 @@ export default function NewInvoicePage() {
                                                     selected={field.value}
                                                     onSelect={field.onChange}
                                                     initialFocus
+                                                    locale={es}
                                                 />
                                                 </PopoverContent>
                                             </Popover>
@@ -196,17 +199,17 @@ export default function NewInvoicePage() {
                                 name="status"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Status</FormLabel>
+                                        <FormLabel>Estado</FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder="Select status" />
+                                                    <SelectValue placeholder="Selecciona un estado" />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                <SelectItem value="Pending">Pending</SelectItem>
-                                                <SelectItem value="Paid">Paid</SelectItem>
-                                                <SelectItem value="Overdue">Overdue</SelectItem>
+                                                <SelectItem value="Pendiente">Pendiente</SelectItem>
+                                                <SelectItem value="Pagada">Pagada</SelectItem>
+                                                <SelectItem value="Vencida">Vencida</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
@@ -215,7 +218,7 @@ export default function NewInvoicePage() {
                             />
                         </div>
                         <div className="space-y-4">
-                            <FormLabel>Items</FormLabel>
+                            <FormLabel>Conceptos</FormLabel>
                             <div className="space-y-4">
                                 {fields.map((field, index) => (
                                     <div key={field.id} className="grid grid-cols-[1fr_80px_100px_auto] gap-2 items-start">
@@ -225,7 +228,7 @@ export default function NewInvoicePage() {
                                             render={({ field }) => (
                                                 <FormItem>
                                                      <FormControl>
-                                                        <Input placeholder="Item description" {...field} />
+                                                        <Input placeholder="Descripción del concepto" {...field} />
                                                      </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -237,7 +240,7 @@ export default function NewInvoicePage() {
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormControl>
-                                                        <Input type="number" placeholder="Qty" {...field} />
+                                                        <Input type="number" placeholder="Cant." {...field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -249,7 +252,7 @@ export default function NewInvoicePage() {
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormControl>
-                                                        <Input type="number" placeholder="Price" {...field} />
+                                                        <Input type="number" placeholder="Precio" {...field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -268,13 +271,13 @@ export default function NewInvoicePage() {
                                 onClick={() => append({ description: "", quantity: 1, price: 0 })}
                             >
                                 <PlusCircle className="mr-2 h-4 w-4" />
-                                Add Item
+                                Añadir Concepto
                             </Button>
 
                             <div className="flex justify-end mt-4">
                                 <div className="text-right">
                                     <p className="text-muted-foreground">Subtotal</p>
-                                    <p className="font-semibold text-lg">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(subtotal)}</p>
+                                    <p className="font-semibold text-lg">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(subtotal)}</p>
                                 </div>
                             </div>
                              <FormField
@@ -282,9 +285,9 @@ export default function NewInvoicePage() {
                                 name="notes"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Notes</FormLabel>
+                                        <FormLabel>Notas</FormLabel>
                                         <FormControl>
-                                            <Textarea placeholder="Add any additional notes..." {...field} />
+                                            <Textarea placeholder="Añade notas adicionales..." {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -294,8 +297,8 @@ export default function NewInvoicePage() {
 
                     </CardContent>
                     <CardFooter className="justify-end gap-2">
-                         <Button variant="outline" type="button" onClick={() => form.reset()}>Cancel</Button>
-                        <Button type="submit">Save Invoice</Button>
+                         <Button variant="outline" type="button" onClick={() => form.reset()}>Cancelar</Button>
+                        <Button type="submit">Guardar Factura</Button>
                     </CardFooter>
                 </Card>
             </form>

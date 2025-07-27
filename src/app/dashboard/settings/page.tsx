@@ -8,20 +8,20 @@ export default function SettingsPage() {
     return (
         <Tabs defaultValue="profile" className="w-full">
             <TabsList className="grid w-full max-w-md grid-cols-2">
-                <TabsTrigger value="profile">Profile</TabsTrigger>
-                <TabsTrigger value="account">Account</TabsTrigger>
+                <TabsTrigger value="profile">Perfil</TabsTrigger>
+                <TabsTrigger value="account">Cuenta</TabsTrigger>
             </TabsList>
             <TabsContent value="profile">
                 <Card>
                 <CardHeader>
-                    <CardTitle>Profile</CardTitle>
+                    <CardTitle>Perfil</CardTitle>
                     <CardDescription>
-                        Make changes to your public profile here. Click save when you're done.
+                        Realiza cambios en tu perfil público aquí. Haz clic en guardar cuando hayas terminado.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="name">Name</Label>
+                        <Label htmlFor="name">Nombre</Label>
                         <Input id="name" defaultValue="John Doe" />
                     </div>
                     <div className="space-y-2">
@@ -30,30 +30,30 @@ export default function SettingsPage() {
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button>Save changes</Button>
+                    <Button>Guardar cambios</Button>
                 </CardFooter>
                 </Card>
             </TabsContent>
             <TabsContent value="account">
                 <Card>
                 <CardHeader>
-                    <CardTitle>Account</CardTitle>
+                    <CardTitle>Cuenta</CardTitle>
                     <CardDescription>
-                    Manage your account settings and preferences.
+                    Gestiona la configuración y las preferencias de tu cuenta.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="new-password">New Password</Label>
+                    <Label htmlFor="new-password">Nueva Contraseña</Label>
                     <Input id="new-password" type="password" />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="confirm-password">Confirm Password</Label>
+                        <Label htmlFor="confirm-password">Confirmar Contraseña</Label>
                         <Input id="confirm-password" type="password" />
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button>Update Password</Button>
+                    <Button>Actualizar Contraseña</Button>
                 </CardFooter>
                 </Card>
             </TabsContent>

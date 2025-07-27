@@ -8,14 +8,27 @@ interface InvoiceStatusBadgeProps {
 export default function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) {
   const getVariant = (): "default" | "secondary" | "destructive" => {
     switch (status) {
-      case 'Paid':
+      case 'Pagada':
         return 'default'; // Using a custom success-like style
-      case 'Pending':
+      case 'Pendiente':
         return 'secondary';
-      case 'Overdue':
+      case 'Vencida':
         return 'destructive';
       default:
         return 'secondary';
+    }
+  }
+
+  const getStatusText = () => {
+    switch (status) {
+      case 'Paid':
+        return 'Pagada';
+      case 'Pending':
+        return 'Pendiente';
+      case 'Overdue':
+        return 'Vencida';
+      default:
+        return status;
     }
   }
 
@@ -32,7 +45,7 @@ export default function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) 
 
   return (
     <Badge variant={getVariant()} className={getClassName()}>
-      {status}
+      {getStatusText()}
     </Badge>
   );
 }

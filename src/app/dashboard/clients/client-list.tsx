@@ -30,10 +30,10 @@ export default function ClientList() {
         <Card>
             <CardHeader>
                 <div className="flex items-center justify-between gap-4">
-                    <CardTitle>All Clients</CardTitle>
+                    <CardTitle>Todos los Clientes</CardTitle>
                     <div className="flex items-center gap-2">
                         <Input
-                            placeholder="Search by name or email"
+                            placeholder="Buscar por nombre o email"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-64"
@@ -42,20 +42,20 @@ export default function ClientList() {
                             <DialogTrigger asChild>
                                 <Button>
                                     <PlusCircle className="w-4 h-4 mr-2" />
-                                    New Client
+                                    Nuevo Cliente
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-[425px]">
                                 <DialogHeader>
-                                <DialogTitle>Add New Client</DialogTitle>
+                                <DialogTitle>Añadir Nuevo Cliente</DialogTitle>
                                 <DialogDescription>
-                                    Enter the details for your new client.
+                                    Introduce los detalles de tu nuevo cliente.
                                 </DialogDescription>
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4">
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="name" className="text-right">
-                                    Name
+                                    Nombre
                                     </Label>
                                     <Input id="name" placeholder="Acme Inc." className="col-span-3" />
                                 </div>
@@ -67,7 +67,7 @@ export default function ClientList() {
                                 </div>
                                 </div>
                                 <DialogFooter>
-                                <Button type="submit">Save Client</Button>
+                                <Button type="submit">Guardar Cliente</Button>
                                 </DialogFooter>
                             </DialogContent>
                         </Dialog>
@@ -78,10 +78,10 @@ export default function ClientList() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Name</TableHead>
+                            <TableHead>Nombre</TableHead>
                             <TableHead>Email</TableHead>
                             <TableHead>
-                                <span className="sr-only">Actions</span>
+                                <span className="sr-only">Acciones</span>
                             </TableHead>
                         </TableRow>
                     </TableHeader>
@@ -107,9 +107,9 @@ export default function ClientList() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuItem>Edit</DropdownMenuItem>
-                                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">Delete</DropdownMenuItem>
+                                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                            <DropdownMenuItem>Editar</DropdownMenuItem>
+                                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">Eliminar</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </TableCell>

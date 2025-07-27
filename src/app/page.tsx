@@ -39,33 +39,33 @@ export default function LoginPage() {
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold tracking-tight font-headline">InvoiceFlow</CardTitle>
-            <CardDescription>Sign in to manage your invoices</CardDescription>
+            <CardDescription>Inicia sesión para gestionar tus facturas</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="name@example.com" required />
+                <Input id="email" type="email" placeholder="nombre@ejemplo.com" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Contraseña</Label>
                 <Input id="password" type="password" required />
               </div>
             </div>
             <Link href="/dashboard">
-                <Button className="w-full mt-6">Sign In</Button>
+                <Button className="w-full mt-6">Iniciar Sesión</Button>
             </Link>
             <Separator className="my-6">
-              <span className="px-2 text-muted-foreground bg-background">OR</span>
+              <span className="px-2 text-muted-foreground bg-background">O</span>
             </Separator>
             <Button variant="outline" className="w-full">
               <GoogleIcon className="mr-2 h-4 w-4" />
-              Sign in with Google
+              Iniciar sesión con Google
             </Button>
             <div className="mt-4 text-center text-sm">
-              Don't have an account?{" "}
+              ¿No tienes una cuenta?{" "}
               <Link href="#" className="underline text-primary">
-                Sign up
+                Regístrate
               </Link>
             </div>
           </CardContent>

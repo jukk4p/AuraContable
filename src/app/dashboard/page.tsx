@@ -12,7 +12,7 @@ export default function DashboardPage() {
     const recentInvoices = mockInvoices.slice(0, 5);
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+        return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
     }
   
     return (
@@ -20,7 +20,7 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium">Ingresos Totales</CardTitle>
               <DollarSign className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -30,42 +30,42 @@ export default function DashboardPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Paid Invoices</CardTitle>
+              <CardTitle className="text-sm font-medium">Facturas Pagadas</CardTitle>
               <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{mockDashboardData.paidInvoices}</div>
-              <p className="text-xs text-muted-foreground">Total invoices marked as paid</p>
+              <p className="text-xs text-muted-foreground">Total de facturas pagadas</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Pending Invoices</CardTitle>
+              <CardTitle className="text-sm font-medium">Facturas Pendientes</CardTitle>
               <Users className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{mockDashboardData.pendingInvoices}</div>
-              <p className="text-xs text-muted-foreground">Awaiting payment</p>
+              <p className="text-xs text-muted-foreground">Esperando pago</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Overdue Invoices</CardTitle>
+              <CardTitle className="text-sm font-medium">Facturas Vencidas</CardTitle>
               <FileWarning className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{mockDashboardData.overdueInvoices}</div>
-              <p className="text-xs text-muted-foreground">Past their due date</p>
+              <p className="text-xs text-muted-foreground">Fecha de pago superada</p>
             </CardContent>
           </Card>
         </div>
         
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Recent Invoices</CardTitle>
+                <CardTitle>Facturas Recientes</CardTitle>
                 <Link href="/dashboard/invoices">
                     <Button variant="outline" size="sm">
-                        View All
+                        Ver Todas
                         <ArrowUpRight className="w-4 h-4 ml-2" />
                     </Button>
                 </Link>
@@ -74,11 +74,11 @@ export default function DashboardPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Client</TableHead>
-                            <TableHead className="hidden md:table-cell">Invoice #</TableHead>
-                            <TableHead>Amount</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="hidden md:table-cell">Due Date</TableHead>
+                            <TableHead>Cliente</TableHead>
+                            <TableHead className="hidden md:table-cell">Nº Factura</TableHead>
+                            <TableHead>Importe</TableHead>
+                            <TableHead>Estado</TableHead>
+                            <TableHead className="hidden md:table-cell">Vencimiento</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
