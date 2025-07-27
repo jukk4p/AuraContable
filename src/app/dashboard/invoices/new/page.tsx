@@ -22,8 +22,8 @@ import { Client, InvoiceStatus, InvoiceTax } from "@/lib/types"
 import React, { useState, useEffect, useCallback } from 'react'
 import { auth } from "@/lib/firebase/config"
 import { useAuthState } from "react-firebase-hooks/auth"
-import { getClients, addInvoice, getInvoices, getCompanyProfile } from "@/lib/firebase/firestore"
-import { useRouter } from "next/navigation"
+import { getClients, addInvoice, getInvoices, getCompanyProfile, getInvoiceById, updateInvoice } from "@/lib/firebase/firestore"
+import { useRouter, useParams } from "next/navigation"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,6 +78,10 @@ export default function NewInvoicePage() {
     const { t, formatCurrency, locale: currentLocale } = useLocale();
     const { toast } = useToast()
     const router = useRouter();
+    const params = useParams();
+    const invoiceId = params.id as string | undefined;
+    const isEditing = !!invoiceId;
+
     const [user] = useAuthState(auth);
     const [clients, setClients] = useState<Client[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -100,38 +104,54 @@ export default function NewInvoicePage() {
             if(user) {
                 setIsLoading(true);
                 try {
-                    const [userClients, userInvoices, companyProfile] = await Promise.all([
-                        getClients(user.uid),
-                        getInvoices(user.uid),
-                        getCompanyProfile(user.uid)
-                    ]);
-                    
-                    setClients(userClients);
+                    if (isEditing) {
+                        const [invoiceData, userClients] = await Promise.all([
+                            getInvoiceById(invoiceId),
+                            getClients(user.uid),
+                        ]);
+                        setClients(userClients);
+                        if (invoiceData) {
+                            form.reset({
+                                ...invoiceData,
+                                clientId: invoiceData.clientId,
+                            });
+                        } else {
+                            toast({ title: "Error", description: "Factura no encontrada.", variant: "destructive" });
+                            router.push('/dashboard/invoices');
+                        }
+                    } else {
+                        const [userClients, userInvoices, companyProfile] = await Promise.all([
+                            getClients(user.uid),
+                            getInvoices(user.uid),
+                            getCompanyProfile(user.uid)
+                        ]);
+                        
+                        setClients(userClients);
 
-                    const currentYear = new Date().getFullYear();
-                    const yearPrefix = `FAC-${currentYear}-`;
-                    
-                    const invoicesThisYear = userInvoices.filter(inv => inv.invoiceNumber.startsWith(yearPrefix));
-                    
-                    let nextInvoiceNumber = 1;
-                    if (invoicesThisYear.length > 0) {
-                        const invoiceNumbers = invoicesThisYear.map(inv => {
-                            const parts = inv.invoiceNumber.split('-');
-                            return parseInt(parts[parts.length - 1], 10);
+                        const currentYear = new Date().getFullYear();
+                        const yearPrefix = `FAC-${currentYear}-`;
+                        
+                        const invoicesThisYear = userInvoices.filter(inv => inv.invoiceNumber.startsWith(yearPrefix));
+                        
+                        let nextInvoiceNumber = 1;
+                        if (invoicesThisYear.length > 0) {
+                            const invoiceNumbers = invoicesThisYear.map(inv => {
+                                const parts = inv.invoiceNumber.split('-');
+                                return parseInt(parts[parts.length - 1], 10);
+                            });
+                            const maxNumber = Math.max(...invoiceNumbers);
+                            nextInvoiceNumber = maxNumber + 1;
+                        }
+
+                        const newInvoiceNumber = `${yearPrefix}${String(nextInvoiceNumber).padStart(3, '0')}`;
+                        
+                        form.reset({
+                            ...form.getValues(),
+                            invoiceNumber: newInvoiceNumber,
+                            terms: companyProfile?.terms || "",
+                            taxes: companyProfile?.defaultTaxes || [],
                         });
-                        const maxNumber = Math.max(...invoiceNumbers);
-                        nextInvoiceNumber = maxNumber + 1;
                     }
-
-                    const newInvoiceNumber = `${yearPrefix}${String(nextInvoiceNumber).padStart(3, '0')}`;
-                    
-                    form.reset({
-                        ...form.getValues(),
-                        invoiceNumber: newInvoiceNumber,
-                        terms: companyProfile?.terms || "",
-                        taxes: companyProfile?.defaultTaxes || [],
-                    });
-
                 } catch (error) {
                     console.error("Error fetching initial data:", error);
                     toast({ title: "Error", description: "No se pudieron cargar los datos iniciales.", variant: "destructive" });
@@ -143,7 +163,7 @@ export default function NewInvoicePage() {
             }
         }
         fetchData();
-    }, [user, form, toast]);
+    }, [user, isEditing, invoiceId, form, toast, router]);
 
 
     const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({
@@ -191,27 +211,36 @@ export default function NewInvoicePage() {
              return;
         }
 
-        try {
-            await addInvoice({
-                ...data,
-                client: selectedClient,
-                subtotal,
-                total,
-                taxes: data.taxes || [],
-                notes: data.notes || '',
-                terms: data.terms || '',
-                userId: user.uid,
-            });
+        const invoicePayload = {
+            ...data,
+            client: selectedClient,
+            subtotal,
+            total,
+            taxes: data.taxes || [],
+            notes: data.notes || '',
+            terms: data.terms || '',
+            userId: user.uid,
+        };
 
-            toast({
-                title: t('newInvoice.toast.title'),
-                description: `${t('newInvoice.toast.description')} ${data.invoiceNumber}`,
-            });
+        try {
+            if (isEditing) {
+                await updateInvoice(invoiceId, invoicePayload);
+                toast({
+                    title: "Factura Actualizada",
+                    description: `La factura ${data.invoiceNumber} ha sido actualizada.`,
+                });
+            } else {
+                await addInvoice(invoicePayload);
+                toast({
+                    title: t('newInvoice.toast.title'),
+                    description: `${t('newInvoice.toast.description')} ${data.invoiceNumber}`,
+                });
+            }
 
             router.push('/dashboard/invoices');
         } catch (error) {
-            console.error("Error creating invoice:", error);
-            toast({ title: "Error", description: "Hubo un problema al crear la factura.", variant: "destructive" });
+            console.error("Error saving invoice:", error);
+            toast({ title: "Error", description: "Hubo un problema al guardar la factura.", variant: "destructive" });
         } finally {
             setIsSubmitting(false);
         }
@@ -230,7 +259,7 @@ export default function NewInvoicePage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <Card>
                     <CardHeader>
-                        <CardTitle>{t('newInvoice.title')}</CardTitle>
+                        <CardTitle>{isEditing ? "Editar Factura" : t('newInvoice.title')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-8">
                         {/* Top Section */}
@@ -241,7 +270,7 @@ export default function NewInvoicePage() {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>{t('invoices.client')}</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder={clients.length > 0 ? t('newInvoice.selectClient') : 'Crea un cliente primero'} />
@@ -276,7 +305,7 @@ export default function NewInvoicePage() {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>{t('invoices.status')}</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder={t('newInvoice.selectStatus')} />

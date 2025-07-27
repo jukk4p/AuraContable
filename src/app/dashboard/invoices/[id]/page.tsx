@@ -7,6 +7,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ArrowLeft, Download, Edit, Trash2, CheckCircle, Clock } from 'lucide-react';
+import Link from 'next/link';
 
 import type { Invoice, CompanyProfile } from '@/lib/types';
 import { auth } from '@/lib/firebase/config';
@@ -135,8 +136,10 @@ export default function InvoiceDetailsPage() {
                         <Button variant="outline" size="sm" disabled={isDownloading} onClick={handleDownloadPdf}>
                             <Download className="mr-2 h-4 w-4"/> {isDownloading ? "Generando..." : "PDF"}
                         </Button>
-                        <Button variant="outline" size="sm" disabled={isUpdating}>
-                            <Edit className="mr-2 h-4 w-4"/> {t('common.edit')}
+                        <Button variant="outline" size="sm" asChild>
+                           <Link href={`/dashboard/invoices/${invoice.id}/edit`}>
+                                <Edit className="mr-2 h-4 w-4"/> {t('common.edit')}
+                           </Link>
                         </Button>
                          <Button variant="outline" size="sm" disabled={isUpdating || invoice.status === 'Paid'} onClick={handleMarkAsPaid}>
                             <CheckCircle className="mr-2 h-4 w-4"/> {t('invoices.markAsPaid')}
