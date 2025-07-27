@@ -97,12 +97,36 @@
             "name": "Nombre",
             "email": "Email"
         },
-        "account": {
-            "title": "Cuenta",
-            "description": "Gestiona la configuración y las preferencias de tu cuenta.",
+        "company": {
+            "title": "Empresa",
+            "description": "Gestiona la información de tu empresa para las facturas.",
+            "name": "Nombre de la empresa",
+            "taxId": "CIF/NIF",
+            "address": "Dirección",
+            "billingEmail": "Email de facturación",
+            "iban": "IBAN / Cuenta bancaria",
+            "fiscalData": "Otros datos fiscales",
+            "fiscalDataPlaceholder": "Ej: Registro Mercantil...",
+            "logo": "Logotipo"
+        },
+        "invoicing": {
+            "title": "Facturación",
+            "description": "Configura los ajustes por defecto para tus facturas."
+        },
+        "security": {
+            "title": "Seguridad",
+            "description": "Gestiona los ajustes de seguridad de tu cuenta.",
             "newPassword": "Nueva Contraseña",
             "confirmPassword": "Confirmar Contraseña",
             "updatePassword": "Actualizar Contraseña"
+        },
+        "notifications": {
+            "title": "Notificaciones",
+            "description": "Elige cómo quieres recibir las notificaciones."
+        },
+        "appearance": {
+            "title": "Apariencia",
+            "description": "Personaliza el aspecto de la aplicación."
         },
         "language": {
             "title": "Idioma",
@@ -111,3 +135,5 @@
         }
     }
 }
+
+    

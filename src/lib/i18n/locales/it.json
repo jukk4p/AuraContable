@@ -97,12 +97,36 @@
             "name": "Nome",
             "email": "Email"
         },
-        "account": {
-            "title": "Account",
-            "description": "Gestisci le impostazioni e le preferenze del tuo account.",
+        "company": {
+            "title": "Azienda",
+            "description": "Gestisci le informazioni della tua azienda per le fatture.",
+            "name": "Nome azienda",
+            "taxId": "Partita IVA/Codice Fiscale",
+            "address": "Indirizzo",
+            "billingEmail": "Email di fatturazione",
+            "iban": "IBAN / Conto corrente",
+            "fiscalData": "Altri dati fiscali",
+            "fiscalDataPlaceholder": "Es: Registro delle Imprese...",
+            "logo": "Logo"
+        },
+        "invoicing": {
+            "title": "Fatturazione",
+            "description": "Configura le impostazioni predefinite per le tue fatture."
+        },
+        "security": {
+            "title": "Sicurezza",
+            "description": "Gestisci le impostazioni di sicurezza del tuo account.",
             "newPassword": "Nuova Password",
             "confirmPassword": "Conferma Password",
             "updatePassword": "Aggiorna Password"
+        },
+        "notifications": {
+            "title": "Notifiche",
+            "description": "Scegli come desideri ricevere le notifiche."
+        },
+        "appearance": {
+            "title": "Aspetto",
+            "description": "Personalizza l'aspetto dell'applicazione."
         },
         "language": {
             "title": "Lingua",
@@ -111,3 +135,5 @@
         }
     }
 }
+
+    

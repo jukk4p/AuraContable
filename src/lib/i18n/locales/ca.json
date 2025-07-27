@@ -97,12 +97,36 @@
             "name": "Nom",
             "email": "Correu electrònic"
         },
-        "account": {
-            "title": "Compte",
-            "description": "Gestiona la configuració i les preferències del teu compte.",
+        "company": {
+            "title": "Empresa",
+            "description": "Gestiona la informació de la teva empresa per a les factures.",
+            "name": "Nom de l'empresa",
+            "taxId": "CIF/NIF",
+            "address": "Adreça",
+            "billingEmail": "Email de facturació",
+            "iban": "IBAN / Compte bancari",
+            "fiscalData": "Altres dades fiscals",
+            "fiscalDataPlaceholder": "Ex: Registre Mercantil...",
+            "logo": "Logotip"
+        },
+        "invoicing": {
+            "title": "Facturació",
+            "description": "Configura els paràmetres per defecte de les teves factures."
+        },
+        "security": {
+            "title": "Seguretat",
+            "description": "Gestiona la configuració de seguretat del teu compte.",
             "newPassword": "Nova Contrasenya",
             "confirmPassword": "Confirma la Contrasenya",
             "updatePassword": "Actualitza la Contrasenya"
+        },
+        "notifications": {
+            "title": "Notificacions",
+            "description": "Tria com vols rebre les notificacions."
+        },
+        "appearance": {
+            "title": "Aparença",
+            "description": "Personalitza l'aspecte de l'aplicació."
         },
         "language": {
             "title": "Idioma",
@@ -111,3 +135,5 @@
         }
     }
 }
+
+    

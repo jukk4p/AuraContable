@@ -97,12 +97,36 @@
             "name": "Nom",
             "email": "Email"
         },
-        "account": {
-            "title": "Compte",
-            "description": "Gérez les paramètres et préférences de votre compte.",
+        "company": {
+            "title": "Entreprise",
+            "description": "Gérez les informations de votre entreprise pour les factures.",
+            "name": "Nom de l'entreprise",
+            "taxId": "N° de TVA/SIRET",
+            "address": "Adresse",
+            "billingEmail": "Email de facturation",
+            "iban": "IBAN / Compte bancaire",
+            "fiscalData": "Autres données fiscales",
+            "fiscalDataPlaceholder": "Ex: Registre du Commerce...",
+            "logo": "Logo"
+        },
+        "invoicing": {
+            "title": "Facturation",
+            "description": "Configurez les paramètres par défaut de vos factures."
+        },
+        "security": {
+            "title": "Sécurité",
+            "description": "Gérez les paramètres de sécurité de votre compte.",
             "newPassword": "Nouveau mot de passe",
             "confirmPassword": "Confirmer le mot de passe",
             "updatePassword": "Mettre à jour le mot de passe"
+        },
+        "notifications": {
+            "title": "Notifications",
+            "description": "Choisissez comment vous souhaitez recevoir les notifications."
+        },
+        "appearance": {
+            "title": "Apparence",
+            "description": "Personnalisez l'apparence de l'application."
         },
         "language": {
             "title": "Langue",
@@ -111,3 +135,5 @@
         }
     }
 }
+
+    

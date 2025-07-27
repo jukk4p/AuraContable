@@ -97,12 +97,36 @@
             "name": "Name",
             "email": "Email"
         },
-        "account": {
-            "title": "Account",
-            "description": "Manage your account settings and preferences.",
+        "company": {
+            "title": "Company",
+            "description": "Manage your company information for invoices.",
+            "name": "Company Name",
+            "taxId": "Tax ID",
+            "address": "Address",
+            "billingEmail": "Billing Email",
+            "iban": "IBAN / Bank Account",
+            "fiscalData": "Other Fiscal Data",
+            "fiscalDataPlaceholder": "E.g. Commercial Registry...",
+            "logo": "Logo"
+        },
+        "invoicing": {
+            "title": "Invoicing",
+            "description": "Configure the default settings for your invoices."
+        },
+        "security": {
+            "title": "Security",
+            "description": "Manage your account security settings.",
             "newPassword": "New Password",
             "confirmPassword": "Confirm Password",
             "updatePassword": "Update Password"
+        },
+        "notifications": {
+            "title": "Notifications",
+            "description": "Choose how you want to receive notifications."
+        },
+        "appearance": {
+            "title": "Appearance",
+            "description": "Customize the look and feel of the application."
         },
         "language": {
             "title": "Language",
@@ -111,3 +135,5 @@
         }
     }
 }
+
+    
