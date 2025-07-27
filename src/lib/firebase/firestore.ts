@@ -1,4 +1,5 @@
 
+
 "use server"
 
 import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, DocumentData, QueryDocumentSnapshot, Timestamp, getDoc, setDoc } from "firebase/firestore";
@@ -57,11 +58,13 @@ function isInvoice(doc: DocumentData): doc is Omit<Invoice, 'id' | 'issueDate' |
      return (
         typeof doc.invoiceNumber === 'string' &&
         doc.client && typeof doc.client.name === 'string' &&
-        typeof doc.clientId === 'string' &&
+        // doc.clientId is now optional in some flows
+        // typeof doc.clientId === 'string' &&
         Array.isArray(doc.items) &&
         typeof doc.subtotal === 'number' &&
         typeof doc.total === 'number' &&
-        Array.isArray(doc.taxes) &&
+        // taxes can be optional
+        // Array.isArray(doc.taxes) &&
         ['Paid', 'Pending', 'Overdue'].includes(doc.status) &&
         doc.issueDate instanceof Timestamp &&
         doc.dueDate instanceof Timestamp &&
@@ -81,6 +84,9 @@ const invoiceFromSnapshot = (snapshot: QueryDocumentSnapshot<DocumentData> | Doc
         ...data,
         issueDate: data.issueDate.toDate(),
         dueDate: data.dueDate.toDate(),
+        taxes: data.taxes || [], // Ensure taxes is an array
+        notes: data.notes || '',
+        terms: data.terms || '',
     };
 };
 
