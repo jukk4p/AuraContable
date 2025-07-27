@@ -22,55 +22,75 @@ export async function generateInvoicePdf(
     const doc = new jsPDF() as jsPDFWithAutoTable;
     const { t, formatCurrency } = l10n;
 
-    // --- Header with Logo ---
-    if (company?.logoUrl) {
+    const primaryColor = '#3399FF'; // HSL(210, 70%, 50%)
+    const textColor = '#1E293B'; // approx. HSL(210, 25%, 15%)
+    const mutedColor = '#64748B'; // approx. HSL(210, 20%, 40%)
+    const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
+    const pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth();
+
+    // --- Header ---
+    doc.setFontSize(26);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(textColor);
+    doc.text(t('nav.invoices').toUpperCase(), 20, 30);
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(mutedColor);
+    doc.text(`${t('invoices.invoiceNumberShort')}: #${invoice.invoiceNumber}`, 20, 38);
+
+    if (company?.logoUrl && company.logoUrl.startsWith('data:image')) {
         try {
-            // Check if logoUrl is a valid data URI
-            if (company.logoUrl.startsWith('data:image')) {
-                 doc.addImage(company.logoUrl, 'PNG', 20, 15, 40, 15); // Adjust x, y, width, height as needed
-            }
+            doc.addImage(company.logoUrl, 'PNG', pageWidth - 60, 20, 40, 15);
         } catch(e) {
             console.error("Error adding logo to PDF:", e);
         }
     }
 
-    doc.setFontSize(20);
-    doc.text(t('invoices.invoiceNumber').toUpperCase(), 20, 45);
-    doc.setFontSize(14);
-    doc.text(`#${invoice.invoiceNumber}`, 20, 53);
-
     // --- Company & Client Info ---
+    const infoStartY = 60;
+    doc.setLineWidth(0.5);
+    doc.setDrawColor(mutedColor);
+    doc.line(20, infoStartY - 10, pageWidth - 20, infoStartY - 10);
+    
     doc.setFontSize(10);
-    const companyX = 20;
-    const clientX = 120;
-    const startY = 70;
-
-    // Company Info (Issuer)
-    doc.setFont('helvetica', 'bold');
-    doc.text(company?.name || 'Your Company Name', companyX, startY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(company?.address || 'Your Address', companyX, startY + 5);
-    doc.text(company?.taxId || 'Your Tax ID', companyX, startY + 10);
-    doc.text(company?.billingEmail || 'your-email@company.com', companyX, startY + 15);
     
-    // Client Info (Recipient)
+    // Company Info (From)
     doc.setFont('helvetica', 'bold');
-    doc.text(t('invoices.client'), clientX, startY);
+    doc.setTextColor(mutedColor);
+    doc.text('De:', 20, infoStartY);
     doc.setFont('helvetica', 'normal');
-    doc.text(invoice.client.name, clientX, startY + 5);
-    doc.text(invoice.client.email, clientX, startY + 10);
+    doc.setTextColor(textColor);
+    doc.text(company?.name || 'Your Company Name', 20, infoStartY + 6);
+    doc.text(company?.address || 'Your Address', 20, infoStartY + 11);
+    doc.text(company?.taxId || 'Your Tax ID', 20, infoStartY + 16);
+    doc.text(company?.billingEmail || 'your-email@company.com', 20, infoStartY + 21);
 
-    // --- Invoice Details ---
-    const detailsY = startY + 30;
+    // Client Info (To)
     doc.setFont('helvetica', 'bold');
-    doc.text(t('invoices.issueDate').toUpperCase(), companyX, detailsY);
+    doc.setTextColor(mutedColor);
+    doc.text('Para:', pageWidth / 2, infoStartY);
     doc.setFont('helvetica', 'normal');
-    doc.text(format(invoice.issueDate, 'PPP'), companyX, detailsY + 5);
+    doc.setTextColor(textColor);
+    doc.text(invoice.client.name, pageWidth / 2, infoStartY + 6);
+    doc.text(invoice.client.email, pageWidth / 2, infoStartY + 11);
+
+    // Invoice Dates
+    const datesY = infoStartY + 35;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(mutedColor);
+    doc.text(t('invoices.issueDate').toUpperCase(), 20, datesY);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(textColor);
+    doc.text(format(invoice.issueDate, 'PPP'), 20, datesY + 6);
     
     doc.setFont('helvetica', 'bold');
-    doc.text(t('invoices.dueDate').toUpperCase(), companyX + 60, detailsY);
+    doc.setTextColor(mutedColor);
+    doc.text(t('invoices.dueDate').toUpperCase(), pageWidth / 2, datesY);
     doc.setFont('helvetica', 'normal');
-    doc.text(format(invoice.dueDate, 'PPP'), companyX + 60, detailsY + 5);
+    doc.setTextColor(textColor);
+    doc.text(format(invoice.dueDate, 'PPP'), pageWidth / 2, datesY + 6);
+
 
     // --- Items Table ---
     const tableHeaders = [
@@ -88,43 +108,75 @@ export async function generateInvoicePdf(
     ]);
 
     doc.autoTable({
-        startY: detailsY + 15,
+        startY: datesY + 15,
         head: [tableHeaders],
         body: tableData,
         theme: 'striped',
-        headStyles: { fillColor: [22, 163, 74] },
+        headStyles: { 
+            fillColor: primaryColor,
+            textColor: '#FFFFFF',
+            fontStyle: 'bold'
+        },
+        styles: {
+            cellPadding: 3,
+            fontSize: 10,
+            textColor: textColor,
+        },
+        columnStyles: {
+            1: { halign: 'center' },
+            2: { halign: 'right' },
+            3: { halign: 'right' }
+        },
+        didDrawPage: (data) => {
+            // Footer
+            if (company?.iban || invoice.notes) {
+                 const footerY = pageHeight - 35;
+                 doc.setLineWidth(0.5);
+                 doc.setDrawColor(mutedColor);
+                 doc.line(20, footerY, pageWidth - 20, footerY);
+
+                 let currentY = footerY + 10;
+                 doc.setFontSize(9);
+                 doc.setTextColor(mutedColor);
+
+                 if(company?.iban) {
+                     doc.setFont('helvetica', 'bold');
+                     doc.text('Detalles de Pago:', 20, currentY);
+                     doc.setFont('helvetica', 'normal');
+                     doc.text(`IBAN: ${company.iban}`, 20, currentY + 5);
+                     currentY += 15;
+                 }
+                  if (invoice.notes) {
+                     doc.setFont('helvetica', 'bold');
+                     doc.text(`${t('newInvoice.notes')}:`, 20, currentY);
+                     doc.setFont('helvetica', 'normal');
+                     doc.text(invoice.notes, 20, currentY + 5, { maxWidth: pageWidth - 40 });
+                 }
+            }
+        }
     });
 
     // --- Totals ---
     const finalY = (doc as any).lastAutoTable.finalY;
-    const totalX = 140;
-    doc.setFontSize(12);
-
-    doc.text(`${t('newInvoice.subtotal')}:`, totalX, finalY + 10);
-    doc.text(formatCurrency(invoice.subtotal), 190, finalY + 10, { align: 'right' });
+    const totalX = pageWidth - 80;
+    const totalValueX = pageWidth - 20;
     
-    // You can add tax and total rows here if they are in your invoice object
-    // For example:
-    // doc.text(`Tax:`, totalX, finalY + 17);
-    // doc.text(formatCurrency(invoice.tax), 190, finalY + 17, { align: 'right' });
+    doc.setFontSize(12);
+    doc.setTextColor(textColor);
+    
+    doc.text(`${t('newInvoice.subtotal')}:`, totalX, finalY + 15, { align: 'left'});
+    doc.text(formatCurrency(invoice.subtotal), totalValueX, finalY + 15, { align: 'right' });
+    
+    // Example for tax and total, assuming you add them to the invoice object
+    // doc.text(`IVA (21%):`, totalX, finalY + 22, { align: 'left'});
+    // doc.text(formatCurrency(invoice.tax), totalValueX, finalY + 22, { align: 'right' });
+    
+    // doc.setFontSize(14);
     // doc.setFont('helvetica', 'bold');
-    // doc.text(`Total:`, totalX, finalY + 24);
-    // doc.text(formatCurrency(invoice.total), 190, finalY + 24, { align: 'right' });
+    // doc.text(`TOTAL:`, totalX, finalY + 30, { align: 'left'});
+    // doc.text(formatCurrency(invoice.total), totalValueX, finalY + 30, { align: 'right' });
 
-
-    // --- Notes & Footer ---
-    if (invoice.notes) {
-        doc.setFontSize(10);
-        doc.text(t('newInvoice.notes'), 20, finalY + 40);
-        doc.text(invoice.notes, 20, finalY + 45, { maxWidth: 170 });
-    }
-
-    if (company?.iban) {
-         doc.setFontSize(10);
-         doc.text('Payment Details:', 20, doc.internal.pageSize.height - 30);
-         doc.text(`IBAN: ${company.iban}`, 20, doc.internal.pageSize.height - 25);
-    }
 
     // --- Save PDF ---
-    doc.save(`Invoice-${invoice.invoiceNumber}.pdf`);
+    doc.save(`Factura-${invoice.invoiceNumber}.pdf`);
 }
