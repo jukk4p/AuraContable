@@ -1,9 +1,10 @@
 
+
 "use server"
 
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, DocumentData, QueryDocumentSnapshot, Timestamp, getDoc, setDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, DocumentData, QueryDocumentSnapshot, Timestamp, getDoc, setDoc, orderBy, limit } from "firebase/firestore";
 import { db } from "./config";
-import type { Client, Invoice, Expense, CompanyProfile } from "@/lib/types";
+import type { Client, Invoice, Expense, CompanyProfile, AppNotification } from "@/lib/types";
 
 // Type guard for Client
 function isClient(doc: DocumentData): doc is Client {
@@ -202,4 +203,39 @@ export async function saveCompanyProfile(profile: Omit<CompanyProfile, 'id'>): P
     // Firestore does not allow undefined values. We need to clean the object.
     const cleanProfile = Object.fromEntries(Object.entries(profile).filter(([_, v]) => v !== undefined));
     await setDoc(docRef, cleanProfile, { merge: true });
+}
+
+// Notification functions
+const notificationFromSnapshot = (snapshot: QueryDocumentSnapshot<DocumentData>): AppNotification => {
+    const data = snapshot.data();
+    return {
+        id: snapshot.id,
+        userId: data.userId,
+        title: data.title,
+        body: data.body,
+        href: data.href,
+        isRead: data.isRead,
+        createdAt: (data.createdAt as Timestamp).toDate(),
+    };
+};
+
+export async function getNotifications(userId: string): Promise<AppNotification[]> {
+    if (!userId) return [];
+    const q = query(
+        collection(db, 'notifications'), 
+        where('userId', '==', userId), 
+        orderBy('createdAt', 'desc'),
+        limit(10)
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(notificationFromSnapshot);
+}
+
+export async function addNotification(notification: Omit<AppNotification, 'id'>): Promise<void> {
+    await addDoc(collection(db, "notifications"), notification);
+}
+
+export async function markNotificationAsRead(notificationId: string): Promise<void> {
+    const notifRef = doc(db, 'notifications', notificationId);
+    await updateDoc(notifRef, { isRead: true });
 }

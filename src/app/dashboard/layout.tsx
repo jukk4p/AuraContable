@@ -2,18 +2,22 @@
 "use client"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { FileText, LayoutGrid, Settings, Users, PanelLeft, Search, PlusCircle, Receipt, AreaChart } from "lucide-react"
+import { FileText, LayoutGrid, Settings, Users, PanelLeft, Search, PlusCircle, Receipt, AreaChart, Bell, Circle } from "lucide-react"
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
-import React from "react"
+import React, { useEffect, useState } from "react"
 import { useLocale } from "@/lib/i18n/locale-provider"
 import { cn } from "@/lib/utils"
 import { auth } from "@/lib/firebase/config"
 import { signOut } from "firebase/auth"
 import { useAuthState } from "react-firebase-hooks/auth"
+import { AppNotification } from "@/lib/types"
+import { getNotifications, markNotificationAsRead } from "@/lib/firebase/firestore"
+import { formatDistanceToNow } from "date-fns"
+import { es } from "date-fns/locale"
 
 function CustomSidebarTrigger() {
     const { toggleSidebar } = useSidebar();
@@ -26,6 +30,72 @@ function CustomSidebarTrigger() {
         >
             <PanelLeft />
         </Button>
+    )
+}
+
+function NotificationsBell() {
+    const [user] = useAuthState(auth);
+    const [notifications, setNotifications] = useState<AppNotification[]>([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    useEffect(() => {
+        if (user) {
+            getNotifications(user.uid).then(data => {
+                setNotifications(data);
+                setUnreadCount(data.filter(n => !n.isRead).length);
+            });
+        }
+    }, [user]);
+
+    const handleMarkAsRead = async (id: string) => {
+        await markNotificationAsRead(id);
+        setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+    };
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                    <Bell className="h-5 w-5" />
+                    {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
+                            {unreadCount}
+                        </span>
+                    )}
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+                <DropdownMenuLabel>Notificaciones</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup className="max-h-96 overflow-y-auto">
+                    {notifications.length === 0 && (
+                        <DropdownMenuItem disabled>No tienes notificaciones</DropdownMenuItem>
+                    )}
+                    {notifications.map(notif => (
+                         <DropdownMenuItem key={notif.id} className="flex items-start gap-2" onSelect={(e) => e.preventDefault()}>
+                            {!notif.isRead && <Circle className="h-2 w-2 mt-1.5 fill-primary text-primary" />}
+                            <div className={cn("flex-1 space-y-1", notif.isRead && "pl-4")}>
+                               <Link href={notif.href} className="hover:underline">
+                                 <p className="font-semibold">{notif.title}</p>
+                                 <p className="text-sm text-muted-foreground">{notif.body}</p>
+                                 <p className="text-xs text-muted-foreground mt-1">
+                                    {formatDistanceToNow(notif.createdAt, { addSuffix: true, locale: es })}
+                                </p>
+                               </Link>
+                                {!notif.isRead && (
+                                     <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => handleMarkAsRead(notif.id)}>Marcar como leída</Button>
+                                )}
+                            </div>
+                         </DropdownMenuItem>
+                    ))}
+                </DropdownMenuGroup>
+                 <DropdownMenuSeparator />
+                 <DropdownMenuItem className="justify-center">
+                    Ver todas las notificaciones
+                 </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
     )
 }
 
@@ -130,6 +200,7 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
                     {t('common.createInvoice')}
                 </Button>
             </Link>
+            <NotificationsBell />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative w-10 h-10 rounded-full">

@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import { useEffect, useState } from 'react';
@@ -11,7 +12,7 @@ import Link from 'next/link';
 
 import type { Invoice, CompanyProfile } from '@/lib/types';
 import { auth } from '@/lib/firebase/config';
-import { getInvoiceById, getCompanyProfile, updateInvoice, deleteInvoice } from '@/lib/firebase/firestore';
+import { getInvoiceById, getCompanyProfile, updateInvoice, deleteInvoice, addNotification } from '@/lib/firebase/firestore';
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -85,11 +86,22 @@ export default function InvoiceDetailsPage() {
     };
     
     const handleMarkAsPaid = async () => {
-        if (!invoice) return;
+        if (!invoice || !user) return;
         setIsUpdating(true);
         try {
             await updateInvoice(invoice.id, { status: 'Paid' });
             setInvoice({ ...invoice, status: 'Paid' });
+            
+            // Add a notification for the payment
+            await addNotification({
+                userId: user.uid,
+                title: "Pago Recibido",
+                body: `La factura ${invoice.invoiceNumber} ha sido pagada.`,
+                href: `/dashboard/invoices/${invoice.id}`,
+                isRead: false,
+                createdAt: new Date(),
+            });
+
             toast({ title: "Factura Actualizada", description: "La factura ha sido marcada como pagada." });
         } catch (error) {
              console.error("Error updating invoice status:", error);

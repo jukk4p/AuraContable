@@ -106,3 +106,13 @@ export type ReportData = {
     totalCount: number;
     monthlyData: { month: string; total: number; paid: number; pending: number; overdue: number }[];
 }
+
+export type AppNotification = {
+    id: string;
+    userId: string;
+    title: string;
+    body: string;
+    href: string;
+    isRead: boolean;
+    createdAt: Date;
+}
