@@ -126,7 +126,11 @@
         },
         "appearance": {
             "title": "Aparença",
-            "description": "Personalitza l'aspecte de l'aplicació."
+            "description": "Personalitza l'aspecte de l'aplicació.",
+            "theme": "Tema",
+            "light": "Clar",
+            "dark": "Fosc",
+            "system": "Sistema"
         },
         "language": {
             "title": "Idioma",
@@ -135,5 +139,3 @@
         }
     }
 }
-
-    

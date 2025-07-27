@@ -10,10 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import type { Locale } from "@/lib/i18n/locales";
-import { Building, Languages, Shield, User, Bell, Palette, FileText } from "lucide-react";
+import { Building, Languages, Shield, User, Bell, Palette, FileText, Moon, Sun, Monitor } from "lucide-react";
+import { useTheme } from "next-themes";
+
 
 export default function SettingsPage() {
-    const { t, setLocale } = useLocale();
+    const { t } = useLocale();
 
     const tabs = [
         { value: "profile", label: t('settings.profile.title'), icon: User },
@@ -66,12 +68,7 @@ export default function SettingsPage() {
                         </Card>
                     </TabsContent>
                     <TabsContent value="appearance" className="m-0">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>{t('settings.appearance.title')}</CardTitle>
-                                <CardDescription>{t('settings.appearance.description')}</CardDescription>
-                            </CardHeader>
-                        </Card>
+                        <AppearanceSettings />
                     </TabsContent>
                     <TabsContent value="language" className="m-0">
                         <LanguageSettings />
@@ -216,6 +213,37 @@ function LanguageSettings() {
                         </SelectContent>
                     </Select>
                     </div>
+            </CardContent>
+        </Card>
+    )
+}
+
+function AppearanceSettings() {
+    const { t } = useLocale();
+    const { setTheme } = useTheme();
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>{t('settings.appearance.title')}</CardTitle>
+                <CardDescription>{t('settings.appearance.description')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <Label>{t('settings.appearance.theme')}</Label>
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setTheme("light")}>
+                        <Sun className="mr-2" />
+                        {t('settings.appearance.light')}
+                    </Button>
+                    <Button variant="outline" onClick={() => setTheme("dark")}>
+                        <Moon className="mr-2" />
+                        {t('settings.appearance.dark')}
+                    </Button>
+                    <Button variant="outline" onClick={() => setTheme("system")}>
+                        <Monitor className="mr-2" />
+                        {t('settings.appearance.system')}
+                    </Button>
+                </div>
             </CardContent>
         </Card>
     )

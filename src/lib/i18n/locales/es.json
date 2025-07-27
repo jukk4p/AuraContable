@@ -126,7 +126,11 @@
         },
         "appearance": {
             "title": "Apariencia",
-            "description": "Personaliza el aspecto de la aplicación."
+            "description": "Personaliza el aspecto de la aplicación.",
+            "theme": "Tema",
+            "light": "Claro",
+            "dark": "Oscuro",
+            "system": "Sistema"
         },
         "language": {
             "title": "Idioma",
@@ -135,5 +139,3 @@
         }
     }
 }
-
-    

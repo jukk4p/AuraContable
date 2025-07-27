@@ -126,7 +126,11 @@
         },
         "appearance": {
             "title": "Appearance",
-            "description": "Customize the look and feel of the application."
+            "description": "Customize the look and feel of the application.",
+            "theme": "Theme",
+            "light": "Light",
+            "dark": "Dark",
+            "system": "System"
         },
         "language": {
             "title": "Language",
@@ -135,5 +139,3 @@
         }
     }
 }
-
-    
