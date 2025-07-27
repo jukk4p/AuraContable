@@ -2,7 +2,7 @@
 "use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowUpRight, Banknote, Users, FileWarning, CheckCircle2 } from "lucide-react";
+import { ArrowUpRight, Banknote, Users, FileWarning, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import InvoiceStatusBadge from "@/components/invoice-status-badge";
@@ -14,31 +14,32 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { getInvoices } from "@/lib/firebase/firestore";
 import type { Invoice } from "@/lib/types";
 import { format } from "date-fns";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function DashboardPage() {
     const { t, formatCurrency } = useLocale();
-    const [user] = useAuthState(auth);
+    const [user, authLoading, authError] = useAuthState(auth);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [dbLoading, setDbLoading] = useState(true);
 
     useEffect(() => {
         const fetchInvoices = async () => {
             if (user) {
-                setLoading(true);
+                setDbLoading(true);
                 try {
                     const userInvoices = await getInvoices(user.uid);
                     setInvoices(userInvoices);
                 } catch (e: any) {
                     console.error("Error fetching invoices:", e);
                 } finally {
-                    setLoading(false);
+                    setDbLoading(false);
                 }
-            } else if (user === null) {
-                setLoading(false);
+            } else if (!authLoading) {
+                setDbLoading(false);
             }
         };
         fetchInvoices();
-    }, [user]);
+    }, [user, authLoading]);
 
     const dashboardData = React.useMemo(() => {
         const totalRevenue = invoices
@@ -61,8 +62,22 @@ export default function DashboardPage() {
         .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime())
         .slice(0, 5);
 
-    if (loading) {
+    if (authLoading || dbLoading) {
         return <p>Cargando panel...</p>;
+    }
+    
+    if (authError) {
+        return <p>Error de autenticación: {authError.message}</p>
+    }
+
+    if (!user) {
+         return (
+            <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Acceso Denegado</AlertTitle>
+                <AlertDescription>Debes iniciar sesión para ver esta página.</AlertDescription>
+            </Alert>
+        )
     }
 
     return (
@@ -158,3 +173,5 @@ export default function DashboardPage() {
       </div>
     );
 }
+
+    

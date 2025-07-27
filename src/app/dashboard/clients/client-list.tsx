@@ -20,7 +20,7 @@ import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
-function ClientForm({ client, onSave, onCancel }: { client?: Client | null, onSave: (client: Omit<Client, 'id' | 'avatarUrl' | 'userId'> & { id?: string }) => void, onCancel: () => void }) {
+function ClientForm({ client, onSave, onCancel, isSaving }: { client?: Client | null, onSave: (client: Omit<Client, 'id' | 'avatarUrl' | 'userId'> & { id?: string }) => void, onCancel: () => void, isSaving: boolean }) {
     const { t } = useLocale();
     const [name, setName] = useState(client?.name || '');
     const [email, setEmail] = useState(client?.email || '');
@@ -53,8 +53,8 @@ function ClientForm({ client, onSave, onCancel }: { client?: Client | null, onSa
                 </div>
             </div>
             <DialogFooter>
-                <Button type="button" variant="outline" onClick={onCancel}>{t('common.cancel')}</Button>
-                <Button type="submit">{t('common.save')}</Button>
+                <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving}>{t('common.cancel')}</Button>
+                <Button type="submit" disabled={isSaving}>{isSaving ? t('common.save') + "..." : t('common.save')}</Button>
             </DialogFooter>
         </form>
     );
@@ -62,40 +62,42 @@ function ClientForm({ client, onSave, onCancel }: { client?: Client | null, onSa
 
 export default function ClientList() {
     const { t } = useLocale();
-    const [user] = useAuthState(auth);
+    const [user, authLoading, authError] = useAuthState(auth);
     const [clients, setClients] = useState<Client[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [dbLoading, setDbLoading] = useState(true);
+    const [dbError, setDbError] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
 
     useEffect(() => {
         const fetchClients = async () => {
             if (user) {
-                setLoading(true);
-                setError(null);
+                setDbLoading(true);
+                setDbError(null);
                 try {
                     const userClients = await getClients(user.uid);
                     setClients(userClients);
                 } catch (e: any) {
                     console.error("Error fetching clients: ", e);
                     if(e.code === 'failed-precondition') {
-                        setError("La base de datos de Firestore no está creada o configurada. Por favor, créala desde la consola de Firebase.");
+                        setDbError("La base de datos de Firestore no está creada o configurada. Por favor, créala desde la consola de Firebase.");
+                    } else if (e.message.includes("permission-denied")) {
+                         setDbError("Permiso denegado. Revisa las reglas de seguridad de Firestore.");
                     } else {
-                        setError("Ha ocurrido un error al cargar los clientes.");
+                        setDbError("Ha ocurrido un error al cargar los clientes.");
                     }
                 } finally {
-                    setLoading(false);
+                    setDbLoading(false);
                 }
-            } else if (!user) {
-                // Not logged in, stop loading.
-                setLoading(false);
+            } else if (!authLoading) {
+                setDbLoading(false);
             }
         };
         fetchClients();
-    }, [user]);
+    }, [user, authLoading]);
 
     const filteredClients = useMemo(() => {
         return clients.filter(client =>
@@ -109,7 +111,8 @@ export default function ClientList() {
             toast({ title: "Error", description: "Debes iniciar sesión para realizar esta acción.", variant: "destructive" });
             return;
         }
-
+        
+        setIsSaving(true);
         try {
             if (clientData.id) {
                 // Edit existing client
@@ -133,6 +136,8 @@ export default function ClientList() {
         } catch (error) {
             console.error("Error saving client: ", error);
             toast({ title: "Error", description: "Hubo un problema al guardar el cliente.", variant: "destructive" });
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -157,8 +162,22 @@ export default function ClientList() {
         setEditingClient(null);
     };
     
-    if (loading) {
+    if (authLoading || dbLoading) {
         return <p>Cargando clientes...</p>
+    }
+
+    if (authError) {
+        return <p>Error de autenticación: {authError.message}</p>
+    }
+
+    if (!user) {
+         return (
+            <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Acceso Denegado</AlertTitle>
+                <AlertDescription>Debes iniciar sesión para ver esta página.</AlertDescription>
+            </Alert>
+        )
     }
 
     return (
@@ -181,18 +200,18 @@ export default function ClientList() {
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => { if (isFormOpen) e.preventDefault()}} onEscapeKeyDown={handleCloseForm}>
-                                <ClientForm client={editingClient} onSave={handleSaveClient} onCancel={handleCloseForm} />
+                                <ClientForm client={editingClient} onSave={handleSaveClient} onCancel={handleCloseForm} isSaving={isSaving} />
                             </DialogContent>
                         </Dialog>
                     </div>
                 </div>
             </CardHeader>
             <CardContent>
-                {error && (
+                {dbError && (
                     <Alert variant="destructive" className="mb-4">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Error de Conexión</AlertTitle>
-                        <AlertDescription>{error}</AlertDescription>
+                        <AlertDescription>{dbError}</AlertDescription>
                     </Alert>
                 )}
                 <Table>
@@ -237,7 +256,7 @@ export default function ClientList() {
                         ))}
                     </TableBody>
                 </Table>
-                 {!error && filteredClients.length === 0 && (
+                 {!dbError && filteredClients.length === 0 && (
                     <div className="text-center py-10">
                         <p className="text-muted-foreground">{t('clients.noClients')}</p>
                     </div>
@@ -247,3 +266,4 @@ export default function ClientList() {
     );
 }
 
+    

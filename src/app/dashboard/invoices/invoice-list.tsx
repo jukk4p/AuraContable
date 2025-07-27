@@ -19,12 +19,15 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { getInvoices, deleteInvoice } from '@/lib/firebase/firestore';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+
 
 export default function InvoiceList() {
     const { t, formatCurrency, locale } = useLocale();
-    const [user] = useAuthState(auth);
+    const [user, authLoading, authError] = useAuthState(auth);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [dbLoading, setDbLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
     const [sortConfig, setSortConfig] = useState<{ key: keyof Invoice | 'client.name'; direction: 'ascending' | 'descending' } | null>(null);
@@ -32,7 +35,7 @@ export default function InvoiceList() {
     useEffect(() => {
         const fetchInvoices = async () => {
             if (user) {
-                setLoading(true);
+                setDbLoading(true);
                 try {
                     const userInvoices = await getInvoices(user.uid);
                     setInvoices(userInvoices);
@@ -40,14 +43,14 @@ export default function InvoiceList() {
                     console.error("Error fetching invoices:", e);
                     toast({ title: "Error", description: "Hubo un problema al cargar las facturas.", variant: "destructive" });
                 } finally {
-                    setLoading(false);
+                    setDbLoading(false);
                 }
-            } else if (!user) {
-                setLoading(false);
+            } else if (!authLoading) {
+                setDbLoading(false);
             }
         };
         fetchInvoices();
-    }, [user]);
+    }, [user, authLoading]);
 
     const filteredInvoices = useMemo(() => {
         let filtered = [...invoices];
@@ -124,9 +127,24 @@ export default function InvoiceList() {
         return <ArrowUpDown className="ml-2 h-4 w-4" />; 
       };
 
-    if (loading) {
+    if (authLoading || dbLoading) {
         return <p>Cargando facturas...</p>;
     }
+    
+    if (authError) {
+        return <p>Error de autenticación: {authError.message}</p>
+    }
+
+    if (!user) {
+         return (
+            <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Acceso Denegado</AlertTitle>
+                <AlertDescription>Debes iniciar sesión para ver esta página.</AlertDescription>
+            </Alert>
+        )
+    }
+
 
     return (
         <Card>
@@ -233,3 +251,5 @@ export default function InvoiceList() {
         </Card>
     );
 }
+
+    
