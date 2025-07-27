@@ -2,14 +2,13 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { FileText, LayoutGrid, Settings, Users, PanelLeft, Search, PlusCircle } from "lucide-react"
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger, SidebarFooter } from "@/components/ui/sidebar"
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger, SidebarFooter, useSidebar } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import React from "react"
 import { useLocale } from "@/lib/i18n/locale-provider"
-import { useSidebar } from "@/components/ui/sidebar"
 
 function CustomSidebarTrigger() {
     const { toggleSidebar } = useSidebar();
@@ -18,6 +17,7 @@ function CustomSidebarTrigger() {
             variant="ghost"
             size="icon"
             onClick={() => toggleSidebar()}
+            className="hidden md:flex"
         >
             <PanelLeft />
         </Button>
@@ -61,11 +61,12 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <Sidebar>
-        <SidebarHeader className="p-4">
+        <SidebarHeader className="p-4 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">
             <FileText className="w-8 h-8 text-primary" />
             <span className="text-xl font-semibold font-headline">InvoiceFlow</span>
           </Link>
+          <CustomSidebarTrigger />
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
@@ -81,11 +82,6 @@ export default function DashboardLayout({
             ))}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter>
-            <div className="flex items-center justify-center p-2">
-                <CustomSidebarTrigger />
-            </div>
-        </SidebarFooter>
       </Sidebar>
       <SidebarInset>
         <header className="flex items-center justify-between h-16 px-6 border-b">
