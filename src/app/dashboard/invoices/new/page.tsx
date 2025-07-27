@@ -24,6 +24,15 @@ import { auth } from "@/lib/firebase/config"
 import { useAuthState } from "react-firebase-hooks/auth"
 import { getClients, addInvoice, getInvoices, getCompanyProfile } from "@/lib/firebase/firestore"
 import { useRouter } from "next/navigation"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
 
 const invoiceFormSchema = z.object({
     invoiceNumber: z.string().min(1, "El número de factura es obligatorio"),
@@ -46,6 +55,24 @@ const invoiceFormSchema = z.object({
 })
 
 type InvoiceFormValues = z.infer<typeof invoiceFormSchema>
+
+const PRESET_TAXES = {
+  es: [
+    { id: 'es-iva-21', name: 'IVA', percentage: 21 },
+    { id: 'es-iva-10', name: 'IVA Reducido', percentage: 10 },
+    { id: 'es-irpf-15', name: 'IRPF', percentage: -15 },
+    { id: 'es-irpf-7', name: 'IRPF (Nuevos autónomos)', percentage: -7 },
+  ],
+  it: [
+    { id: 'it-iva-22', name: 'IVA', percentage: 22 },
+  ],
+  fr: [
+    { id: 'fr-tva-20', name: 'TVA', percentage: 20 },
+  ],
+  gb: [
+    { id: 'gb-vat-20', name: 'VAT', percentage: 20 },
+  ]
+};
 
 export default function NewInvoicePage() {
     const { t, formatCurrency, locale: currentLocale } = useLocale();
@@ -421,16 +448,43 @@ export default function NewInvoicePage() {
                                         </div>
                                     ))}
 
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="mt-2"
-                                        onClick={() => appendTax({ id: `tax-${Date.now()}`, name: "", percentage: 0 })}
-                                    >
-                                        <PlusCircle className="mr-2 h-4 w-4" />
-                                        {t('settings.invoicing.addTax')}
-                                    </Button>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button type="button" variant="outline" size="sm" className="mt-2">
+                                                <PlusCircle className="mr-2 h-4 w-4" />
+                                                {t('settings.invoicing.addTax')}
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent>
+                                            <DropdownMenuLabel>España</DropdownMenuLabel>
+                                            {PRESET_TAXES.es.map(tax => (
+                                                <DropdownMenuItem key={tax.id} onSelect={() => appendTax(tax)}>
+                                                    {tax.name} ({tax.percentage}%)
+                                                </DropdownMenuItem>
+                                            ))}
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuLabel>Internacional</DropdownMenuLabel>
+                                            {PRESET_TAXES.it.map(tax => (
+                                                 <DropdownMenuItem key={tax.id} onSelect={() => appendTax(tax)}>
+                                                    {tax.name} ({tax.percentage}%) - Italia
+                                                </DropdownMenuItem>
+                                            ))}
+                                            {PRESET_TAXES.fr.map(tax => (
+                                                 <DropdownMenuItem key={tax.id} onSelect={() => appendTax(tax)}>
+                                                    {tax.name} ({tax.percentage}%) - Francia
+                                                </DropdownMenuItem>
+                                            ))}
+                                            {PRESET_TAXES.gb.map(tax => (
+                                                 <DropdownMenuItem key={tax.id} onSelect={() => appendTax(tax)}>
+                                                    {tax.name} ({tax.percentage}%) - UK
+                                                </DropdownMenuItem>
+                                            ))}
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onSelect={() => appendTax({ id: `tax-${Date.now()}`, name: "", percentage: 0 })}>
+                                                Impuesto personalizado
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
 
                                     <hr className="my-2" />
                                     <div className="flex justify-between items-center text-lg font-bold">
@@ -451,3 +505,5 @@ export default function NewInvoicePage() {
         </Form>
     )
 }
+
+    
