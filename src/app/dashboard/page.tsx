@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import InvoiceStatusBadge from "@/components/invoice-status-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { useState } from "react";
 
 export default function DashboardPage() {
     const { t, formatCurrency } = useLocale();
-    const recentInvoices = mockInvoices.slice(0, 5);
+    const [invoices] = useState(mockInvoices);
+    const recentInvoices = invoices.slice(0, 5);
 
     return (
       <div className="space-y-8">

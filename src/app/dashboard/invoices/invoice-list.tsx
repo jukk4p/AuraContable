@@ -10,30 +10,31 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { mockInvoices } from '@/lib/data';
+import { mockInvoices as initialInvoices } from '@/lib/data';
 import type { Invoice, InvoiceStatus } from '@/lib/types';
 import InvoiceStatusBadge from '@/components/invoice-status-badge';
 import { useLocale } from '@/lib/i18n/locale-provider';
 
 export default function InvoiceList() {
     const { t, formatCurrency } = useLocale();
+    const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
     const [sortConfig, setSortConfig] = useState<{ key: keyof Invoice | 'client.name'; direction: 'ascending' | 'descending' } | null>(null);
 
     const filteredInvoices = useMemo(() => {
-        let invoices = [...mockInvoices];
+        let filtered = [...invoices];
         if (statusFilter !== 'All') {
-            invoices = invoices.filter(invoice => invoice.status === statusFilter);
+            filtered = filtered.filter(invoice => invoice.status === statusFilter);
         }
         if (searchTerm) {
-            invoices = invoices.filter(invoice =>
+            filtered = filtered.filter(invoice =>
                 invoice.client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase())
             );
         }
-        return invoices;
-    }, [searchTerm, statusFilter]);
+        return filtered;
+    }, [searchTerm, statusFilter, invoices]);
 
     const sortedInvoices = useMemo(() => {
         let sortableInvoices = [...filteredInvoices];
@@ -70,6 +71,10 @@ export default function InvoiceList() {
         }
         setSortConfig({ key, direction });
     };
+
+    const handleDeleteInvoice = (id: string) => {
+        setInvoices(invoices.filter(invoice => invoice.id !== id));
+    }
 
     const getSortIcon = (key: keyof Invoice | 'client.name') => {
         if (!sortConfig || sortConfig.key !== key) {
@@ -169,7 +174,7 @@ export default function InvoiceList() {
                                             <DropdownMenuItem asChild><Link href={`/dashboard/invoices/${invoice.id}`}>{t('common.viewDetails')}</Link></DropdownMenuItem>
                                             <DropdownMenuItem>{t('invoices.markAsPaid')}</DropdownMenuItem>
                                             <DropdownMenuItem>{t('invoices.downloadPdf')}</DropdownMenuItem>
-                                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">{t('invoices.deleteInvoice')}</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleDeleteInvoice(invoice.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">{t('invoices.deleteInvoice')}</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </TableCell>
