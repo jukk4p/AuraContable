@@ -6,12 +6,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ArrowLeft, Download, Edit, Trash2, CheckCircle, Clock } from 'lucide-react';
+import { ArrowLeft, Download, Edit, Trash2, CheckCircle, Clock, AlertCircle as AlertCircleIcon } from 'lucide-react';
 import Link from 'next/link';
 
 import type { Invoice, CompanyProfile } from '@/lib/types';
 import { auth } from '@/lib/firebase/config';
-import { getInvoiceById, getCompanyProfile, updateInvoice } from '@/lib/firebase/firestore';
+import { getInvoiceById, getCompanyProfile, updateInvoice, deleteInvoice } from '@/lib/firebase/firestore';
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -22,6 +22,8 @@ import { generateInvoicePdf } from '@/lib/pdf-generator';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 export default function InvoiceDetailsPage() {
     const params = useParams();
@@ -33,6 +35,7 @@ export default function InvoiceDetailsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isDownloading, setIsDownloading] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const invoiceId = params.id as string;
     const localeMap = { es: es };
@@ -95,6 +98,20 @@ export default function InvoiceDetailsPage() {
         }
     }
 
+    const handleDelete = async () => {
+        if (!invoice) return;
+        setIsDeleting(true);
+        try {
+            await deleteInvoice(invoice.id);
+            toast({ title: "Factura Eliminada", description: "La factura ha sido eliminada correctamente." });
+            router.push('/dashboard/invoices');
+        } catch (error) {
+            console.error("Error deleting invoice:", error);
+            toast({ title: "Error", description: "Hubo un problema al eliminar la factura.", variant: "destructive" });
+            setIsDeleting(false);
+        }
+    }
+
     if (isLoading) {
         return <InvoiceDetailsSkeleton />;
     }
@@ -133,7 +150,7 @@ export default function InvoiceDetailsPage() {
                         <InvoiceStatusBadge status={invoice.status} />
                     </div>
                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" disabled={isDownloading} onClick={handleDownloadPdf}>
+                        <Button variant="outline" size="sm" disabled={isDownloading || isDeleting} onClick={handleDownloadPdf}>
                             <Download className="mr-2 h-4 w-4"/> {isDownloading ? "Generando..." : "PDF"}
                         </Button>
                         <Button variant="outline" size="sm" asChild>
@@ -141,12 +158,29 @@ export default function InvoiceDetailsPage() {
                                 <Edit className="mr-2 h-4 w-4"/> {t('common.edit')}
                            </Link>
                         </Button>
-                         <Button variant="outline" size="sm" disabled={isUpdating || invoice.status === 'Paid'} onClick={handleMarkAsPaid}>
+                         <Button variant="outline" size="sm" disabled={isUpdating || invoice.status === 'Paid' || isDeleting} onClick={handleMarkAsPaid}>
                             <CheckCircle className="mr-2 h-4 w-4"/> {t('invoices.markAsPaid')}
                         </Button>
-                        <Button variant="destructive" size="sm" disabled={isUpdating}>
-                            <Trash2 className="mr-2 h-4 w-4"/> {t('common.delete')}
-                        </Button>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm" disabled={isUpdating || isDeleting}>
+                                    <Trash2 className="mr-2 h-4 w-4"/> {isDeleting ? "Eliminando..." : t('common.delete')}
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Esta acción no se puede deshacer. Esto eliminará permanentemente la factura
+                                    de nuestros servidores.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDelete}>Continuar</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -340,3 +374,5 @@ function InvoiceDetailsSkeleton() {
         </div>
     )
 }
+
+    
