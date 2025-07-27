@@ -13,11 +13,7 @@ import type { Locale } from "@/lib/i18n/locales";
 import { Building, Languages, Shield, User, Bell, Palette, FileText } from "lucide-react";
 
 export default function SettingsPage() {
-    const { t, locale, setLocale } = useLocale();
-
-    const handleLanguageChange = (value: string) => {
-        setLocale(value as Locale);
-    }
+    const { t, setLocale } = useLocale();
 
     const tabs = [
         { value: "profile", label: t('settings.profile.title'), icon: User },
@@ -32,6 +28,8 @@ export default function SettingsPage() {
     return (
         <div className="grid md:grid-cols-[180px_1fr] lg:grid-cols-[250px_1fr] gap-6 items-start">
             <h1 className="text-2xl font-semibold font-headline md:hidden">{t('nav.settings')}</h1>
+            
+            {/* Desktop View */}
             <Tabs defaultValue="profile" orientation="vertical" className="hidden md:block">
                 <TabsList className="w-full h-auto bg-transparent p-0">
                     {tabs.map((tab) => (
@@ -41,26 +39,7 @@ export default function SettingsPage() {
                         </TabsTrigger>
                     ))}
                 </TabsList>
-            </Tabs>
-
-            <Tabs defaultValue="profile" className="md:hidden">
-                <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="profile">{t('settings.profile.title')}</TabsTrigger>
-                    <TabsTrigger value="company">{t('settings.company.title')}</TabsTrigger>
-                    <TabsTrigger value="language">{t('settings.language.title')}</TabsTrigger>
-                </TabsList>
-                 <TabsContent value="profile">
-                    <ProfileSettings />
-                </TabsContent>
-                <TabsContent value="company">
-                    <CompanySettings />
-                </TabsContent>
-                <TabsContent value="language">
-                    <LanguageSettings />
-                </TabsContent>
-            </Tabs>
-            
-            <div className="hidden md:block">
+                
                 <TabsContent value="profile" className="m-0">
                     <ProfileSettings />
                 </TabsContent>
@@ -97,7 +76,25 @@ export default function SettingsPage() {
                 <TabsContent value="language" className="m-0">
                     <LanguageSettings />
                 </TabsContent>
-            </div>
+            </Tabs>
+
+            {/* Mobile View */}
+            <Tabs defaultValue="profile" className="md:hidden">
+                <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="profile">{t('settings.profile.title')}</TabsTrigger>
+                    <TabsTrigger value="company">{t('settings.company.title')}</TabsTrigger>
+                    <TabsTrigger value="language">{t('settings.language.title')}</TabsTrigger>
+                </TabsList>
+                 <TabsContent value="profile">
+                    <ProfileSettings />
+                </TabsContent>
+                <TabsContent value="company">
+                    <CompanySettings />
+                </TabsContent>
+                <TabsContent value="language">
+                    <LanguageSettings />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
@@ -240,5 +237,3 @@ function LanguageSettings() {
         </Card>
     )
 }
-
-    
