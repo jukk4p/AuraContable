@@ -165,6 +165,7 @@
         "security": {
             "title": "Seguridad",
             "description": "Gestiona los ajustes de seguridad de tu cuenta.",
+            "currentPassword": "Contraseña Actual",
             "newPassword": "Nueva Contraseña",
             "confirmPassword": "Confirmar Contraseña",
             "updatePassword": "Actualizar Contraseña"

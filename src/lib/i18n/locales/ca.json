@@ -143,7 +143,9 @@
             "dateFormat": "Format de data",
             "selectDateFormat": "Selecciona un format",
             "defaultNotes": "Notes per defecte",
-            "defaultNotesPlaceholder": "Ex: Gràcies per la seva confiança."
+            "defaultNotesPlaceholder": "Ex: Gràcies per la seva confiança.",
+            "defaultTerms": "Termes i condicions per defecte",
+            "defaultTermsPlaceholder": "Ex: Pagament a 30 dies."
         },
         "templates": {
             "title": "Plantilles d'Email",
@@ -163,6 +165,7 @@
         "security": {
             "title": "Seguretat",
             "description": "Gestiona la configuració de seguretat del teu compte.",
+            "currentPassword": "Contrasenya Actual",
             "newPassword": "Nova Contrasenya",
             "confirmPassword": "Confirma la Contrasenya",
             "updatePassword": "Actualitza la Contrasenya"

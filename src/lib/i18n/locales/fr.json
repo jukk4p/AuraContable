@@ -143,7 +143,9 @@
             "dateFormat": "Format de date",
             "selectDateFormat": "Sélectionnez un format",
             "defaultNotes": "Notes par défaut",
-            "defaultNotesPlaceholder": "Ex: Merci pour votre confiance."
+            "defaultNotesPlaceholder": "Ex: Merci pour votre confiance.",
+            "defaultTerms": "Termes et conditions par défaut",
+            "defaultTermsPlaceholder": "Ex: Paiement dû sous 30 jours."
         },
         "templates": {
             "title": "Modèles d'e-mails",
@@ -163,6 +165,7 @@
         "security": {
             "title": "Sécurité",
             "description": "Gérez les paramètres de sécurité de votre compte.",
+            "currentPassword": "Mot de passe actuel",
             "newPassword": "Nouveau mot de passe",
             "confirmPassword": "Confirmer le mot de passe",
             "updatePassword": "Mettre à jour le mot de passe"

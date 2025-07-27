@@ -1,8 +1,13 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { locales, defaultLocale, type Locale } from './locales';
 import { setCookie, getCookie } from 'cookies-next';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../firebase/config';
+import { getCompanyProfile } from '../firebase/firestore';
+import type { CompanyProfile } from '../types';
 
 type LocaleContextType = {
   locale: Locale;
@@ -18,6 +23,9 @@ function getNestedValue(obj: any, key: string): string {
 }
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
+  const [user] = useAuthState(auth);
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+
   const [locale, setLocaleState] = useState<Locale>(() => {
     const cookieLocale = getCookie('locale');
     if (cookieLocale && locales[cookieLocale as Locale]) {
@@ -34,6 +42,18 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  useEffect(() => {
+      async function fetchProfile() {
+          if (user) {
+              const profile = await getCompanyProfile(user.uid);
+              setCompanyProfile(profile);
+          } else {
+              setCompanyProfile(null);
+          }
+      }
+      fetchProfile();
+  }, [user]);
+
   const setLocale = (newLocale: Locale) => {
     setLocaleState(newLocale);
     setCookie('locale', newLocale, { maxAge: 60 * 60 * 24 * 365 });
@@ -46,19 +66,13 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   }, [locale]);
   
   const formatCurrency = useMemo(() => {
-    const currencyMap: Record<Locale, string> = {
-        es: 'EUR',
-        en: 'USD',
-        fr: 'EUR',
-        it: 'EUR',
-        ca: 'EUR',
-    }
+    const currency = companyProfile?.currency || 'EUR';
     const numberFormat = new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: currencyMap[locale] || 'EUR',
+      currency: currency,
     });
     return (amount: number) => numberFormat.format(amount);
-  }, [locale]);
+  }, [locale, companyProfile]);
 
 
   const value = useMemo(() => ({ locale, setLocale, t, formatCurrency }), [locale, setLocale, t, formatCurrency]);

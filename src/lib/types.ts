@@ -85,6 +85,7 @@ export type CompanyProfile = {
     fiscalData: string;
     logoUrl?: string;
     country?: string;
+    currency: 'EUR' | 'USD' | 'GBP';
     terms?: string;
     defaultTaxes?: InvoiceTax[];
     templates?: {

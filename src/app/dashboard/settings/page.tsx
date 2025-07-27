@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import React, { useState, useEffect, useRef } from "react";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/lib/firebase/config";
-import { updateProfile, updateEmail } from "firebase/auth";
+import { updateProfile, updateEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import type { CompanyProfile, InvoiceTax, NotificationPreferences } from "@/lib/types";
 import { getCompanyProfile, saveCompanyProfile } from "@/lib/firebase/firestore";
@@ -41,6 +41,7 @@ export default function SettingsPage() {
                 const defaultProfile: CompanyProfile = {
                     userId: user.uid,
                     name: '', taxId: '', address: '', billingEmail: '', iban: '', fiscalData: '', logoUrl: '', terms: '', defaultTaxes: [],
+                    currency: 'EUR',
                     templates: {
                         newInvoice: { subject: '', body: '' },
                         reminder: { subject: '', body: '' }
@@ -195,6 +196,9 @@ function ProfileSettings() {
                 await updateProfile(user, { displayName: name });
             }
             if (email !== user.email) {
+                // This is a sensitive operation and might require re-authentication.
+                // For simplicity, we are not handling re-authentication here,
+                // but in a real-world app, you should.
                 await updateEmail(user, email);
             }
             toast({
@@ -396,6 +400,19 @@ function InvoicingSettings({ profile, onProfileChange, isLoading }: InvoicingSet
                 <CardDescription>{t('settings.invoicing.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
+                 <div className="space-y-2">
+                    <Label htmlFor="currency">{t('settings.invoicing.defaultCurrency')}</Label>
+                    <Select value={profile.currency} onValueChange={(value) => handleFieldChange('currency', value)}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder={t('settings.invoicing.selectCurrency')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="EUR">Euro (€)</SelectItem>
+                            <SelectItem value="USD">US Dollar ($)</SelectItem>
+                            <SelectItem value="GBP">British Pound (£)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                 </div>
                 <div className="space-y-2">
                     <Label>{t('settings.invoicing.defaultTaxes')}</Label>
                     <div className="space-y-2">
@@ -512,27 +529,80 @@ function TemplateSettings({ profile, onProfileChange, isLoading }: TemplateSetti
 
 function SecuritySettings() {
     const { t } = useLocale();
+    const { toast } = useToast();
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleUpdatePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const user = auth.currentUser;
+        if (!user || !user.email) {
+            toast({ title: "Error", description: "No se ha encontrado el usuario.", variant: "destructive"});
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            toast({ title: "Error", description: "Las nuevas contraseñas no coinciden.", variant: "destructive"});
+            return;
+        }
+        if (newPassword.length < 6) {
+            toast({ title: "Error", description: "La nueva contraseña debe tener al menos 6 caracteres.", variant: "destructive"});
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const credential = EmailAuthProvider.credential(user.email, currentPassword);
+            await reauthenticateWithCredential(user, credential);
+            await updatePassword(user, newPassword);
+            toast({ title: "Éxito", description: "Contraseña actualizada correctamente."});
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch (error: any) {
+            console.error("Password update error:", error);
+            let errorMessage = "Ocurrió un error al actualizar la contraseña.";
+            if (error.code === 'auth/wrong-password') {
+                errorMessage = "La contraseña actual es incorrecta.";
+            } else if (error.code === 'auth/too-many-requests') {
+                errorMessage = "Demasiados intentos. Inténtalo de nuevo más tarde.";
+            }
+            toast({ title: "Error", description: errorMessage, variant: "destructive"});
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     return (
         <Card>
-            <CardHeader>
-                <CardTitle>{t('settings.security.title')}</CardTitle>
-                <CardDescription>
-                    {t('settings.security.description')}
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-            <div className="space-y-2">
-                <Label htmlFor="new-password">{t('settings.security.newPassword')}</Label>
-                <Input id="new-password" type="password" />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="confirm-password">{t('settings.security.confirmPassword')}</Label>
-                    <Input id="confirm-password" type="password" />
-                </div>
-            </CardContent>
-            <CardFooter>
-                <Button>{t('settings.security.updatePassword')}</Button>
-            </CardFooter>
+            <form onSubmit={handleUpdatePassword}>
+                <CardHeader>
+                    <CardTitle>{t('settings.security.title')}</CardTitle>
+                    <CardDescription>
+                        {t('settings.security.description')}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="current-password">{t('settings.security.currentPassword')}</Label>
+                        <Input id="current-password" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required disabled={isSaving}/>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="new-password">{t('settings.security.newPassword')}</Label>
+                        <Input id="new-password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required disabled={isSaving}/>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="confirm-password">{t('settings.security.confirmPassword')}</Label>
+                        <Input id="confirm-password" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required disabled={isSaving}/>
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button type="submit" disabled={isSaving}>
+                        {isSaving ? "Actualizando..." : t('settings.security.updatePassword')}
+                    </Button>
+                </CardFooter>
+            </form>
         </Card>
     )
 }

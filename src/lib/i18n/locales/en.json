@@ -143,7 +143,9 @@
             "dateFormat": "Date format",
             "selectDateFormat": "Select a format",
             "defaultNotes": "Default notes",
-            "defaultNotesPlaceholder": "E.g. Thank you for your business."
+            "defaultNotesPlaceholder": "E.g. Thank you for your business.",
+            "defaultTerms": "Default terms and conditions",
+            "defaultTermsPlaceholder": "E.g. Payment due within 30 days."
         },
         "templates": {
             "title": "Email Templates",
@@ -163,6 +165,7 @@
         "security": {
             "title": "Security",
             "description": "Manage your account security settings.",
+            "currentPassword": "Current Password",
             "newPassword": "New Password",
             "confirmPassword": "Confirm Password",
             "updatePassword": "Update Password"
