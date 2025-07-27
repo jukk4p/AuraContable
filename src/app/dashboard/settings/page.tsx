@@ -13,6 +13,11 @@ import type { Locale } from "@/lib/i18n/locales";
 import { Building, Languages, Shield, User, Bell, Palette, FileText, Moon, Sun, Monitor, PlusCircle, Trash2, Mail } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Switch } from "@/components/ui/switch";
+import React, { useState, useEffect } from "react";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { auth } from "@/lib/firebase/config";
+import { updateProfile, updateEmail } from "firebase/auth";
+import { useToast } from "@/hooks/use-toast";
 
 
 export default function SettingsPage() {
@@ -77,27 +82,90 @@ export default function SettingsPage() {
 
 function ProfileSettings() {
     const { t } = useLocale();
+    const [user, loading, error] = useAuthState(auth);
+    const { toast } = useToast();
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (user) {
+            setName(user.displayName || '');
+            setEmail(user.email || '');
+        }
+    }, [user]);
+
+    const handleSaveChanges = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user) return;
+
+        setIsSaving(true);
+        try {
+            if (name !== user.displayName) {
+                await updateProfile(user, { displayName: name });
+            }
+            if (email !== user.email) {
+                await updateEmail(user, email);
+                // Note: updating email might require re-authentication.
+                // For simplicity, we'll assume it works directly here.
+                // In a production app, handle re-authentication errors.
+            }
+            toast({
+                title: "Perfil actualizado",
+                description: "Tus cambios se han guardado correctamente.",
+            });
+        } catch (error: any) {
+            console.error("Error updating profile:", error);
+            toast({
+                title: "Error",
+                description: `Hubo un problema al actualizar tu perfil: ${error.message}`,
+                variant: "destructive",
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    if (loading) {
+        return <p>Cargando perfil...</p>
+    }
+
     return (
         <Card>
-            <CardHeader>
-                <CardTitle>{t('settings.profile.title')}</CardTitle>
-                <CardDescription>
-                    {t('settings.profile.description')}
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="name">{t('settings.profile.name')}</Label>
-                    <Input id="name" defaultValue="John Doe" />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="email">{t('settings.profile.email')}</Label>
-                    <Input id="email" type="email" defaultValue="john.doe@example.com" />
-                </div>
-            </CardContent>
-            <CardFooter>
-                <Button>{t('common.saveChanges')}</Button>
-            </CardFooter>
+            <form onSubmit={handleSaveChanges}>
+                <CardHeader>
+                    <CardTitle>{t('settings.profile.title')}</CardTitle>
+                    <CardDescription>
+                        {t('settings.profile.description')}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="name">{t('settings.profile.name')}</Label>
+                        <Input 
+                            id="name" 
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            disabled={isSaving}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="email">{t('settings.profile.email')}</Label>
+                        <Input 
+                            id="email" 
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            disabled={isSaving}
+                        />
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button type="submit" disabled={isSaving || loading}>
+                        {isSaving ? "Guardando..." : t('common.saveChanges')}
+                    </Button>
+                </CardFooter>
+            </form>
         </Card>
     )
 }
@@ -396,3 +464,5 @@ function AppearanceSettings() {
         </Card>
     )
 }
+
+    
