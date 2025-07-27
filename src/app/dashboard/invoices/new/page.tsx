@@ -534,5 +534,3 @@ export default function NewInvoicePage() {
         </Form>
     )
 }
-
-    

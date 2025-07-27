@@ -191,7 +191,7 @@ export async function getCompanyProfile(userId: string): Promise<CompanyProfile 
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as CompanyProfile;
+        return docSnap.data() as CompanyProfile;
     } else {
         return null;
     }
@@ -199,5 +199,7 @@ export async function getCompanyProfile(userId: string): Promise<CompanyProfile 
 
 export async function saveCompanyProfile(profile: Omit<CompanyProfile, 'id'>): Promise<void> {
     const docRef = doc(db, "companyProfiles", profile.userId);
-    await setDoc(docRef, profile, { merge: true });
+    // Firestore does not allow undefined values. We need to clean the object.
+    const cleanProfile = Object.fromEntries(Object.entries(profile).filter(([_, v]) => v !== undefined));
+    await setDoc(docRef, cleanProfile, { merge: true });
 }

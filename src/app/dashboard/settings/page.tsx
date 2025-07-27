@@ -399,9 +399,9 @@ function InvoicingSettings({ profile, onProfileChange, isLoading }: InvoicingSet
                 </div>
 
                 <div className="space-y-2">
-                    <Label htmlFor="default-terms">{t('settings.invoicing.defaultTerms')}</Label>
+                    <Label htmlFor="terms">{t('settings.invoicing.defaultTerms')}</Label>
                     <Textarea 
-                        id="default-terms" 
+                        id="terms" 
                         placeholder={t('settings.invoicing.defaultTermsPlaceholder')} 
                         value={profile.terms || ''}
                         onChange={(e) => handleFieldChange('terms', e.target.value)}
@@ -577,6 +577,3 @@ function AppearanceSettings() {
         </Card>
     )
 }
-
-
-    
