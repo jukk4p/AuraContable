@@ -18,7 +18,7 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/lib/firebase/config";
 import { updateProfile, updateEmail } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
-import type { CompanyProfile, InvoiceTax } from "@/lib/types";
+import type { CompanyProfile, InvoiceTax, NotificationPreferences } from "@/lib/types";
 import { getCompanyProfile, saveCompanyProfile } from "@/lib/firebase/firestore";
 import Image from "next/image";
 
@@ -37,23 +37,29 @@ export default function SettingsPage() {
             if (user) {
                 setIsLoading(true);
                 const existingProfile = await getCompanyProfile(user.uid);
+                
+                const defaultProfile: CompanyProfile = {
+                    userId: user.uid,
+                    name: '', taxId: '', address: '', billingEmail: '', iban: '', fiscalData: '', logoUrl: '', terms: '', defaultTaxes: [],
+                    templates: {
+                        newInvoice: { subject: '', body: '' },
+                        reminder: { subject: '', body: '' }
+                    },
+                    notifications: {
+                        invoicePaid: { email: true },
+                        invoiceOverdue: { email: true }
+                    }
+                };
+
                 if (existingProfile) {
                     setCompanyProfile({
+                        ...defaultProfile,
                         ...existingProfile,
-                        templates: existingProfile.templates || {
-                            newInvoice: { subject: '', body: '' },
-                            reminder: { subject: '', body: '' }
-                        }
+                        templates: existingProfile.templates || defaultProfile.templates,
+                        notifications: existingProfile.notifications || defaultProfile.notifications,
                     });
                 } else {
-                    setCompanyProfile({
-                        userId: user.uid,
-                        name: '', taxId: '', address: '', billingEmail: '', iban: '', fiscalData: '', logoUrl: '', terms: '', defaultTaxes: [],
-                        templates: {
-                            newInvoice: { subject: '', body: '' },
-                            reminder: { subject: '', body: '' }
-                        }
-                    });
+                    setCompanyProfile(defaultProfile);
                 }
                 setIsLoading(false);
             }
@@ -145,7 +151,11 @@ export default function SettingsPage() {
                         <SecuritySettings />
                     </TabsContent>
                     <TabsContent value="notifications" className="m-0">
-                        <NotificationsSettings />
+                        <NotificationsSettings
+                             profile={companyProfile}
+                            onProfileChange={handleProfileChange}
+                            isLoading={isLoading}
+                        />
                     </TabsContent>
                     <TabsContent value="appearance" className="m-0">
                         <AppearanceSettings />
@@ -442,7 +452,7 @@ function TemplateSettings({ profile, onProfileChange, isLoading }: TemplateSetti
         onProfileChange({
             ...profile,
             templates: {
-                ...profile.templates,
+                ...(profile.templates || { newInvoice: { subject: '', body: '' }, reminder: { subject: '', body: '' } }),
                 [template]: {
                     ...profile.templates?.[template],
                     [field]: value
@@ -527,8 +537,31 @@ function SecuritySettings() {
     )
 }
 
-function NotificationsSettings() {
+type NotificationsSettingsProps = {
+    profile: CompanyProfile | null;
+    onProfileChange: (profile: CompanyProfile) => void;
+    isLoading: boolean;
+};
+
+function NotificationsSettings({ profile, onProfileChange, isLoading }: NotificationsSettingsProps) {
     const { t } = useLocale();
+
+    const handleSwitchChange = (notification: keyof NotificationPreferences, value: boolean) => {
+        if (!profile) return;
+
+        onProfileChange({
+            ...profile,
+            notifications: {
+                ...(profile.notifications || { invoicePaid: { email: true }, invoiceOverdue: { email: true } }),
+                [notification]: { email: value },
+            }
+        });
+    };
+    
+    if (isLoading || !profile) {
+        return <p>Cargando ajustes de notificaciones...</p>;
+    }
+
     return (
         <Card>
             <CardHeader>
@@ -541,14 +574,22 @@ function NotificationsSettings() {
                         <Label htmlFor="invoice-paid-email">{t('settings.notifications.invoicePaid.title')}</Label>
                         <p className="text-sm text-muted-foreground">{t('settings.notifications.invoicePaid.description')}</p>
                     </div>
-                    <Switch id="invoice-paid-email" />
+                    <Switch 
+                        id="invoice-paid-email" 
+                        checked={profile.notifications?.invoicePaid.email}
+                        onCheckedChange={(checked) => handleSwitchChange('invoicePaid', checked)}
+                    />
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
                         <Label htmlFor="invoice-overdue-email">{t('settings.notifications.invoiceOverdue.title')}</Label>
                          <p className="text-sm text-muted-foreground">{t('settings.notifications.invoiceOverdue.description')}</p>
                     </div>
-                    <Switch id="invoice-overdue-email" />
+                    <Switch 
+                        id="invoice-overdue-email" 
+                        checked={profile.notifications?.invoiceOverdue.email}
+                        onCheckedChange={(checked) => handleSwitchChange('invoiceOverdue', checked)}
+                    />
                 </div>
             </CardContent>
         </Card>

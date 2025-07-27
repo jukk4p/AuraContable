@@ -65,6 +65,15 @@ export type EmailTemplate = {
     body: string;
 }
 
+export type NotificationPreferences = {
+    invoicePaid: {
+        email: boolean;
+    };
+    invoiceOverdue: {
+        email: boolean;
+    };
+}
+
 export type CompanyProfile = {
     id?: string;
     userId: string;
@@ -81,5 +90,6 @@ export type CompanyProfile = {
     templates?: {
         newInvoice: EmailTemplate;
         reminder: EmailTemplate;
-    }
+    },
+    notifications?: NotificationPreferences;
 }
