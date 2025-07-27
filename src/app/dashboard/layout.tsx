@@ -2,7 +2,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { FileText, LayoutGrid, Settings, Users, PanelLeft, Search, PlusCircle } from "lucide-react"
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger, SidebarFooter, useSidebar } from "@/components/ui/sidebar"
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -25,16 +25,10 @@ function CustomSidebarTrigger() {
     )
 }
 
-
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+function DashboardHeader({children}: {children: React.ReactNode}) {
   const pathname = usePathname()
   const { t } = useLocale();
   const { state } = useSidebar();
-
 
   const navItems = [
     { href: "/dashboard", icon: LayoutGrid, label: t('nav.dashboard') },
@@ -62,7 +56,7 @@ export default function DashboardLayout({
   };
 
   return (
-    <SidebarProvider>
+    <>
       <Sidebar>
         <SidebarHeader className="p-4 flex items-center justify-between">
           <Link href="/dashboard" className={cn("flex items-center gap-2", state === 'collapsed' && "invisible")}>
@@ -127,6 +121,20 @@ export default function DashboardLayout({
             {children}
         </main>
       </SidebarInset>
+    </>
+  )
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <SidebarProvider>
+      <DashboardHeader>
+        {children}
+      </DashboardHeader>
     </SidebarProvider>
   )
 }
