@@ -126,7 +126,9 @@
             "iban": "IBAN / Compte bancari",
             "fiscalData": "Altres dades fiscals",
             "fiscalDataPlaceholder": "Ex: Registre Mercantil...",
-            "logo": "Logotip"
+            "logo": "Logotip",
+            "uploadLogo": "Puja el logotip",
+            "logoHint": "Recomanat: .png amb fons transparent, màx 1MB."
         },
         "invoicing": {
             "title": "Facturació",

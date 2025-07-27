@@ -126,7 +126,9 @@
             "iban": "IBAN / Bank Account",
             "fiscalData": "Other Fiscal Data",
             "fiscalDataPlaceholder": "E.g. Commercial Registry...",
-            "logo": "Logo"
+            "logo": "Logo",
+            "uploadLogo": "Upload Logo",
+            "logoHint": "Recommended: .png with transparent background, max 1MB."
         },
         "invoicing": {
             "title": "Invoicing",

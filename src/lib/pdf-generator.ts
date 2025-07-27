@@ -21,18 +21,29 @@ export async function generateInvoicePdf(
 ) {
     const doc = new jsPDF() as jsPDFWithAutoTable;
     const { t, formatCurrency } = l10n;
-    
-    // --- Header ---
+
+    // --- Header with Logo ---
+    if (company?.logoUrl) {
+        try {
+            // Check if logoUrl is a valid data URI
+            if (company.logoUrl.startsWith('data:image')) {
+                 doc.addImage(company.logoUrl, 'PNG', 20, 15, 40, 15); // Adjust x, y, width, height as needed
+            }
+        } catch(e) {
+            console.error("Error adding logo to PDF:", e);
+        }
+    }
+
     doc.setFontSize(20);
-    doc.text(t('invoices.invoiceNumber').toUpperCase(), 20, 30);
+    doc.text(t('invoices.invoiceNumber').toUpperCase(), 20, 45);
     doc.setFontSize(14);
-    doc.text(`#${invoice.invoiceNumber}`, 20, 38);
+    doc.text(`#${invoice.invoiceNumber}`, 20, 53);
 
     // --- Company & Client Info ---
     doc.setFontSize(10);
     const companyX = 20;
     const clientX = 120;
-    const startY = 55;
+    const startY = 70;
 
     // Company Info (Issuer)
     doc.setFont('helvetica', 'bold');

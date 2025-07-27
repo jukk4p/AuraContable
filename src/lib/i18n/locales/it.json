@@ -126,7 +126,9 @@
             "iban": "IBAN / Conto corrente",
             "fiscalData": "Altri dati fiscali",
             "fiscalDataPlaceholder": "Es: Registro delle Imprese...",
-            "logo": "Logo"
+            "logo": "Logo",
+            "uploadLogo": "Carica logo",
+            "logoHint": "Consigliato: .png con sfondo trasparente, max 1MB."
         },
         "invoicing": {
             "title": "Fatturazione",

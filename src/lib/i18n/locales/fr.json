@@ -126,7 +126,9 @@
             "iban": "IBAN / Compte bancaire",
             "fiscalData": "Autres données fiscales",
             "fiscalDataPlaceholder": "Ex: Registre du Commerce...",
-            "logo": "Logo"
+            "logo": "Logo",
+            "uploadLogo": "Télécharger le logo",
+            "logoHint": "Recommandé : .png avec fond transparent, max 1 Mo."
         },
         "invoicing": {
             "title": "Facturation",

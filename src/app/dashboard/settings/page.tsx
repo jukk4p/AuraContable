@@ -10,16 +10,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import type { Locale } from "@/lib/i18n/locales";
-import { Building, Languages, Shield, User, Bell, Palette, FileText, Moon, Sun, Monitor, PlusCircle, Trash2, Mail } from "lucide-react";
+import { Building, Languages, Shield, User, Bell, Palette, FileText, Moon, Sun, Monitor, PlusCircle, Trash2, Mail, Image as ImageIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Switch } from "@/components/ui/switch";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/lib/firebase/config";
 import { updateProfile, updateEmail } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import type { CompanyProfile } from "@/lib/types";
 import { getCompanyProfile, saveCompanyProfile } from "@/lib/firebase/firestore";
+import Image from "next/image";
 
 
 export default function SettingsPage() {
@@ -174,10 +175,11 @@ function CompanySettings() {
     const [user, loading] = useAuthState(auth);
     const { toast } = useToast();
     const [profile, setProfile] = useState<Omit<CompanyProfile, 'id' | 'userId'>>({
-        name: '', taxId: '', address: '', billingEmail: '', iban: '', fiscalData: ''
+        name: '', taxId: '', address: '', billingEmail: '', iban: '', fiscalData: '', logoUrl: ''
     });
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         async function fetchProfile() {
@@ -195,6 +197,17 @@ function CompanySettings() {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setProfile({ ...profile, [e.target.id]: e.target.value });
+    };
+
+    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setProfile({ ...profile, logoUrl: reader.result as string });
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -259,8 +272,21 @@ function CompanySettings() {
                         <Textarea id="fiscalData" placeholder={t('settings.company.fiscalDataPlaceholder')} value={profile.fiscalData} onChange={handleChange} disabled={isSaving}/>
                     </div>
                      <div className="space-y-2">
-                        <Label htmlFor="company-logo">{t('settings.company.logo')}</Label>
-                        <Input id="company-logo" type="file" disabled={isSaving} />
+                        <Label>{t('settings.company.logo')}</Label>
+                        <div className="flex items-center gap-4">
+                            <div className="w-24 h-24 rounded-md border flex items-center justify-center bg-muted/50 overflow-hidden">
+                                {profile.logoUrl ? (
+                                    <Image src={profile.logoUrl} alt="Company Logo" width={96} height={96} className="object-contain" />
+                                ) : (
+                                    <ImageIcon className="w-10 h-10 text-muted-foreground" />
+                                )}
+                            </div>
+                            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
+                                {t('settings.company.uploadLogo')}
+                            </Button>
+                            <Input ref={fileInputRef} id="company-logo" type="file" className="hidden" onChange={handleLogoChange} accept="image/png, image/jpeg, image/gif"/>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{t('settings.company.logoHint')}</p>
                     </div>
                 </CardContent>
                 <CardFooter>
