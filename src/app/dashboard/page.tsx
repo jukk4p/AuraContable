@@ -1,7 +1,7 @@
 "use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowUpRight, DollarSign, Users, FileWarning, CheckCircle2 } from "lucide-react";
+import { ArrowUpRight, Banknote, Users, FileWarning, CheckCircle2 } from "lucide-react";
 import { mockDashboardData, mockInvoices } from "@/lib/data";
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ export default function DashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-sm font-medium">{t('dashboard.totalRevenue')}</CardTitle>
-              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              <Banknote className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{formatCurrency(mockDashboardData.totalRevenue)}</div>
