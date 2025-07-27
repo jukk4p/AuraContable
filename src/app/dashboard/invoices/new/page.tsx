@@ -17,7 +17,7 @@ import { format } from "date-fns"
 import { useToast } from "@/hooks/use-toast"
 import { es } from "date-fns/locale"
 import { useLocale } from "@/lib/i18n/locale-provider"
-import { Client } from "@/lib/types"
+import { Client, InvoiceStatus } from "@/lib/types"
 import React, { useState, useEffect } from 'react'
 
 // Note: This should fetch real clients from Firestore in the future.
@@ -34,7 +34,7 @@ const invoiceFormSchema = z.object({
     clientId: z.string().min(1, "El cliente es obligatorio"),
     issueDate: z.date({required_error: "La fecha de emisión es obligatoria"}),
     dueDate: z.date({required_error: "La fecha de vencimiento es obligatoria"}),
-    status: z.enum(["Pendiente", "Pagada", "Vencida"], {required_error: "El estado es obligatorio"}),
+    status: z.enum(["Pending", "Paid", "Overdue"], {required_error: "El estado es obligatorio"}),
     items: z.array(z.object({
         description: z.string().min(1, "La descripción es obligatoria"),
         quantity: z.coerce.number().min(1, "La cantidad debe ser al menos 1"),
@@ -60,7 +60,7 @@ export default function NewInvoicePage() {
         resolver: zodResolver(invoiceFormSchema),
         defaultValues: {
             invoiceNumber: `FAC-${new Date().getFullYear()}-`,
-            status: "Pendiente",
+            status: "Pending",
             items: [{ description: "", quantity: 1, price: 0 }],
             notes: "",
         },
@@ -231,9 +231,9 @@ export default function NewInvoicePage() {
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                <SelectItem value="Pendiente">{t('invoices.statusPending')}</SelectItem>
-                                                <SelectItem value="Pagada">{t('invoices.statusPaid')}</SelectItem>
-                                                <SelectItem value="Vencida">{t('invoices.statusOverdue')}</SelectItem>
+                                                <SelectItem value="Pending">{t('invoices.statusPending')}</SelectItem>
+                                                <SelectItem value="Paid">{t('invoices.statusPaid')}</SelectItem>
+                                                <SelectItem value="Overdue">{t('invoices.statusOverdue')}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
