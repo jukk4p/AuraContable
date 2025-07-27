@@ -12,6 +12,7 @@ import { useLocale } from "@/lib/i18n/locale-provider"
 import { cn } from "@/lib/utils"
 import { auth } from "@/lib/firebase/config"
 import { signOut } from "firebase/auth"
+import { useAuthState } from "react-firebase-hooks/auth"
 
 function CustomSidebarTrigger() {
     const { toggleSidebar } = useSidebar();
@@ -32,6 +33,7 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
   const router = useRouter();
   const { t } = useLocale();
   const { state } = useSidebar();
+  const [user, loading, error] = useAuthState(auth);
 
   const navItems = [
     { href: "/dashboard", icon: LayoutGrid, label: t('nav.dashboard') },
@@ -69,6 +71,16 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
       console.error("Error signing out: ", error);
     }
   };
+  
+  const getUserInitials = () => {
+    if (loading) return '...';
+    if (!user || !user.displayName) return 'U';
+    const names = user.displayName.split(' ');
+    if (names.length > 1) {
+        return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return user.displayName.substring(0, 2).toUpperCase();
+  }
 
   return (
     <>
@@ -116,13 +128,13 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative w-10 h-10 rounded-full">
                   <Avatar>
-                    <AvatarImage src="https://placehold.co/40x40" alt="User" />
-                    <AvatarFallback>U</AvatarFallback>
+                    <AvatarImage src={user?.photoURL || undefined} alt="User" />
+                    <AvatarFallback>{getUserInitials()}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{t('nav.myAccount')}</DropdownMenuLabel>
+                <DropdownMenuLabel>{user?.displayName || 'My Account'}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild><Link href="/dashboard/settings">{t('nav.settings')}</Link></DropdownMenuItem>
                 <DropdownMenuItem>{t('nav.support')}</DropdownMenuItem>
