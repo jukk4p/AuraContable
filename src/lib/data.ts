@@ -1,6 +1,10 @@
 import type { Client, Invoice, DashboardData, InvoiceStatus } from "./types";
 
 export const mockClients: Client[] = [
+  // This will be replaced by Firestore data.
+  { id: '1', name: 'Acme Inc.', email: 'contact@acme.com', avatarUrl: 'https://placehold.co/40x40' },
+  { id: '2', name: 'Stark Industries', email: 'tony@starkindustries.com', avatarUrl: 'https://placehold.co/40x40' },
+  { id: '3', name: 'Wayne Enterprises', email: 'bruce@wayne.com', avatarUrl: 'https://placehold.co/40x40' },
 ];
 
 export const mockInvoices: Invoice[] = [

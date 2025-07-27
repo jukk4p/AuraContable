@@ -11,16 +11,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Textarea } from "@/components/ui/textarea"
-import { mockClients } from "@/lib/data"
 import { CalendarIcon, PlusCircle, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { useToast } from "@/hooks/use-toast"
 import { es } from "date-fns/locale"
 import { useLocale } from "@/lib/i18n/locale-provider"
+import { Client } from "@/lib/types"
+import React, { useState, useEffect } from 'react'
 
-// Note: Using mockClients here temporarily. This should fetch real clients.
-const clients = [
+// Note: This should fetch real clients from Firestore in the future.
+// For now, we simulate fetching and use local state as a placeholder.
+const initialClients: Client[] = [
   { id: '1', name: 'Acme Inc.', email: 'contact@acme.com', avatarUrl: 'https://placehold.co/40x40' },
   { id: '2', name: 'Stark Industries', email: 'tony@starkindustries.com', avatarUrl: 'https://placehold.co/40x40' },
   { id: '3', name: 'Wayne Enterprises', email: 'bruce@wayne.com', avatarUrl: 'https://placehold.co/40x40' },
@@ -30,9 +32,9 @@ const clients = [
 const invoiceFormSchema = z.object({
     invoiceNumber: z.string().min(1, "El número de factura es obligatorio"),
     clientId: z.string().min(1, "El cliente es obligatorio"),
-    issueDate: z.date(),
-    dueDate: z.date(),
-    status: z.enum(["Pendiente", "Pagada", "Vencida"]),
+    issueDate: z.date({required_error: "La fecha de emisión es obligatoria"}),
+    dueDate: z.date({required_error: "La fecha de vencimiento es obligatoria"}),
+    status: z.enum(["Pendiente", "Pagada", "Vencida"], {required_error: "El estado es obligatorio"}),
     items: z.array(z.object({
         description: z.string().min(1, "La descripción es obligatoria"),
         quantity: z.coerce.number().min(1, "La cantidad debe ser al menos 1"),
@@ -44,15 +46,21 @@ const invoiceFormSchema = z.object({
 type InvoiceFormValues = z.infer<typeof invoiceFormSchema>
 
 export default function NewInvoicePage() {
-    const { t, formatCurrency } = useLocale();
+    const { t, formatCurrency, locale: currentLocale } = useLocale();
     const { toast } = useToast()
+    const [clients, setClients] = useState<Client[]>([]);
+
+    // Simulate fetching clients
+    useEffect(() => {
+        // In a real app, you would fetch this from Firestore
+        setClients(initialClients);
+    }, []);
 
     const form = useForm<InvoiceFormValues>({
         resolver: zodResolver(invoiceFormSchema),
         defaultValues: {
             invoiceNumber: `FAC-${new Date().getFullYear()}-`,
             status: "Pendiente",
-            issueDate: new Date(),
             items: [{ description: "", quantity: 1, price: 0 }],
             notes: "",
         },
@@ -66,7 +74,7 @@ export default function NewInvoicePage() {
     const watchedItems = form.watch("items");
 
     const calculateTotals = () => {
-        const subtotal = watchedItems.reduce((acc, item) => acc + (item.quantity * item.price), 0);
+        const subtotal = watchedItems.reduce((acc, item) => acc + ((item.quantity || 0) * (item.price || 0)), 0);
         return { subtotal };
     }
 
@@ -78,6 +86,12 @@ export default function NewInvoicePage() {
             title: t('newInvoice.toast.title'),
             description: `${t('newInvoice.toast.description')} ${data.invoiceNumber}`,
         })
+        form.reset();
+        form.setValue("items", [{ description: "", quantity: 1, price: 0 }]);
+    }
+
+    const localeMap = {
+        es: es,
     }
     
     return (
@@ -142,7 +156,7 @@ export default function NewInvoicePage() {
                                                     )}
                                                     >
                                                     {field.value ? (
-                                                        format(field.value, "PPP", { locale: es })
+                                                        format(field.value, "PPP", { locale: localeMap[currentLocale as keyof typeof localeMap] || undefined })
                                                     ) : (
                                                         <span>{t('newInvoice.pickDate')}</span>
                                                     )}
@@ -156,7 +170,7 @@ export default function NewInvoicePage() {
                                                     selected={field.value}
                                                     onSelect={field.onChange}
                                                     initialFocus
-                                                    locale={es}
+                                                    locale={localeMap[currentLocale as keyof typeof localeMap] || undefined}
                                                 />
                                                 </PopoverContent>
                                             </Popover>
@@ -181,7 +195,7 @@ export default function NewInvoicePage() {
                                                     )}
                                                     >
                                                     {field.value ? (
-                                                        format(field.value, "PPP", { locale: es })
+                                                        format(field.value, "PPP", { locale: localeMap[currentLocale as keyof typeof localeMap] || undefined })
                                                     ) : (
                                                         <span>{t('newInvoice.pickDate')}</span>
                                                     )}
@@ -195,7 +209,7 @@ export default function NewInvoicePage() {
                                                     selected={field.value}
                                                     onSelect={field.onChange}
                                                     initialFocus
-                                                    locale={es}
+                                                    locale={localeMap[currentLocale as keyof typeof localeMap] || undefined}
                                                 />
                                                 </PopoverContent>
                                             </Popover>
