@@ -12,7 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import { FileText, AlertCircle, MailCheck } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
-import { auth } from "@/lib/firebase/config";
+import { auth, db } from "@/lib/firebase/config";
+import { collection, addDoc } from "firebase/firestore";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 
@@ -57,13 +58,22 @@ export default function LoginPage() {
     try {
       if (isSignUp) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await sendEmailVerification(userCredential.user);
+        const user = userCredential.user;
+        
+        // Create user document in Firestore
+        await addDoc(collection(db, "users"), {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName || '',
+            createdAt: new Date()
+        });
+
+        await sendEmailVerification(user);
         setVerificationSent(true);
       } else {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         if (!userCredential.user.emailVerified) {
             setError("Por favor, verifica tu correo electrónico antes de iniciar sesión.");
-            // Optional: sign out the user if you don't want them to be in a partially logged-in state.
             await auth.signOut();
         } else {
             router.push('/dashboard');
@@ -169,4 +179,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
