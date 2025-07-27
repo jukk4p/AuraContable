@@ -11,7 +11,6 @@ export type Client = {
 };
 
 export type InvoiceItem = {
-  id: string;
   description: string;
   quantity: number;
   price: number;
@@ -21,13 +20,12 @@ export type Invoice = {
   id: string;
   invoiceNumber: string;
   client: Client;
+  clientId: string;
   items: InvoiceItem[];
   subtotal: number;
-  tax: number;
-  total: number;
   status: InvoiceStatus;
-  issueDate: string;
-  dueDate: string;
+  issueDate: Date;
+  dueDate: Date;
   notes: string;
   userId: string;
 };

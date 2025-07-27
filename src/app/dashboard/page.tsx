@@ -1,19 +1,69 @@
+
 "use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowUpRight, Banknote, Users, FileWarning, CheckCircle2 } from "lucide-react";
-import { mockDashboardData, mockInvoices } from "@/lib/data";
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import InvoiceStatusBadge from "@/components/invoice-status-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useLocale } from "@/lib/i18n/locale-provider";
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { auth } from "@/lib/firebase/config";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { getInvoices } from "@/lib/firebase/firestore";
+import type { Invoice } from "@/lib/types";
+import { format } from "date-fns";
 
 export default function DashboardPage() {
     const { t, formatCurrency } = useLocale();
-    const [invoices] = useState(mockInvoices);
-    const recentInvoices = invoices.slice(0, 5);
+    const [user] = useAuthState(auth);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchInvoices = async () => {
+            if (user) {
+                setLoading(true);
+                try {
+                    const userInvoices = await getInvoices(user.uid);
+                    setInvoices(userInvoices);
+                } catch (e: any) {
+                    console.error("Error fetching invoices:", e);
+                } finally {
+                    setLoading(false);
+                }
+            } else if (user === null) {
+                setLoading(false);
+            }
+        };
+        fetchInvoices();
+    }, [user]);
+
+    const dashboardData = React.useMemo(() => {
+        const totalRevenue = invoices
+            .filter(inv => inv.status === 'Paid')
+            .reduce((sum, inv) => sum + inv.subtotal, 0);
+
+        const paidInvoices = invoices.filter(inv => inv.status === 'Paid').length;
+        const pendingInvoices = invoices.filter(inv => inv.status === 'Pending').length;
+        const overdueInvoices = invoices.filter(inv => inv.status === 'Overdue').length;
+
+        return {
+            totalRevenue,
+            paidInvoices,
+            pendingInvoices,
+            overdueInvoices,
+        };
+    }, [invoices]);
+    
+    const recentInvoices = invoices
+        .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime())
+        .slice(0, 5);
+
+    if (loading) {
+        return <p>Cargando panel...</p>;
+    }
 
     return (
       <div className="space-y-8">
@@ -24,8 +74,8 @@ export default function DashboardPage() {
               <Banknote className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(mockDashboardData.totalRevenue)}</div>
-              <p className="text-xs text-muted-foreground">{mockDashboardData.revenueChange}</p>
+              <div className="text-2xl font-bold">{formatCurrency(dashboardData.totalRevenue)}</div>
+              {/* <p className="text-xs text-muted-foreground">+15.2% from last month</p> */}
             </CardContent>
           </Card>
           <Card>
@@ -34,7 +84,7 @@ export default function DashboardPage() {
               <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockDashboardData.paidInvoices}</div>
+              <div className="text-2xl font-bold">{dashboardData.paidInvoices}</div>
               <p className="text-xs text-muted-foreground">{t('dashboard.totalPaidInvoices')}</p>
             </CardContent>
           </Card>
@@ -44,7 +94,7 @@ export default function DashboardPage() {
               <Users className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockDashboardData.pendingInvoices}</div>
+              <div className="text-2xl font-bold">{dashboardData.pendingInvoices}</div>
               <p className="text-xs text-muted-foreground">{t('dashboard.awaitingPayment')}</p>
             </CardContent>
           </Card>
@@ -54,7 +104,7 @@ export default function DashboardPage() {
               <FileWarning className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockDashboardData.overdueInvoices}</div>
+              <div className="text-2xl font-bold">{dashboardData.overdueInvoices}</div>
               <p className="text-xs text-muted-foreground">{t('dashboard.paymentOverdue')}</p>
             </CardContent>
           </Card>
@@ -94,11 +144,11 @@ export default function DashboardPage() {
                                     </div>
                                 </TableCell>
                                 <TableCell className="hidden md:table-cell">{invoice.invoiceNumber}</TableCell>
-                                <TableCell>{formatCurrency(invoice.total)}</TableCell>
+                                <TableCell>{formatCurrency(invoice.subtotal)}</TableCell>
                                 <TableCell>
                                     <InvoiceStatusBadge status={invoice.status} />
                                 </TableCell>
-                                <TableCell className="hidden md:table-cell">{invoice.dueDate}</TableCell>
+                                <TableCell className="hidden md:table-cell">{format(invoice.dueDate, 'PPP')}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>

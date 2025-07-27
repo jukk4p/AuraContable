@@ -1,3 +1,4 @@
+
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -19,15 +20,10 @@ import { es } from "date-fns/locale"
 import { useLocale } from "@/lib/i18n/locale-provider"
 import { Client, InvoiceStatus } from "@/lib/types"
 import React, { useState, useEffect } from 'react'
-
-// Note: This should fetch real clients from Firestore in the future.
-// For now, we simulate fetching and use local state as a placeholder.
-const initialClients: Client[] = [
-  { id: '1', name: 'Acme Inc.', email: 'contact@acme.com', avatarUrl: 'https://placehold.co/40x40' },
-  { id: '2', name: 'Stark Industries', email: 'tony@starkindustries.com', avatarUrl: 'https://placehold.co/40x40' },
-  { id: '3', name: 'Wayne Enterprises', email: 'bruce@wayne.com', avatarUrl: 'https://placehold.co/40x40' },
-];
-
+import { auth } from "@/lib/firebase/config"
+import { useAuthState } from "react-firebase-hooks/auth"
+import { getClients, addInvoice } from "@/lib/firebase/firestore"
+import { useRouter } from "next/navigation"
 
 const invoiceFormSchema = z.object({
     invoiceNumber: z.string().min(1, "El número de factura es obligatorio"),
@@ -48,13 +44,20 @@ type InvoiceFormValues = z.infer<typeof invoiceFormSchema>
 export default function NewInvoicePage() {
     const { t, formatCurrency, locale: currentLocale } = useLocale();
     const { toast } = useToast()
+    const router = useRouter();
+    const [user] = useAuthState(auth);
     const [clients, setClients] = useState<Client[]>([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Simulate fetching clients
     useEffect(() => {
-        // In a real app, you would fetch this from Firestore
-        setClients(initialClients);
-    }, []);
+        const fetchUserClients = async () => {
+            if(user) {
+                const userClients = await getClients(user.uid);
+                setClients(userClients);
+            }
+        }
+        fetchUserClients();
+    }, [user]);
 
     const form = useForm<InvoiceFormValues>({
         resolver: zodResolver(invoiceFormSchema),
@@ -80,14 +83,41 @@ export default function NewInvoicePage() {
 
     const { subtotal } = calculateTotals();
 
-    function onSubmit(data: InvoiceFormValues) {
-        console.log(data)
-        toast({
-            title: t('newInvoice.toast.title'),
-            description: `${t('newInvoice.toast.description')} ${data.invoiceNumber}`,
-        })
-        form.reset();
-        form.setValue("items", [{ description: "", quantity: 1, price: 0 }]);
+    async function onSubmit(data: InvoiceFormValues) {
+        if (!user) {
+            toast({ title: "Error", description: "Debes iniciar sesión para crear una factura.", variant: "destructive" });
+            return;
+        }
+        
+        setIsSubmitting(true);
+
+        const selectedClient = clients.find(c => c.id === data.clientId);
+        if (!selectedClient) {
+             toast({ title: "Error", description: "Cliente no válido.", variant: "destructive" });
+             setIsSubmitting(false);
+             return;
+        }
+
+        try {
+            await addInvoice({
+                ...data,
+                client: selectedClient,
+                subtotal: subtotal,
+                userId: user.uid,
+            });
+
+            toast({
+                title: t('newInvoice.toast.title'),
+                description: `${t('newInvoice.toast.description')} ${data.invoiceNumber}`,
+            });
+
+            router.push('/dashboard/invoices');
+        } catch (error) {
+            console.error("Error creating invoice:", error);
+            toast({ title: "Error", description: "Hubo un problema al crear la factura.", variant: "destructive" });
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
     const localeMap = {
@@ -112,7 +142,7 @@ export default function NewInvoicePage() {
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder={t('newInvoice.selectClient')} />
+                                                    <SelectValue placeholder={clients.length > 0 ? t('newInvoice.selectClient') : 'Crea un cliente primero'} />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
@@ -321,8 +351,8 @@ export default function NewInvoicePage() {
 
                     </CardContent>
                     <CardFooter className="justify-end gap-2">
-                         <Button variant="outline" type="button" onClick={() => form.reset()}>{t('common.cancel')}</Button>
-                        <Button type="submit">{t('common.save')}</Button>
+                         <Button variant="outline" type="button" onClick={() => form.reset()} disabled={isSubmitting}>{t('common.cancel')}</Button>
+                        <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Guardando..." : t('common.save')}</Button>
                     </CardFooter>
                 </Card>
             </form>

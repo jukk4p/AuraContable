@@ -1,6 +1,7 @@
+
 "use client"
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,17 +11,43 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { mockInvoices as initialInvoices } from '@/lib/data';
 import type { Invoice, InvoiceStatus } from '@/lib/types';
 import InvoiceStatusBadge from '@/components/invoice-status-badge';
 import { useLocale } from '@/lib/i18n/locale-provider';
+import { auth } from '@/lib/firebase/config';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { getInvoices, deleteInvoice } from '@/lib/firebase/firestore';
+import { format } from 'date-fns';
+import { toast } from '@/hooks/use-toast';
 
 export default function InvoiceList() {
-    const { t, formatCurrency } = useLocale();
-    const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
+    const { t, formatCurrency, locale } = useLocale();
+    const [user] = useAuthState(auth);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
     const [sortConfig, setSortConfig] = useState<{ key: keyof Invoice | 'client.name'; direction: 'ascending' | 'descending' } | null>(null);
+
+    useEffect(() => {
+        const fetchInvoices = async () => {
+            if (user) {
+                setLoading(true);
+                try {
+                    const userInvoices = await getInvoices(user.uid);
+                    setInvoices(userInvoices);
+                } catch (e: any) {
+                    console.error("Error fetching invoices:", e);
+                    toast({ title: "Error", description: "Hubo un problema al cargar las facturas.", variant: "destructive" });
+                } finally {
+                    setLoading(false);
+                }
+            } else if (!user) {
+                setLoading(false);
+            }
+        };
+        fetchInvoices();
+    }, [user]);
 
     const filteredInvoices = useMemo(() => {
         let filtered = [...invoices];
@@ -47,7 +74,11 @@ export default function InvoiceList() {
                 if (key === 'client.name') {
                     aValue = a.client.name;
                     bValue = b.client.name;
-                } else {
+                } else if (key === 'issueDate' || key === 'dueDate') {
+                    aValue = new Date(a[key]);
+                    bValue = new Date(b[key]);
+                }
+                else {
                     aValue = a[key as keyof Invoice];
                     bValue = b[key as keyof Invoice];
                 }
@@ -72,8 +103,15 @@ export default function InvoiceList() {
         setSortConfig({ key, direction });
     };
 
-    const handleDeleteInvoice = (id: string) => {
-        setInvoices(invoices.filter(invoice => invoice.id !== id));
+    const handleDeleteInvoice = async (id: string) => {
+        try {
+            await deleteInvoice(id);
+            setInvoices(invoices.filter(invoice => invoice.id !== id));
+            toast({ title: t('invoices.deleteInvoice'), description: "La factura ha sido eliminada." });
+        } catch (error) {
+            console.error("Error deleting invoice:", error);
+            toast({ title: "Error", description: "Hubo un problema al eliminar la factura.", variant: "destructive" });
+        }
     }
 
     const getSortIcon = (key: keyof Invoice | 'client.name') => {
@@ -81,10 +119,14 @@ export default function InvoiceList() {
           return <ArrowUpDown className="ml-2 h-4 w-4" />;
         }
         if (sortConfig.direction === 'ascending') {
-          return <ArrowUpDown className="ml-2 h-4 w-4" />; // Could use ArrowUp instead
+          return <ArrowUpDown className="ml-2 h-4 w-4" />; 
         }
-        return <ArrowUpDown className="ml-2 h-4 w-4" />; // Could use ArrowDown instead
+        return <ArrowUpDown className="ml-2 h-4 w-4" />; 
       };
+
+    if (loading) {
+        return <p>Cargando facturas...</p>;
+    }
 
     return (
         <Card>
@@ -124,8 +166,8 @@ export default function InvoiceList() {
                                 </Button>
                             </TableHead>
                             <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('total')}>
-                                    {t('invoices.amount')} {getSortIcon('total')}
+                                <Button variant="ghost" onClick={() => requestSort('subtotal')}>
+                                    {t('invoices.amount')} {getSortIcon('subtotal')}
                                 </Button>
                             </TableHead>
                             <TableHead>
@@ -156,11 +198,11 @@ export default function InvoiceList() {
                                     </div>
                                 </TableCell>
                                 <TableCell>{invoice.invoiceNumber}</TableCell>
-                                <TableCell>{formatCurrency(invoice.total)}</TableCell>
+                                <TableCell>{formatCurrency(invoice.subtotal)}</TableCell>
                                 <TableCell>
                                     <InvoiceStatusBadge status={invoice.status} />
                                 </TableCell>
-                                <TableCell>{invoice.dueDate}</TableCell>
+                                <TableCell>{format(invoice.dueDate, 'PPP')}</TableCell>
                                 <TableCell>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
@@ -182,6 +224,11 @@ export default function InvoiceList() {
                         ))}
                     </TableBody>
                 </Table>
+                {sortedInvoices.length === 0 && (
+                    <div className="text-center py-10">
+                        <p className="text-muted-foreground">No tienes facturas todavía.</p>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );
