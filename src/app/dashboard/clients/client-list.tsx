@@ -21,7 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, MailWarning } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 
-function ClientForm({ client, onSave, onCancel, isSaving }: { client?: Client | null, onSave: (client: Omit<Client, 'id' | 'avatarUrl' | 'userId'> & { id?: string }) => void, onCancel: () => void, isSaving: boolean }) {
+function ClientForm({ client, onSave, onCancel, isSaving }: { client?: Client | null, onSave: (client: Omit<Client, 'id' | 'avatarUrl' | 'userId' | 'createdAt'> & { id?: string }) => void, onCancel: () => void, isSaving: boolean }) {
     const { t } = useLocale();
     const [name, setName] = useState(client?.name || '');
     const [email, setEmail] = useState(client?.email || '');
@@ -119,7 +119,7 @@ export default function ClientList() {
         );
     }, [searchTerm, clients]);
 
-    const handleSaveClient = async (clientData: Omit<Client, 'id' | 'avatarUrl' | 'userId'> & { id?: string }) => {
+    const handleSaveClient = async (clientData: Omit<Client, 'id' | 'avatarUrl' | 'userId' | 'createdAt'> & { id?: string }) => {
         if (!user || !user.emailVerified) {
             toast({ title: "Error", description: "Debes iniciar sesión y verificar tu correo para realizar esta acción.", variant: "destructive" });
             return;
@@ -293,3 +293,5 @@ export default function ClientList() {
         </Card>
     );
 }
+
+    

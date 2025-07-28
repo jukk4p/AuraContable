@@ -169,14 +169,17 @@ export default function ExpensesPage() {
         setIsSaving(true);
         try {
             if (expenseData.id) {
-                const updatedData = { ...expenseData };
-                delete updatedData.id;
-                await updateExpense(expenseData.id, updatedData as Omit<Expense, 'id' | 'userId'>);
+                const { id, ...updatedData } = expenseData;
+                await updateExpense(id, updatedData as Omit<Expense, 'id' | 'userId'>);
                 setExpenses(expenses.map(e => e.id === expenseData.id ? { ...e, ...updatedData } as Expense : e));
                 toast({ title: "Gasto Actualizado", description: "El gasto ha sido actualizado." });
             } else {
-                const newExpenseData = { ...expenseData, userId: user.uid };
-                const newExpense = await addExpense(newExpenseData as Omit<Expense, 'id'>);
+                const { id, ...newExpenseData } = expenseData;
+                const expenseToAdd = {
+                    ...newExpenseData,
+                     userId: user.uid,
+                };
+                const newExpense = await addExpense(expenseToAdd);
                 setExpenses([...expenses, newExpense]);
                 toast({ title: "Gasto Añadido", description: "El nuevo gasto ha sido añadido." });
             }
@@ -317,3 +320,5 @@ export default function ExpensesPage() {
         </Card>
     );
 }
+
+    
