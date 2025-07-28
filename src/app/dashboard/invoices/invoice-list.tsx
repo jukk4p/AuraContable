@@ -18,6 +18,7 @@ import { auth } from '@/lib/firebase/config';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { getInvoices, deleteInvoice, getInvoiceById, getCompanyProfile, updateInvoice, addNotification } from '@/lib/firebase/firestore';
 import { format } from 'date-fns';
+import { es, fr, it, enUS } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, MailWarning } from "lucide-react";
@@ -35,6 +36,7 @@ export default function InvoiceList() {
     const [isDownloading, setIsDownloading] = useState<string | null>(null);
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
+    const localeMap = { es, fr, it, en: enUS, ca: es };
 
     useEffect(() => {
         const fetchInvoices = async () => {
@@ -282,7 +284,7 @@ export default function InvoiceList() {
                                     <TableCell>
                                         <InvoiceStatusBadge status={invoice.status} />
                                     </TableCell>
-                                    <TableCell>{format(invoice.dueDate, 'PPP')}</TableCell>
+                                    <TableCell>{format(invoice.dueDate, 'PPP', { locale: localeMap[locale as keyof typeof localeMap] || undefined })}</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
