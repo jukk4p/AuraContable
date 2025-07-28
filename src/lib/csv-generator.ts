@@ -1,5 +1,5 @@
 
-import type { Invoice } from './types';
+import type { Invoice, Client } from './types';
 import { format } from 'date-fns';
 
 function escapeCsvCell(cell: any): string {
@@ -61,3 +61,46 @@ export async function generateInvoicingReportCsv(invoices: Invoice[]) {
     link.click();
     document.body.removeChild(link);
 }
+
+export async function generateClientsCsv(clients: Client[]) {
+    const headers = [
+        'Nombre',
+        'Email',
+        'NIF',
+        'Direccion',
+        'Pais',
+        'Telefono',
+        'Notas',
+    ];
+
+    const rows = clients.map(client => {
+        return [
+            client.name,
+            client.email,
+            client.taxId,
+            client.address,
+            client.country,
+            client.phone,
+            client.notes,
+        ].map(escapeCsvCell).join(',');
+    });
+
+    const csvContent = [
+        headers.join(','),
+        ...rows
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.href) {
+        URL.revokeObjectURL(link.href);
+    }
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute('download', `Clientes-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+    

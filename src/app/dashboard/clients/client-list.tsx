@@ -2,11 +2,11 @@
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -20,6 +20,7 @@ import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, MailWarning } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import { generateClientsCsv } from '@/lib/csv-generator';
 
 function ClientForm({ client, onSave, onCancel, isSaving }: { client?: Client | null, onSave: (client: Omit<Client, 'id' | 'avatarUrl' | 'userId' | 'createdAt'> & { id?: string }) => void, onCancel: () => void, isSaving: boolean }) {
     const { t } = useLocale();
@@ -88,6 +89,7 @@ export default function ClientList() {
     const [dbLoading, setDbLoading] = useState(true);
     const [dbError, setDbError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
 
 
     useEffect(() => {
@@ -169,6 +171,18 @@ export default function ClientList() {
             toast({ title: "Error", description: "Hubo un problema al eliminar el cliente.", variant: "destructive" });
         }
     };
+    
+    const handleExportCsv = async () => {
+        setIsExporting(true);
+        try {
+            await generateClientsCsv(filteredClients);
+        } catch (error) {
+            console.error("Error exporting clients to CSV:", error);
+            toast({ title: "Error", description: "Hubo un problema al exportar los clientes.", variant: "destructive" });
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     const handleOpenForm = (client: Client | null = null) => {
         setEditingClient(client);
@@ -222,6 +236,20 @@ export default function ClientList() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-64"
                         />
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" disabled={isExporting}>
+                                    <FileDown className="w-4 h-4 mr-2" />
+                                    {isExporting ? "Exportando..." : "Exportar"}
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem onSelect={handleExportCsv} disabled={filteredClients.length === 0}>
+                                    Exportar a CSV
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
                         <Dialog open={isFormOpen} onOpenChange={(isOpen) => { if(!isOpen) handleCloseForm(); else setIsFormOpen(true); }}>
                             <DialogTrigger asChild>
                                 <Button onClick={() => handleOpenForm()} disabled={isSaving}>
@@ -298,7 +326,5 @@ export default function ClientList() {
         </Card>
     );
 }
-
-    
 
     
