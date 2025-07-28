@@ -3,11 +3,11 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, View, Edit, Trash2, Download, CheckCircle, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,7 +16,7 @@ import InvoiceStatusBadge from '@/components/invoice-status-badge';
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { auth } from '@/lib/firebase/config';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { getInvoices, deleteInvoice, getInvoiceById, getCompanyProfile } from '@/lib/firebase/firestore';
+import { getInvoices, deleteInvoice, getInvoiceById, getCompanyProfile, updateInvoice, addNotification } from '@/lib/firebase/firestore';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -33,6 +33,8 @@ export default function InvoiceList() {
     const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
     const [sortConfig, setSortConfig] = useState<{ key: keyof Invoice | 'client.name'; direction: 'ascending' | 'descending' } | null>(null);
     const [isDownloading, setIsDownloading] = useState<string | null>(null);
+    const [isUpdating, setIsUpdating] = useState<string | null>(null);
+
 
     useEffect(() => {
         const fetchInvoices = async () => {
@@ -80,7 +82,7 @@ export default function InvoiceList() {
                     aValue = a.client.name;
                     bValue = b.client.name;
                 } else if (key === 'issueDate' || key === 'dueDate') {
-                    aValue = new Date(a[key]);
+                    aValue = new Date(a[key] as any);
                 }
                 else {
                     aValue = a[key as keyof Invoice];
@@ -115,6 +117,30 @@ export default function InvoiceList() {
         } catch (error) {
             console.error("Error deleting invoice:", error);
             toast({ title: "Error", description: "Hubo un problema al eliminar la factura.", variant: "destructive" });
+        }
+    }
+    
+    const handleMarkAsPaid = async (invoice: Invoice) => {
+        if (!user) return;
+        setIsUpdating(invoice.id);
+        try {
+            await updateInvoice(invoice.id, { status: 'Paid' });
+            setInvoices(invoices.map(inv => inv.id === invoice.id ? { ...inv, status: 'Paid' } : inv));
+            
+            await addNotification({
+                userId: user.uid,
+                title: "Pago Recibido",
+                body: `La factura ${invoice.invoiceNumber} ha sido pagada.`,
+                href: `/dashboard/invoices/${invoice.id}`,
+                isRead: false,
+            });
+
+            toast({ title: "Factura Actualizada", description: "La factura ha sido marcada como pagada." });
+        } catch (error) {
+             console.error("Error updating invoice status:", error);
+            toast({ title: "Error", description: "No se pudo actualizar el estado de la factura.", variant: "destructive" });
+        } finally {
+            setIsUpdating(null);
         }
     }
 
@@ -260,7 +286,7 @@ export default function InvoiceList() {
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button aria-haspopup="true" size="icon" variant="ghost" disabled={isDownloading === invoice.id}>
+                                                <Button aria-haspopup="true" size="icon" variant="ghost" disabled={isDownloading === invoice.id || isUpdating === invoice.id}>
                                                     <MoreHorizontal className="h-4 w-4" />
                                                     <span className="sr-only">{t('common.menu')}</span>
                                                 </Button>
@@ -268,13 +294,32 @@ export default function InvoiceList() {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
                                                 <DropdownMenuItem asChild>
-                                                    <Link href={`/dashboard/invoices/${invoice.id}`}>{t('common.viewDetails')}</Link>
+                                                    <Link href={`/dashboard/invoices/${invoice.id}`}>
+                                                        <View className="mr-2 h-4 w-4"/>{t('common.viewDetails')}
+                                                    </Link>
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem>{t('invoices.markAsPaid')}</DropdownMenuItem>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/dashboard/invoices/${invoice.id}/edit`}>
+                                                        <Edit className="mr-2 h-4 w-4"/>{t('common.edit')}
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem onClick={() => handleMarkAsPaid(invoice)} disabled={invoice.status === 'Paid' || isUpdating === invoice.id}>
+                                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                                    {isUpdating === invoice.id ? "Actualizando..." : t('invoices.markAsPaid')}
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem disabled>
+                                                    <Send className="mr-2 h-4 w-4"/> Enviar por Email
+                                                </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handleDownloadPdf(invoice.id)} disabled={isDownloading === invoice.id}>
+                                                    <Download className="mr-2 h-4 w-4"/>
                                                     {isDownloading === invoice.id ? "Descargando..." : t('invoices.downloadPdf')}
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleDeleteInvoice(invoice.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">{t('invoices.deleteInvoice')}</DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem onClick={() => handleDeleteInvoice(invoice.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                                    <Trash2 className="mr-2 h-4 w-4"/>
+                                                    {t('invoices.deleteInvoice')}
+                                                </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
