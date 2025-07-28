@@ -71,6 +71,7 @@ export type Client = {
  * This is stored as an object within the `items` array of an Invoice document.
  */
 export type InvoiceItem = {
+  id: string;
   description: string;
   quantity: number;
   price: number;
@@ -227,3 +228,5 @@ export interface DashboardData {
     pendingInvoices: number;
     overdueInvoices: number;
 }
+
+    

@@ -207,12 +207,9 @@ export default function NewInvoicePage() {
              return;
         }
 
-        const { clientId, ...restOfData } = data;
-
         const invoicePayload = {
-            ...restOfData,
+            ...data,
             client: selectedClient,
-            clientId: selectedClient.id,
             subtotal,
             total,
             taxes: data.taxes || [],
@@ -220,6 +217,11 @@ export default function NewInvoicePage() {
             terms: data.terms || '',
             userId: user.uid,
         };
+        
+        // Firestore doesn't accept undefined values
+        if (!invoicePayload.taxes) invoicePayload.taxes = [];
+        if (!invoicePayload.notes) invoicePayload.notes = '';
+        if (!invoicePayload.terms) invoicePayload.terms = '';
 
         try {
             if (isEditing) {
@@ -229,7 +231,9 @@ export default function NewInvoicePage() {
                     description: `La factura ${data.invoiceNumber} ha sido actualizada.`,
                 });
             } else {
-                await addInvoice(invoicePayload);
+                // remove clientId from payload, as it's not in the Invoice type for creation
+                const { clientId, ...creationPayload } = invoicePayload;
+                await addInvoice(creationPayload);
                 toast({
                     title: t('newInvoice.toast.title'),
                     description: `${t('newInvoice.toast.description')} ${data.invoiceNumber}`,
@@ -533,3 +537,5 @@ export default function NewInvoicePage() {
         </Form>
     )
 }
+
+    

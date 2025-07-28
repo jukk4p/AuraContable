@@ -105,7 +105,6 @@ function isInvoice(doc: DocumentData): doc is Omit<Invoice, 'id' | 'issueDate' |
         ['Paid', 'Pending', 'Overdue'].includes(data.status) &&
         data.issueDate instanceof Timestamp &&
         data.dueDate instanceof Timestamp &&
-        data.createdAt instanceof Timestamp &&
         typeof data.userId === 'string'
     );
 }
@@ -117,12 +116,13 @@ const invoiceFromSnapshot = (snapshot: QueryDocumentSnapshot<DocumentData> | Doc
         console.error("Invalid invoice data received from Firestore:", data);
         throw new Error("Invalid invoice data from Firestore.");
     }
+    const createdAt = (data.createdAt as Timestamp)?.toDate() || new Date();
     return {
         id: 'id' in snapshot ? snapshot.id : '',
         ...data,
         issueDate: data.issueDate.toDate(),
         dueDate: data.dueDate.toDate(),
-        createdAt: data.createdAt.toDate(),
+        createdAt: createdAt,
     };
 };
 
@@ -140,18 +140,7 @@ export async function getInvoiceById(invoiceId: string): Promise<Invoice | null>
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-        const data = docSnap.data();
-         if (!isInvoice(data)) {
-            console.error("Invalid invoice data received from Firestore:", data);
-            throw new Error("Invalid invoice data from Firestore.");
-        }
-        return {
-            id: docSnap.id,
-            ...data,
-            issueDate: data.issueDate.toDate(),
-            dueDate: data.dueDate.toDate(),
-            createdAt: data.createdAt.toDate(),
-        };
+        return invoiceFromSnapshot(docSnap);
     } else {
         return null;
     }
@@ -246,11 +235,10 @@ const notificationFromSnapshot = (snapshot: QueryDocumentSnapshot<DocumentData>)
     return {
         id: snapshot.id,
         userId: data.userId,
-        message: data.message,
-        type: data.type,
-        channel: data.channel,
+        title: data.title,
+        body: data.body,
+        href: data.href,
         isRead: data.isRead,
-        reference: data.reference,
         createdAt: (data.createdAt as Timestamp).toDate(),
     };
 };
@@ -261,7 +249,8 @@ export function getNotifications(
     onError: (error: FirestoreError) => void
 ) {
     if (!userId) {
-        return () => {}; // Return an empty unsubscribe function
+        // Return an empty unsubscribe function if there's no user
+        return () => {};
     }
 
     const q = query(
@@ -276,7 +265,7 @@ export function getNotifications(
         callback(notifications);
     }, onError);
 
-    return unsubscribe; // Return the actual unsubscribe function from onSnapshot
+    return unsubscribe;
 }
 
 
@@ -289,3 +278,5 @@ export async function markNotificationAsRead(notificationId: string): Promise<vo
     const notifRef = doc(db, 'notifications', notificationId);
     await updateDoc(notifRef, { isRead: true });
 }
+
+    
