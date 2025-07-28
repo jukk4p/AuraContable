@@ -126,6 +126,7 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
   const { state } = useSidebar();
   const [user, loading, error] = useAuthState(auth);
   const { setTheme } = useTheme();
+  const [initials, setInitials] = useState("...");
 
   useEffect(() => {
     async function fetchAndSetTheme() {
@@ -138,6 +139,26 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
     }
     fetchAndSetTheme();
   }, [user, setTheme]);
+
+  useEffect(() => {
+      if (loading) {
+          setInitials("...");
+      } else if (user) {
+          if (user.displayName) {
+              const names = user.displayName.split(' ');
+              if (names.length > 1) {
+                  setInitials(`${names[0][0]}${names[names.length - 1][0]}`.toUpperCase());
+              } else {
+                  setInitials(user.displayName.substring(0, 2).toUpperCase());
+              }
+          } else {
+              setInitials("U");
+          }
+      } else {
+          setInitials("U");
+      }
+  }, [user, loading]);
+
 
   const navItems = [
     { href: "/dashboard", icon: LayoutGrid, label: t('nav.dashboard'), exact: true },
@@ -179,16 +200,6 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
     }
   };
   
-  const getUserInitials = () => {
-    if (loading) return '...';
-    if (!user || !user.displayName) return 'U';
-    const names = user.displayName.split(' ');
-    if (names.length > 1) {
-        return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
-    }
-    return user.displayName.substring(0, 2).toUpperCase();
-  }
-
   return (
     <>
       <Sidebar>
@@ -239,7 +250,7 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
                 <Button variant="ghost" className="relative w-10 h-10 rounded-full">
                   <Avatar>
                     <AvatarImage src={user?.photoURL || undefined} alt="User" />
-                    <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                    <AvatarFallback>{initials}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
@@ -276,5 +287,3 @@ export default function DashboardLayout({
     </SidebarProvider>
   )
 }
-
-    
