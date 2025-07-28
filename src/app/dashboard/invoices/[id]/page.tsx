@@ -12,7 +12,7 @@ import Link from 'next/link';
 
 import type { Invoice, CompanyProfile } from '@/lib/types';
 import { auth } from '@/lib/firebase/config';
-import { getInvoiceById, getCompanyProfile, updateInvoice, deleteInvoice, addNotification, sendInvoiceByEmail } from '@/lib/firebase/firestore';
+import { getInvoiceById, getCompanyProfile, updateInvoice, deleteInvoice, addNotification } from '@/lib/firebase/firestore';
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -99,7 +99,6 @@ export default function InvoiceDetailsPage() {
                 body: `La factura ${invoice.invoiceNumber} ha sido pagada.`,
                 href: `/dashboard/invoices/${invoice.id}`,
                 isRead: false,
-                createdAt: new Date(),
             });
 
             toast({ title: "Factura Actualizada", description: "La factura ha sido marcada como pagada." });
@@ -130,16 +129,16 @@ export default function InvoiceDetailsPage() {
         setIsSending(true);
 
         try {
-            await sendInvoiceByEmail(invoice, companyProfile, { t, formatCurrency, locale });
+            // await sendInvoiceByEmail(invoice, companyProfile, { t, formatCurrency, locale });
             toast({
-                title: "Correo en proceso",
-                description: `La factura ${invoice.invoiceNumber} se está enviando a ${invoice.client.email}.`,
+                title: "Función no disponible",
+                description: `Esta funcionalidad requiere configuración adicional.`,
             });
         } catch (error) {
             console.error("Error sending email:", error);
             toast({
                 title: "Error al enviar",
-                description: "Hubo un problema al enviar el correo. Revisa la configuración de la extensión 'Trigger Email'.",
+                description: "Hubo un problema al enviar el correo.",
                 variant: "destructive",
             });
         }
@@ -415,5 +414,3 @@ function InvoiceDetailsSkeleton() {
         </div>
     )
 }
-
-    

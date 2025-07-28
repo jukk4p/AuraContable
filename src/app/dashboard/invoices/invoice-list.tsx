@@ -17,7 +17,7 @@ import InvoiceStatusBadge from '@/components/invoice-status-badge';
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { auth } from '@/lib/firebase/config';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { getInvoices, deleteInvoice, getInvoiceById, getCompanyProfile, updateInvoice, addNotification, sendInvoiceByEmail } from '@/lib/firebase/firestore';
+import { getInvoices, deleteInvoice, getInvoiceById, getCompanyProfile, updateInvoice, addNotification } from '@/lib/firebase/firestore';
 import { format } from 'date-fns';
 import { es, fr, it, enUS } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
@@ -173,15 +173,15 @@ export default function InvoiceList() {
         if (!user) return;
         setIsSending(invoiceId);
         try {
-            const invoice = await getInvoiceById(invoiceId);
-            const companyProfile = await getCompanyProfile(user.uid);
-            if (!invoice || !companyProfile) {
-                throw new Error("Invoice or company profile not found");
-            }
-            await sendInvoiceByEmail(invoice, companyProfile, { t, formatCurrency, locale });
+            // const invoice = await getInvoiceById(invoiceId);
+            // const companyProfile = await getCompanyProfile(user.uid);
+            // if (!invoice || !companyProfile) {
+            //     throw new Error("Invoice or company profile not found");
+            // }
+            // await sendInvoiceByEmail(invoice, companyProfile, { t, formatCurrency, locale });
             toast({
-                title: "Correo en proceso",
-                description: `La factura ${invoice.invoiceNumber} se está enviando.`,
+                title: "Función no disponible",
+                description: `Esta funcionalidad requiere configuración adicional.`,
             });
         } catch (error) {
              console.error("Error sending email:", error);

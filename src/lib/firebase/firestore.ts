@@ -1,8 +1,6 @@
 import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, DocumentData, QueryDocumentSnapshot, Timestamp, getDoc, setDoc, orderBy, limit, onSnapshot, FirestoreError } from "firebase/firestore";
 import { db } from "./config";
 import type { Client, Invoice, Expense, CompanyProfile, AppNotification, UserProfile, Product, Report, ImportExportRecord } from "@/lib/types";
-import { generateInvoicePdf } from "../pdf-generator";
-import type { Locale } from "../i18n/locales";
 
 // Type guard for UserProfile
 function isUserProfile(doc: DocumentData): doc is UserProfile {
@@ -282,55 +280,4 @@ export async function addNotification(notification: Omit<AppNotification, 'id' |
 export async function markNotificationAsRead(notificationId: string): Promise<void> {
     const notifRef = doc(db, 'notifications', notificationId);
     await updateDoc(notifRef, { isRead: true });
-}
-
-/**
- * Sends an invoice email by creating a document in the 'mail' collection,
- * which is monitored by the "Trigger Email" Firebase Extension.
- */
-export async function sendInvoiceByEmail(
-    invoice: Invoice,
-    company: CompanyProfile,
-    l10n: { t: (key: string) => string; formatCurrency: (amount: number) => string; locale: Locale }
-): Promise<void> {
-    
-    // 1. Generate PDF buffer
-    const pdfDoc = await generateInvoicePdf(invoice, company, l10n, 'S'); // 'S' for string output
-    const pdfBase64 = btoa(pdfDoc as string);
-
-    // 2. Prepare email content
-    let subject = company.templates?.newInvoice?.subject || `Factura ${invoice.invoiceNumber}`;
-    let body = company.templates?.newInvoice?.body || `Hola {{clientName}},<br><br>Adjuntamos la factura {{invoiceNumber}} por un total de {{invoiceTotal}}.<br><br>Gracias,<br>${company.name}`;
-    
-    // 3. Replace template variables
-    const replacements: { [key: string]: string } = {
-        '{{clientName}}': invoice.client.name,
-        '{{invoiceNumber}}': invoice.invoiceNumber,
-        '{{invoiceTotal}}': l10n.formatCurrency(invoice.total),
-        '{{dueDate}}': new Date(invoice.dueDate).toLocaleDateString(l10n.locale),
-        '{{companyName}}': company.name,
-    };
-    
-    for (const key in replacements) {
-        const regex = new RegExp(key.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
-        subject = subject.replace(regex, replacements[key]);
-        body = body.replace(regex, replacements[key]);
-    }
-
-    // 4. Create the email document in Firestore 'mail' collection
-    await addDoc(collection(db, 'mail'), {
-        to: [invoice.client.email],
-        // from and replyTo can be configured in the extension parameters
-        message: {
-            subject: subject,
-            html: body,
-            attachments: [
-                {
-                    filename: `Factura-${invoice.invoiceNumber}.pdf`,
-                    content: pdfBase64,
-                    encoding: 'base64',
-                },
-            ],
-        },
-    });
 }
