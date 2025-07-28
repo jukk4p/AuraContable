@@ -1,10 +1,43 @@
-
-
-"use server"
-
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, DocumentData, QueryDocumentSnapshot, Timestamp, getDoc, setDoc, orderBy, limit } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, DocumentData, QueryDocumentSnapshot, Timestamp, getDoc, setDoc, orderBy, limit, onSnapshot, FirestoreError } from "firebase/firestore";
 import { db } from "./config";
-import type { Client, Invoice, Expense, CompanyProfile, AppNotification } from "@/lib/types";
+import type { Client, Invoice, Expense, CompanyProfile, AppNotification, UserProfile, Product, Report, ImportExportRecord } from "@/lib/types";
+
+// Type guard for UserProfile
+function isUserProfile(doc: DocumentData): doc is UserProfile {
+    const data = doc as UserProfile;
+    // Add checks for UserProfile fields
+    return typeof data.uid === 'string'; 
+}
+
+// Helper to convert snapshot to UserProfile
+const userProfileFromSnapshot = (snapshot: QueryDocumentSnapshot<DocumentData>): UserProfile => {
+    const data = snapshot.data();
+    if (!isUserProfile(data)) {
+        throw new Error("Invalid user profile data from Firestore.");
+    }
+    return {
+        id: snapshot.id,
+        ...data,
+    };
+};
+
+export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+    if (!userId) return null;
+    const docRef = doc(db, "users", userId);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+        return userProfileFromSnapshot(docSnap as QueryDocumentSnapshot<DocumentData>);
+    } else {
+        return null;
+    }
+}
+
+export async function saveUserProfile(profile: UserProfile): Promise<void> {
+    const docRef = doc(db, "users", profile.uid);
+    await setDoc(docRef, profile, { merge: true });
+}
+
 
 // Type guard for Client
 function isClient(doc: DocumentData): doc is Client {
@@ -24,31 +57,30 @@ const clientFromSnapshot = (snapshot: QueryDocumentSnapshot<DocumentData>): Clie
     }
     return {
         id: snapshot.id,
+        userId: data.userId,
         name: data.name,
         email: data.email,
-        avatarUrl: data.avatarUrl || '',
-        userId: data.userId,
-        address: data.address || '',
-        taxId: data.taxId || '',
-        country: data.country || '',
+        address: data.address,
+        country: data.country,
+        taxId: data.taxId,
+        phone: data.phone,
+        notes: data.notes,
+        createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
     };
 };
 
 export async function getClients(userId: string): Promise<Client[]> {
     if (!userId) return [];
-    // This query previously had an .orderBy('name') which required a composite index.
-    // Removing it simplifies the query and avoids the need for a manual index.
-    // Sorting can be done on the client-side if needed.
     const q = query(collection(db, "clients"), where("userId", "==", userId));
     const querySnapshot = await getDocs(q);
     const clients = querySnapshot.docs.map(clientFromSnapshot);
-    // Sort clients by name alphabetically on the client side
     return clients.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export async function addClient(client: Omit<Client, 'id'>): Promise<Client> {
-    const docRef = await addDoc(collection(db, "clients"), client);
-    return { id: docRef.id, ...client };
+export async function addClient(client: Omit<Client, 'id' | 'createdAt'>): Promise<Client> {
+    const newClient = { ...client, createdAt: new Date() };
+    const docRef = await addDoc(collection(db, "clients"), newClient);
+    return { id: docRef.id, ...newClient };
 }
 
 export async function updateClient(clientId: string, client: Partial<Omit<Client, 'id' | 'userId'>>): Promise<void> {
@@ -62,8 +94,8 @@ export async function deleteClient(clientId: string): Promise<void> {
 
 
 // Type guard for Invoice
-function isInvoice(doc: DocumentData): doc is Omit<Invoice, 'id' | 'issueDate' | 'dueDate'> & { issueDate: Timestamp, dueDate: Timestamp } {
-     const data = doc as Invoice & { issueDate: Timestamp, dueDate: Timestamp };
+function isInvoice(doc: DocumentData): doc is Omit<Invoice, 'id' | 'issueDate' | 'dueDate' | 'createdAt'> & { issueDate: Timestamp, dueDate: Timestamp, createdAt: Timestamp } {
+     const data = doc as Invoice & { issueDate: Timestamp, dueDate: Timestamp, createdAt: Timestamp };
      return (
         typeof data.invoiceNumber === 'string' &&
         data.client && typeof data.client.name === 'string' &&
@@ -73,6 +105,7 @@ function isInvoice(doc: DocumentData): doc is Omit<Invoice, 'id' | 'issueDate' |
         ['Paid', 'Pending', 'Overdue'].includes(data.status) &&
         data.issueDate instanceof Timestamp &&
         data.dueDate instanceof Timestamp &&
+        data.createdAt instanceof Timestamp &&
         typeof data.userId === 'string'
     );
 }
@@ -89,9 +122,7 @@ const invoiceFromSnapshot = (snapshot: QueryDocumentSnapshot<DocumentData> | Doc
         ...data,
         issueDate: data.issueDate.toDate(),
         dueDate: data.dueDate.toDate(),
-        taxes: data.taxes || [], // Ensure taxes is an array
-        notes: data.notes || '',
-        terms: data.terms || '',
+        createdAt: data.createdAt.toDate(),
     };
 };
 
@@ -119,6 +150,7 @@ export async function getInvoiceById(invoiceId: string): Promise<Invoice | null>
             ...data,
             issueDate: data.issueDate.toDate(),
             dueDate: data.dueDate.toDate(),
+            createdAt: data.createdAt.toDate(),
         };
     } else {
         return null;
@@ -126,14 +158,14 @@ export async function getInvoiceById(invoiceId: string): Promise<Invoice | null>
 }
 
 
-export async function addInvoice(invoice: Omit<Invoice, 'id'>): Promise<Invoice> {
-    const docRef = await addDoc(collection(db, "invoices"), invoice);
-    return { id: docRef.id, ...invoice };
+export async function addInvoice(invoice: Omit<Invoice, 'id' | 'createdAt'>): Promise<Invoice> {
+    const newInvoice = { ...invoice, createdAt: new Date() };
+    const docRef = await addDoc(collection(db, "invoices"), newInvoice);
+    return { id: docRef.id, ...newInvoice };
 }
 
-export async function updateInvoice(invoiceId: string, invoice: Partial<Omit<Invoice, 'id'>>): Promise<void> {
+export async function updateInvoice(invoiceId: string, invoice: Partial<Omit<Invoice, 'id' | 'userId'>>): Promise<void> {
     const invoiceRef = doc(db, "invoices", invoiceId);
-    // Firestore does not allow undefined values. We need to clean the object.
     const cleanInvoice = Object.fromEntries(Object.entries(invoice).filter(([_, v]) => v !== undefined));
     await updateDoc(invoiceRef, cleanInvoice);
 }
@@ -150,7 +182,6 @@ function isExpense(doc: DocumentData): doc is Omit<Expense, 'id' | 'date'> & { d
         typeof doc.provider === 'string' &&
         typeof doc.description === 'string' &&
         typeof doc.amount === 'number' &&
-        typeof doc.tax === 'number' &&
         typeof doc.userId === 'string'
     );
 }
@@ -181,7 +212,7 @@ export async function addExpense(expense: Omit<Expense, 'id'>): Promise<Expense>
     return { id: docRef.id, ...expense };
 }
 
-export async function updateExpense(expenseId: string, expense: Partial<Omit<Expense, 'id'>>): Promise<void> {
+export async function updateExpense(expenseId: string, expense: Partial<Omit<Expense, 'id' | 'userId'>>): Promise<void> {
     const expenseRef = doc(db, "expenses", expenseId);
     await updateDoc(expenseRef, expense);
 }
@@ -203,9 +234,8 @@ export async function getCompanyProfile(userId: string): Promise<CompanyProfile 
     }
 }
 
-export async function saveCompanyProfile(profile: Omit<CompanyProfile, 'id'>): Promise<void> {
+export async function saveCompanyProfile(profile: CompanyProfile): Promise<void> {
     const docRef = doc(db, "companyProfiles", profile.userId);
-    // Firestore does not allow undefined values. We need to clean the object.
     const cleanProfile = Object.fromEntries(Object.entries(profile).filter(([_, v]) => v !== undefined));
     await setDoc(docRef, cleanProfile, { merge: true });
 }
@@ -216,33 +246,46 @@ const notificationFromSnapshot = (snapshot: QueryDocumentSnapshot<DocumentData>)
     return {
         id: snapshot.id,
         userId: data.userId,
-        title: data.title,
-        body: data.body,
-        href: data.href,
+        message: data.message,
+        type: data.type,
+        channel: data.channel,
         isRead: data.isRead,
+        reference: data.reference,
         createdAt: (data.createdAt as Timestamp).toDate(),
     };
 };
 
-export async function getNotifications(userId: string): Promise<AppNotification[]> {
-    if (!userId) return [];
+export function getNotifications(
+    userId: string,
+    callback: (notifications: AppNotification[]) => void,
+    onError: (error: FirestoreError) => void
+) {
+    if (!userId) {
+        return () => {}; // Return an empty unsubscribe function
+    }
+
     const q = query(
-        collection(db, 'notifications'), 
-        where('userId', '==', userId), 
+        collection(db, 'notifications'),
+        where('userId', '==', userId),
         orderBy('createdAt', 'desc'),
         limit(10)
     );
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(notificationFromSnapshot);
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const notifications = querySnapshot.docs.map(notificationFromSnapshot);
+        callback(notifications);
+    }, onError);
+
+    return unsubscribe; // Return the actual unsubscribe function from onSnapshot
 }
 
-export async function addNotification(notification: Omit<AppNotification, 'id'>): Promise<void> {
-    await addDoc(collection(db, "notifications"), notification);
+
+export async function addNotification(notification: Omit<AppNotification, 'id' | 'createdAt'>): Promise<void> {
+    const newNotification = { ...notification, createdAt: new Date(), isRead: false };
+    await addDoc(collection(db, "notifications"), newNotification);
 }
 
 export async function markNotificationAsRead(notificationId: string): Promise<void> {
     const notifRef = doc(db, 'notifications', notificationId);
     await updateDoc(notifRef, { isRead: true });
 }
-
-    
