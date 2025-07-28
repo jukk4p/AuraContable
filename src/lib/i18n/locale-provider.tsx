@@ -25,33 +25,31 @@ function getNestedValue(obj: any, key: string): string {
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [user] = useAuthState(auth);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
-
-  const [locale, setLocaleState] = useState<Locale>(() => {
-    const cookieLocale = getCookie('locale');
-    if (cookieLocale && locales[cookieLocale as Locale]) {
-        return cookieLocale as Locale;
-    }
-    return defaultLocale;
-  });
+  const [locale, setLocaleState] = useState<Locale>(defaultLocale);
 
   useEffect(() => {
-    const browserLang = navigator.language.split('-')[0] as Locale;
-    const cookieLocale = getCookie('locale');
-    if (!cookieLocale && locales[browserLang]) {
-      setLocaleState(browserLang);
-    }
-  }, []);
+    async function fetchProfileAndSetLocale() {
+        if (user) {
+            const profile = await getCompanyProfile(user.uid);
+            setCompanyProfile(profile);
+            if (profile?.language && locales[profile.language]) {
+                setLocale(profile.language);
+                return;
+            }
+        }
+        
+        const cookieLocale = getCookie('locale');
+        if (cookieLocale && locales[cookieLocale as Locale]) {
+            setLocale(cookieLocale as Locale);
+            return;
+        }
 
-  useEffect(() => {
-      async function fetchProfile() {
-          if (user) {
-              const profile = await getCompanyProfile(user.uid);
-              setCompanyProfile(profile);
-          } else {
-              setCompanyProfile(null);
-          }
-      }
-      fetchProfile();
+        const browserLang = navigator.language.split('-')[0] as Locale;
+        if (locales[browserLang]) {
+          setLocale(browserLang);
+        }
+    }
+    fetchProfileAndSetLocale();
   }, [user]);
 
   const setLocale = (newLocale: Locale) => {
@@ -76,6 +74,13 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
 
   const value = useMemo(() => ({ locale, setLocale, t, formatCurrency }), [locale, setLocale, t, formatCurrency]);
+
+  useEffect(() => {
+    if (locale) {
+      document.documentElement.lang = locale;
+    }
+  }, [locale]);
+
 
   return (
     <LocaleContext.Provider value={value}>

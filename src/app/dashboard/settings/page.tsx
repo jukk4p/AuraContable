@@ -43,6 +43,7 @@ export default function SettingsPage() {
                         userId: user.uid,
                         name: '', taxId: '', address: '', billingEmail: '', iban: '',
                         currency: 'EUR',
+                        language: 'es',
                         templates: {
                             newInvoice: { subject: '', body: '' },
                             reminder: { subject: '', body: '' }
@@ -176,7 +177,11 @@ export default function SettingsPage() {
                         />
                     </TabsContent>
                     <TabsContent value="language" className="m-0">
-                        <LanguageSettings />
+                        <LanguageSettings 
+                            profile={companyProfile}
+                            onProfileChange={handleProfileChange}
+                            isLoading={isLoading}
+                        />
                     </TabsContent>
                 </div>
             </Tabs>
@@ -458,8 +463,8 @@ function InvoicingSettings({ profile, onProfileChange, isLoading }: InvoicingSet
                     <Textarea 
                         id="terms" 
                         placeholder={t('settings.invoicing.defaultTermsPlaceholder')} 
-                        value={profile.terms || ''}
-                        onChange={(e) => handleFieldChange('terms', e.target.value)}
+                        value={profile.defaultTerms || ''}
+                        onChange={(e) => handleFieldChange('defaultTerms', e.target.value)}
                     />
                 </div>
 
@@ -638,7 +643,7 @@ function NotificationsSettings({ profile, onProfileChange, isLoading }: Notifica
             notifications: {
                 ...profile.notifications,
                 [notification]: { 
-                    ...profile.notifications[notification],
+                    ...profile.notifications![notification],
                     [channel]: value 
                 },
             }
@@ -701,13 +706,27 @@ function NotificationsSettings({ profile, onProfileChange, isLoading }: Notifica
     );
 }
 
-function LanguageSettings() {
-    const { t, locale, setLocale } = useLocale();
+type LanguageSettingsProps = {
+  profile: CompanyProfile | null;
+  onProfileChange: (profile: CompanyProfile) => void;
+  isLoading: boolean;
+};
+
+
+function LanguageSettings({ profile, onProfileChange, isLoading }: LanguageSettingsProps) {
+    const { t, setLocale } = useLocale();
 
     const handleLanguageChange = (value: string) => {
-        setLocale(value as Locale);
+        if (!profile) return;
+        const newLocale = value as Locale;
+        setLocale(newLocale);
+        onProfileChange({ ...profile, language: newLocale });
     }
     
+    if (isLoading || !profile) {
+        return <p>Cargando ajustes de idioma...</p>
+    }
+
     return (
         <Card>
             <CardHeader>
@@ -717,7 +736,7 @@ function LanguageSettings() {
             <CardContent>
                     <div className="w-full max-w-xs">
                         <Label htmlFor="language-select">{t('settings.language.select')}</Label>
-                    <Select value={locale} onValueChange={handleLanguageChange}>
+                    <Select value={profile.language} onValueChange={handleLanguageChange}>
                         <SelectTrigger id="language-select">
                             <SelectValue placeholder={t('settings.language.select')} />
                         </SelectTrigger>
