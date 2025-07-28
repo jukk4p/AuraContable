@@ -142,11 +142,14 @@ export default function NewInvoicePage() {
 
                         const newInvoiceNumber = `${yearPrefix}${String(nextInvoiceNumber).padStart(3, '0')}`;
                         
+                        const defaultClientId = userClients.length === 1 ? userClients[0].id : "";
+
                         form.reset({
                             ...form.getValues(),
                             invoiceNumber: newInvoiceNumber,
                             terms: companyProfile?.defaultTerms || "",
                             taxes: companyProfile?.defaultTaxes || [],
+                            clientId: defaultClientId
                         });
                     }
                 } catch (error) {
@@ -160,7 +163,7 @@ export default function NewInvoicePage() {
             }
         }
         fetchData();
-    }, [user, isEditing, invoiceId, form, toast, router]);
+    }, [user, isEditing, invoiceId, toast, router]);
 
 
     const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({
@@ -208,7 +211,6 @@ export default function NewInvoicePage() {
              return;
         }
 
-        // Clean up the client object to remove undefined fields
         const cleanClient = Object.fromEntries(
             Object.entries(selectedClient).filter(([_, v]) => v !== undefined)
         );
@@ -217,7 +219,6 @@ export default function NewInvoicePage() {
 
         const invoicePayload = {
             ...restOfData,
-            clientId: data.clientId,
             client: cleanClient,
             subtotal,
             total,
@@ -539,5 +540,6 @@ export default function NewInvoicePage() {
         </Form>
     )
 }
+
 
     
