@@ -1,37 +1,48 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper function to check if the user is authenticated and is the owner of the document.
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
 
+    // Users can read and update their own document.
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read, update: if isOwner(userId);
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
     }
 
+    // Company profiles are user-specific.
     match /companyProfiles/{userId} {
-      allow read, write: if isOwner(userId);
-    }
-
-    match /clients/{clientId} {
-      allow read, list, update, delete: if isOwner(resource.data.userId);
-      allow create: if isOwner(request.resource.data.userId);
-    }
-
-    match /invoices/{invoiceId} {
-      allow read, list, update, delete: if isOwner(resource.data.userId);
-      allow create: if isOwner(request.resource.data.userId);
+      allow read, update, create: if isOwner(userId);
     }
     
-    match /expenses/{expenseId} {
-      allow read, list, update, delete: if isOwner(resource.data.userId);
+    // Clients collection
+    match /clients/{clientId} {
+      allow get, update, delete: if isOwner(resource.data.userId);
+      allow list: if isOwner(request.query.resource.data.userId);
       allow create: if isOwner(request.resource.data.userId);
     }
 
+    // Invoices collection
+    match /invoices/{invoiceId} {
+      allow get, update, delete: if isOwner(resource.data.userId);
+      allow list: if isOwner(request.query.resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+    }
+
+    // Expenses collection
+    match /expenses/{expenseId} {
+      allow get, update, delete: if isOwner(resource.data.userId);
+      allow list: if isOwner(request.query.resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+    }
+
+    // Notifications collection
     match /notifications/{notificationId} {
-      allow read, list, update: if isOwner(resource.data.userId);
+      allow get, update, delete: if isOwner(resource.data.userId);
+      allow list: if isOwner(request.query.resource.data.userId);
       allow create: if isOwner(request.resource.data.userId);
     }
   }
