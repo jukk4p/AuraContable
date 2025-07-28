@@ -23,14 +23,14 @@ import { useTheme } from "next-themes"
 function CustomSidebarTrigger() {
     const { toggleSidebar } = useSidebar();
     return (
-        <Button
+        <SidebarMenuButton
             variant="ghost"
-            size="icon"
+            className="h-8 w-8"
             onClick={() => toggleSidebar()}
-            className="hidden md:flex"
+            tooltip="Alternar menú"
         >
             <PanelLeft />
-        </Button>
+        </SidebarMenuButton>
     )
 }
 
@@ -206,16 +206,18 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
   return (
     <>
       <Sidebar>
-        <SidebarHeader className={cn("flex items-center", state === 'expanded' ? "justify-between p-2" : "justify-center")}>
+        <SidebarHeader className={cn("flex items-center p-2", state === 'expanded' ? "justify-between" : "justify-center")}>
             <Link href="/dashboard" className={cn("flex items-center gap-2 font-semibold font-headline", state === 'collapsed' ? 'hidden' : 'text-xl')}>
                 <FileText className="w-8 h-8 text-primary" />
                 <span className={cn(state === 'collapsed' && "hidden")}>InvoiceFlow</span>
             </Link>
-            <CustomSidebarTrigger />
         </SidebarHeader>
 
         <SidebarContent>
           <SidebarMenu>
+             <SidebarMenuItem>
+                <CustomSidebarTrigger />
+            </SidebarMenuItem>
             {navItems.map((item) => (
               <SidebarMenuItem key={item.href}>
                 <Link href={item.href}>
