@@ -244,3 +244,5 @@ export async function markNotificationAsRead(notificationId: string): Promise<vo
     const notifRef = doc(db, 'notifications', notificationId);
     await updateDoc(notifRef, { isRead: true });
 }
+
+    

@@ -413,3 +413,5 @@ function InvoiceDetailsSkeleton() {
         </div>
     )
 }
+
+    

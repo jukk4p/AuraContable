@@ -116,3 +116,5 @@ export type AppNotification = {
     isRead: boolean;
     createdAt: Date;
 }
+
+    
