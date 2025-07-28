@@ -109,7 +109,15 @@
         "descriptionPlaceholder": "e.g. Software subscription",
         "amount": "Amount",
         "tax": "Tax",
-        "attachment": "Attachment (Optional)"
+        "attachment": "Attachment (Optional)",
+        "categories": {
+            "software": "Software",
+            "marketing": "Marketing",
+            "office_supplies": "Office Supplies",
+            "travel": "Travel",
+            "utilities": "Utilities",
+            "other": "Other"
+        }
     },
     "reports": {
         "description": "Analyze your invoicing and expense data."

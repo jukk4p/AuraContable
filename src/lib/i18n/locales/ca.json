@@ -109,7 +109,15 @@
         "descriptionPlaceholder": "Ex: Subscripció de programari",
         "amount": "Import",
         "tax": "Impost",
-        "attachment": "Justificant (Opcional)"
+        "attachment": "Justificant (Opcional)",
+        "categories": {
+            "software": "Programari",
+            "marketing": "Màrqueting",
+            "office_supplies": "Material d'Oficina",
+            "travel": "Viatges",
+            "utilities": "Subministraments",
+            "other": "Altres"
+        }
     },
      "reports": {
         "description": "Analitza les teves dades de facturació i despeses."

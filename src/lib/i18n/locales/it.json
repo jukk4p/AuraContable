@@ -109,7 +109,15 @@
         "descriptionPlaceholder": "Es: Abbonamento software",
         "amount": "Importo",
         "tax": "Imposta",
-        "attachment": "Allegato (Opzionale)"
+        "attachment": "Allegato (Opzionale)",
+        "categories": {
+            "software": "Software",
+            "marketing": "Marketing",
+            "office_supplies": "Forniture per ufficio",
+            "travel": "Viaggi",
+            "utilities": "Utenze",
+            "other": "Altro"
+        }
     },
      "reports": {
         "description": "Analizza i tuoi dati di fatturazione e spesa."

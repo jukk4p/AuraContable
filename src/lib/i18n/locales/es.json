@@ -109,7 +109,15 @@
         "descriptionPlaceholder": "Ej: Suscripción a software",
         "amount": "Importe",
         "tax": "Impuesto",
-        "attachment": "Justificante (Opcional)"
+        "attachment": "Justificante (Opcional)",
+        "categories": {
+            "software": "Software",
+            "marketing": "Marketing",
+            "office_supplies": "Material de Oficina",
+            "travel": "Viajes",
+            "utilities": "Suministros",
+            "other": "Otros"
+        }
     },
     "reports": {
         "description": "Analiza tus datos de facturación y gastos."

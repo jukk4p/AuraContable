@@ -109,7 +109,15 @@
         "descriptionPlaceholder": "Ex: Abonnement logiciel",
         "amount": "Montant",
         "tax": "Taxe",
-        "attachment": "Justificatif (Optionnel)"
+        "attachment": "Justificatif (Optionnel)",
+        "categories": {
+            "software": "Logiciel",
+            "marketing": "Marketing",
+            "office_supplies": "Fournitures de bureau",
+            "travel": "Voyages",
+            "utilities": "Services publics",
+            "other": "Autre"
+        }
     },
     "reports": {
         "description": "Analysez vos données de facturation et de dépenses."

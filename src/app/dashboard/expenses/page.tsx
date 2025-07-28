@@ -25,7 +25,7 @@ import { getExpenses, addExpense, updateExpense, deleteExpense } from '@/lib/fir
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-const expenseCategories = ['Software', 'Marketing', 'Office Supplies', 'Travel', 'Utilities', 'Other'];
+const expenseCategoryKeys = ['software', 'marketing', 'office_supplies', 'travel', 'utilities', 'other'];
 
 function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: Expense | null, onSave: (expense: Omit<Expense, 'id' | 'userId'> & { id?: string }) => void, onCancel: () => void, isSaving: boolean }) {
     const { t, locale } = useLocale();
@@ -51,6 +51,11 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: Expens
             tax: Number(tax)
         });
     };
+    
+    const expenseCategories = expenseCategoryKeys.map(key => ({
+        key: key,
+        value: t(`expenses.categories.${key}`)
+    }));
 
     return (
         <form onSubmit={handleSubmit}>
@@ -84,7 +89,7 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: Expens
                             <SelectValue placeholder={t('expenses.selectCategory')} />
                         </SelectTrigger>
                         <SelectContent>
-                            {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                            {expenseCategories.map(cat => <SelectItem key={cat.key} value={cat.value}>{cat.value}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
