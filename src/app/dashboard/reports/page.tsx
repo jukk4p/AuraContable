@@ -21,6 +21,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "
 import { BarChart, CartesianGrid, XAxis, YAxis, Bar, Tooltip } from 'recharts';
 import { toast } from '@/hooks/use-toast';
 import { generateInvoicingReportPdf } from '@/lib/report-pdf-generator';
+import { generateInvoicingReportCsv } from '@/lib/csv-generator';
 
 
 export default function ReportsPage() {
@@ -30,7 +31,8 @@ export default function ReportsPage() {
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
     const [dbLoading, setDbLoading] = useState(true);
-    const [isExporting, setIsExporting] = useState(false);
+    const [isExportingPdf, setIsExportingPdf] = useState(false);
+    const [isExportingCsv, setIsExportingCsv] = useState(false);
 
     const [date, setDate] = React.useState<DateRange | undefined>({
         from: startOfMonth(new Date()),
@@ -78,19 +80,34 @@ export default function ReportsPage() {
     }, [invoices, expenses, date]);
 
     const handleExportPdf = async () => {
-        setIsExporting(true);
+        setIsExportingPdf(true);
         try {
             if (!date?.from || !date?.to) {
                 toast({ title: "Error", description: "Por favor, selecciona un rango de fechas.", variant: "destructive" });
                 return;
             }
-            // We pass the unfiltered data so the report can do its own calculations
             await generateInvoicingReportPdf(filteredData.invoices, companyProfile, date, { t });
         } catch (error) {
             console.error("Error exporting PDF:", error);
             toast({ title: "Error", description: "Hubo un problema al generar el PDF.", variant: "destructive" });
         } finally {
-            setIsExporting(false);
+            setIsExportingPdf(false);
+        }
+    };
+    
+    const handleExportCsv = async () => {
+        setIsExportingCsv(true);
+        try {
+             if (!date?.from || !date?.to) {
+                toast({ title: "Error", description: "Por favor, selecciona un rango de fechas.", variant: "destructive" });
+                return;
+            }
+            await generateInvoicingReportCsv(filteredData.invoices);
+        } catch (error) {
+            console.error("Error exporting CSV:", error);
+            toast({ title: "Error", description: "Hubo un problema al generar el CSV.", variant: "destructive" });
+        } finally {
+            setIsExportingCsv(false);
         }
     };
 
@@ -121,6 +138,8 @@ export default function ReportsPage() {
     if (dbLoading) {
         return <p>Generando informes...</p>
     }
+    
+    const isActionDisabled = isExportingPdf || isExportingCsv;
 
     return (
         <div className="space-y-6">
@@ -180,11 +199,14 @@ export default function ReportsPage() {
                         <TabsTrigger value="summary">Resumen</TabsTrigger>
                     </TabsList>
                      <div className="flex items-center gap-2">
-                        <Button variant="outline" onClick={handleExportPdf} disabled={isExporting}>
+                        <Button variant="outline" onClick={handleExportPdf} disabled={isActionDisabled}>
                             <FileDown className="mr-2 h-4 w-4" /> 
-                            {isExporting ? "Exportando..." : "Exportar a PDF"}
+                            {isExportingPdf ? "Exportando..." : "Exportar a PDF"}
                         </Button>
-                        <Button variant="outline"><Download className="mr-2 h-4 w-4" /> Exportar a CSV</Button>
+                        <Button variant="outline" onClick={handleExportCsv} disabled={isActionDisabled}>
+                            <Download className="mr-2 h-4 w-4" />
+                             {isExportingCsv ? "Exportando..." : "Exportar a CSV"}
+                        </Button>
                     </div>
                 </div>
 
@@ -318,5 +340,7 @@ function InvoicingReport({ data }: { data: Invoice[] }) {
         </div>
     )
 }
+
+    
 
     
