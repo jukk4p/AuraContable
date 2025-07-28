@@ -108,7 +108,9 @@
         "description": "Descrizione",
         "descriptionPlaceholder": "Es: Abbonamento software",
         "amount": "Importo",
-        "tax": "Imposta",
+        "tax": "Imposta (%)",
+        "selectTax": "Seleziona un'imposta",
+        "customTax": "Altro (personalizzato)",
         "attachment": "Allegato (Opzionale)",
         "categories": {
             "software": "Software",
@@ -209,3 +211,5 @@
         }
     }
 }
+
+    

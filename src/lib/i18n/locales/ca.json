@@ -108,7 +108,9 @@
         "description": "Descripció",
         "descriptionPlaceholder": "Ex: Subscripció de programari",
         "amount": "Import",
-        "tax": "Impost",
+        "tax": "Impost (%)",
+        "selectTax": "Selecciona un impost",
+        "customTax": "Altre (personalitzat)",
         "attachment": "Justificant (Opcional)",
         "categories": {
             "software": "Programari",
@@ -209,3 +211,5 @@
         }
     }
 }
+
+    

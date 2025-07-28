@@ -108,7 +108,9 @@
         "description": "Description",
         "descriptionPlaceholder": "Ex: Abonnement logiciel",
         "amount": "Montant",
-        "tax": "Taxe",
+        "tax": "Taxe (%)",
+        "selectTax": "Sélectionnez une taxe",
+        "customTax": "Autre (personnalisée)",
         "attachment": "Justificatif (Optionnel)",
         "categories": {
             "software": "Logiciel",
@@ -209,3 +211,5 @@
         }
     }
 }
+
+    

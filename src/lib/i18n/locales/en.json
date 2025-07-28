@@ -108,7 +108,9 @@
         "description": "Description",
         "descriptionPlaceholder": "e.g. Software subscription",
         "amount": "Amount",
-        "tax": "Tax",
+        "tax": "Tax (%)",
+        "selectTax": "Select a tax",
+        "customTax": "Other (custom)",
         "attachment": "Attachment (Optional)",
         "categories": {
             "software": "Software",
@@ -209,3 +211,5 @@
         }
     }
 }
+
+    

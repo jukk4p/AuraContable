@@ -26,6 +26,8 @@ import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const expenseCategoryKeys = ['software', 'marketing', 'office_supplies', 'travel', 'utilities', 'other'];
+const presetTaxRates = [21, 10, 4, 0];
+
 
 function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: Expense | null, onSave: (expense: Omit<Expense, 'id' | 'userId'> & { id?: string }) => void, onCancel: () => void, isSaving: boolean }) {
     const { t, locale } = useLocale();
@@ -33,14 +35,23 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: Expens
     const [category, setCategory] = useState(expense?.category || '');
     const [provider, setProvider] = useState(expense?.provider || '');
     const [description, setDescription] = useState(expense?.description || '');
-    const [amount, setAmount] = useState(expense?.amount || '');
-    const [tax, setTax] = useState(expense?.tax || '');
+    const [amount, setAmount] = useState(expense?.amount?.toString() || '');
+    const [tax, setTax] = useState(expense?.tax?.toString() || '0');
+    const [isCustomTax, setIsCustomTax] = useState(false);
+
+
+    useEffect(() => {
+        if (expense?.tax !== undefined && !presetTaxRates.includes(expense.tax)) {
+            setIsCustomTax(true);
+        }
+    }, [expense]);
+
 
     const localeMap = { es: es };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!date || !category || !provider || !description || amount === '' || tax === '') return;
+        if (!date || !category || !provider || !description || amount === '') return;
         onSave({
             id: expense?.id,
             date,
@@ -48,7 +59,7 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: Expens
             provider,
             description,
             amount: Number(amount),
-            tax: Number(tax)
+            tax: Number(tax || 0)
         });
     };
     
@@ -56,6 +67,16 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: Expens
         key: key,
         value: t(`expenses.categories.${key}`)
     }));
+
+    const handleTaxChange = (value: string) => {
+        if (value === 'custom') {
+            setIsCustomTax(true);
+            setTax('');
+        } else {
+            setIsCustomTax(false);
+            setTax(value);
+        }
+    }
 
     return (
         <form onSubmit={handleSubmit}>
@@ -108,7 +129,21 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: Expens
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="tax">{t('expenses.tax')}</Label>
-                        <Input id="tax" type="number" value={tax} onChange={e => setTax(e.target.value)} placeholder="0.00" required disabled={isSaving}/>
+                        {!isCustomTax ? (
+                            <Select value={tax} onValueChange={handleTaxChange} disabled={isSaving}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('expenses.selectTax')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {presetTaxRates.map(rate => (
+                                        <SelectItem key={rate} value={String(rate)}>{rate}%</SelectItem>
+                                    ))}
+                                    <SelectItem value="custom">{t('expenses.customTax')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                             <Input id="tax" type="number" value={tax} onChange={e => setTax(e.target.value)} placeholder="%" required disabled={isSaving}/>
+                        )}
                     </div>
                 </div>
                 <div className="space-y-2">
