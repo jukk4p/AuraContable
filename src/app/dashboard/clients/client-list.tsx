@@ -173,6 +173,10 @@ export default function ClientList() {
     };
     
     const handleExportCsv = async () => {
+        if (filteredClients.length === 0) {
+            toast({ title: "No hay clientes", description: "No hay clientes para exportar.", variant: "destructive" });
+            return;
+        }
         setIsExporting(true);
         try {
             await generateClientsCsv(filteredClients);
@@ -236,19 +240,10 @@ export default function ClientList() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-64"
                         />
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" disabled={isExporting}>
-                                    <FileDown className="w-4 h-4 mr-2" />
-                                    {isExporting ? "Exportando..." : "Exportar"}
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuItem onSelect={handleExportCsv} disabled={filteredClients.length === 0}>
-                                    Exportar a CSV
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button variant="outline" disabled={isExporting} onClick={handleExportCsv}>
+                            <FileDown className="w-4 h-4 mr-2" />
+                            {isExporting ? "Exportando..." : "Exportar a CSV"}
+                        </Button>
 
                         <Dialog open={isFormOpen} onOpenChange={(isOpen) => { if(!isOpen) handleCloseForm(); else setIsFormOpen(true); }}>
                             <DialogTrigger asChild>
