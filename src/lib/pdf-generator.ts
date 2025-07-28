@@ -1,4 +1,5 @@
 
+
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import type { Invoice, CompanyProfile } from './types';
@@ -28,8 +29,9 @@ const localeMap = {
 export async function generateInvoicePdf(
     invoice: Invoice, 
     company: CompanyProfile | null,
-    l10n: Localization
-) {
+    l10n: Localization,
+    outputType: 'save' | 'S' = 'save'
+): Promise<string | void> {
     const doc = new jsPDF() as jsPDFWithAutoTable;
     const { t, formatCurrency, locale } = l10n;
     const dateLocale = localeMap[locale] || enUS;
@@ -205,6 +207,9 @@ export async function generateInvoicePdf(
     doc.text(formatCurrency(invoice.total), totalValueX, currentY, { align: 'right' });
 
 
-    // --- Save PDF ---
-    doc.save(`Factura-${invoice.invoiceNumber}.pdf`);
+    if (outputType === 'S') {
+        return doc.output();
+    } else {
+        doc.save(`Factura-${invoice.invoiceNumber}.pdf`);
+    }
 }

@@ -12,7 +12,7 @@ import Link from 'next/link';
 
 import type { Invoice, CompanyProfile } from '@/lib/types';
 import { auth } from '@/lib/firebase/config';
-import { getInvoiceById, getCompanyProfile, updateInvoice, deleteInvoice, addNotification } from '@/lib/firebase/firestore';
+import { getInvoiceById, getCompanyProfile, updateInvoice, deleteInvoice, addNotification, sendInvoiceByEmail } from '@/lib/firebase/firestore';
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -129,18 +129,20 @@ export default function InvoiceDetailsPage() {
         if (!invoice || !companyProfile) return;
         setIsSending(true);
 
-        // TODO: Replace with actual email sending logic via a serverless function.
-        // For now, we simulate the action and show a success message.
-        console.log("Simulating sending email for invoice:", invoice.invoiceNumber);
-        console.log("Using template:", companyProfile.templates?.newInvoice);
-        
-        // Simulate a delay for the email sending process
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        toast({
-            title: "Correo Enviado (Simulación)",
-            description: `La factura ${invoice.invoiceNumber} ha sido enviada a ${invoice.client.email}.`,
-        });
+        try {
+            await sendInvoiceByEmail(invoice, companyProfile, { t, formatCurrency, locale });
+            toast({
+                title: "Correo en proceso",
+                description: `La factura ${invoice.invoiceNumber} se está enviando a ${invoice.client.email}.`,
+            });
+        } catch (error) {
+            console.error("Error sending email:", error);
+            toast({
+                title: "Error al enviar",
+                description: "Hubo un problema al enviar el correo. Revisa la configuración de la extensión 'Trigger Email'.",
+                variant: "destructive",
+            });
+        }
 
         setIsSending(false);
     }

@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -16,7 +17,7 @@ import InvoiceStatusBadge from '@/components/invoice-status-badge';
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { auth } from '@/lib/firebase/config';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { getInvoices, deleteInvoice, getInvoiceById, getCompanyProfile, updateInvoice, addNotification } from '@/lib/firebase/firestore';
+import { getInvoices, deleteInvoice, getInvoiceById, getCompanyProfile, updateInvoice, addNotification, sendInvoiceByEmail } from '@/lib/firebase/firestore';
 import { format } from 'date-fns';
 import { es, fr, it, enUS } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
@@ -35,6 +36,7 @@ export default function InvoiceList() {
     const [sortConfig, setSortConfig] = useState<{ key: keyof Invoice | 'client.name'; direction: 'ascending' | 'descending' } | null>(null);
     const [isDownloading, setIsDownloading] = useState<string | null>(null);
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
+    const [isSending, setIsSending] = useState<string | null>(null);
 
     const localeMap = { es, fr, it, en: enUS, ca: es };
 
@@ -167,6 +169,28 @@ export default function InvoiceList() {
         }
     }
 
+    const handleSendEmail = async (invoiceId: string) => {
+        if (!user) return;
+        setIsSending(invoiceId);
+        try {
+            const invoice = await getInvoiceById(invoiceId);
+            const companyProfile = await getCompanyProfile(user.uid);
+            if (!invoice || !companyProfile) {
+                throw new Error("Invoice or company profile not found");
+            }
+            await sendInvoiceByEmail(invoice, companyProfile, { t, formatCurrency, locale });
+            toast({
+                title: "Correo en proceso",
+                description: `La factura ${invoice.invoiceNumber} se está enviando.`,
+            });
+        } catch (error) {
+             console.error("Error sending email:", error);
+            toast({ title: "Error", description: "Hubo un problema al enviar el correo.", variant: "destructive" });
+        } finally {
+            setIsSending(null);
+        }
+    }
+
     const getSortIcon = (key: keyof Invoice | 'client.name') => {
         if (!sortConfig || sortConfig.key !== key) {
           return <ArrowUpDown className="ml-2 h-4 w-4" />;
@@ -288,7 +312,7 @@ export default function InvoiceList() {
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button aria-haspopup="true" size="icon" variant="ghost" disabled={isDownloading === invoice.id || isUpdating === invoice.id}>
+                                                <Button aria-haspopup="true" size="icon" variant="ghost" disabled={isDownloading === invoice.id || isUpdating === invoice.id || isSending === invoice.id}>
                                                     <MoreHorizontal className="h-4 w-4" />
                                                     <span className="sr-only">{t('common.menu')}</span>
                                                 </Button>
@@ -310,8 +334,9 @@ export default function InvoiceList() {
                                                     <CheckCircle className="mr-2 h-4 w-4" />
                                                     {isUpdating === invoice.id ? "Actualizando..." : t('invoices.markAsPaid')}
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem disabled>
-                                                    <Send className="mr-2 h-4 w-4"/> Enviar por Email
+                                                <DropdownMenuItem onClick={() => handleSendEmail(invoice.id)} disabled={isSending === invoice.id}>
+                                                    <Send className="mr-2 h-4 w-4"/> 
+                                                    {isSending === invoice.id ? "Enviando..." : "Enviar por Email"}
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handleDownloadPdf(invoice.id)} disabled={isDownloading === invoice.id}>
                                                     <Download className="mr-2 h-4 w-4"/>
