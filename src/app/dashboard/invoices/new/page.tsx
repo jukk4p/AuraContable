@@ -104,12 +104,11 @@ export default function NewInvoicePage() {
             if(user) {
                 setIsLoading(true);
                 try {
+                    const userClients = await getClients(user.uid);
+                    setClients(userClients);
+
                     if (isEditing) {
-                        const [invoiceData, userClients] = await Promise.all([
-                            getInvoiceById(invoiceId),
-                            getClients(user.uid),
-                        ]);
-                        setClients(userClients);
+                        const invoiceData = await getInvoiceById(invoiceId);
                         if (invoiceData) {
                             form.reset({
                                 ...invoiceData,
@@ -120,14 +119,10 @@ export default function NewInvoicePage() {
                             router.push('/dashboard/invoices');
                         }
                     } else {
-                         const [userClients, userInvoices] = await Promise.all([
-                            getClients(user.uid),
+                        const [userInvoices, companyProfile] = await Promise.all([
                             getInvoices(user.uid),
+                            getCompanyProfile(user.uid)
                         ]);
-                        
-                        setClients(userClients);
-
-                        const companyProfile = await getCompanyProfile(user.uid);
 
                         const currentYear = new Date().getFullYear();
                         const yearPrefix = `FAC-${currentYear}-`;
@@ -212,9 +207,12 @@ export default function NewInvoicePage() {
              return;
         }
 
+        const { clientId, ...restOfData } = data;
+
         const invoicePayload = {
-            ...data,
+            ...restOfData,
             client: selectedClient,
+            clientId: selectedClient.id,
             subtotal,
             total,
             taxes: data.taxes || [],
@@ -535,5 +533,3 @@ export default function NewInvoicePage() {
         </Form>
     )
 }
-
-    
