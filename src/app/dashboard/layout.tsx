@@ -151,7 +151,10 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
               } else {
                   setInitials(user.displayName.substring(0, 2).toUpperCase());
               }
-          } else {
+          } else if (user.email) {
+            setInitials(user.email.substring(0,2).toUpperCase());
+          }
+           else {
               setInitials("U");
           }
       } else {
@@ -203,8 +206,8 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
   return (
     <>
       <Sidebar>
-        <SidebarHeader className="p-4 flex items-center justify-between">
-          <Link href="/dashboard" className={cn("flex items-center gap-2", state === 'collapsed' && "invisible")}>
+        <SidebarHeader className={cn("p-2 flex items-center", state === 'expanded' ? "justify-between" : "justify-center")}>
+          <Link href="/dashboard" className={cn("flex items-center gap-2", state === 'collapsed' && "hidden")}>
             <FileText className="w-8 h-8 text-primary" />
             <span className="text-xl font-semibold font-headline">InvoiceFlow</span>
           </Link>
