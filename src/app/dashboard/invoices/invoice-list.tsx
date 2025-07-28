@@ -4,7 +4,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { MoreHorizontal, ArrowUpDown, View, Edit, Trash2, Download, CheckCircle, Send } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, View, Edit, Trash2, Download, CheckCircle, Send, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -23,7 +23,7 @@ import { es, fr, it, enUS } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, MailWarning } from "lucide-react";
-import { generateInvoicePdf } from '@/lib/pdf-generator';
+import { generateInvoicePdf, generateInvoicesZip } from '@/lib/pdf-generator';
 
 
 export default function InvoiceList() {
@@ -35,6 +35,7 @@ export default function InvoiceList() {
     const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
     const [sortConfig, setSortConfig] = useState<{ key: keyof Invoice | 'client.name'; direction: 'ascending' | 'descending' } | null>(null);
     const [isDownloading, setIsDownloading] = useState<string | null>(null);
+    const [isBulkDownloading, setIsBulkDownloading] = useState(false);
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
     const [isSending, setIsSending] = useState<string | null>(null);
 
@@ -169,6 +170,20 @@ export default function InvoiceList() {
         }
     }
 
+     const handleBulkDownload = async () => {
+        if (!user) return;
+        setIsBulkDownloading(true);
+        try {
+            const companyProfile = await getCompanyProfile(user.uid);
+            await generateInvoicesZip(sortedInvoices, companyProfile, { t, formatCurrency, locale });
+        } catch (error) {
+            console.error("Error downloading bulk PDF:", error);
+            toast({ title: "Error", description: "Hubo un problema al generar el ZIP.", variant: "destructive" });
+        } finally {
+            setIsBulkDownloading(false);
+        }
+    };
+
     const handleSendEmail = async (invoiceId: string) => {
         if (!user) return;
         setIsSending(invoiceId);
@@ -244,6 +259,10 @@ export default function InvoiceList() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-64"
                         />
+                         <Button onClick={handleBulkDownload} disabled={isBulkDownloading || sortedInvoices.length === 0} variant="outline">
+                            <FileDown className="mr-2 h-4 w-4" />
+                            {isBulkDownloading ? "Descargando..." : "Descargar Filtradas"}
+                        </Button>
                         <Tabs value={statusFilter} onValueChange={(value) => setStatusFilter(value as InvoiceStatus | 'All')}>
                             <TabsList>
                                 <TabsTrigger value="All">{t('common.all')}</TabsTrigger>

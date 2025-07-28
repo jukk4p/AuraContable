@@ -2,6 +2,7 @@
 
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import JSZip from 'jszip';
 import type { Invoice, CompanyProfile } from './types';
 import { format } from 'date-fns';
 import { es, fr, it, enUS } from 'date-fns/locale';
@@ -30,8 +31,8 @@ export async function generateInvoicePdf(
     invoice: Invoice, 
     company: CompanyProfile | null,
     l10n: Localization,
-    outputType: 'save' | 'S' = 'save'
-): Promise<string | void> {
+    outputType: 'save' | 'blob' = 'save'
+): Promise<Blob | void> {
     const doc = new jsPDF() as jsPDFWithAutoTable;
     const { t, formatCurrency, locale } = l10n;
     const dateLocale = localeMap[locale] || enUS;
@@ -207,9 +208,33 @@ export async function generateInvoicePdf(
     doc.text(formatCurrency(invoice.total), totalValueX, currentY, { align: 'right' });
 
 
-    if (outputType === 'S') {
-        return doc.output();
+    if (outputType === 'blob') {
+        return doc.output('blob');
     } else {
         doc.save(`Factura-${invoice.invoiceNumber}.pdf`);
     }
+}
+
+
+export async function generateInvoicesZip(
+    invoices: Invoice[],
+    company: CompanyProfile | null,
+    l10n: Localization
+) {
+    const zip = new JSZip();
+
+    for (const invoice of invoices) {
+        const pdfBlob = await generateInvoicePdf(invoice, company, l10n, 'blob');
+        if (pdfBlob) {
+            zip.file(`Factura-${invoice.invoiceNumber}.pdf`, pdfBlob);
+        }
+    }
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(zipBlob);
+    link.setAttribute('download', `Facturas-${format(new Date(), 'yyyy-MM-dd')}.zip`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
