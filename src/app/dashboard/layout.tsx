@@ -2,7 +2,7 @@
 "use client"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { FileText, LayoutGrid, Settings, Users, PanelLeft, Search, PlusCircle, Receipt, AreaChart, Bell, Circle } from "lucide-react"
+import { FileText, LayoutGrid, Settings, Users, PanelLeft, Search, PlusCircle, Receipt, AreaChart, Bell, Circle, AlertCircle } from "lucide-react"
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from "@/components/ui/dropdown-menu"
@@ -37,13 +37,24 @@ function NotificationsBell() {
     const [user] = useAuthState(auth);
     const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (user) {
-            getNotifications(user.uid).then(data => {
-                setNotifications(data);
-                setUnreadCount(data.filter(n => !n.isRead).length);
-            });
+            setError(null);
+            getNotifications(user.uid)
+                .then(data => {
+                    setNotifications(data);
+                    setUnreadCount(data.filter(n => !n.isRead).length);
+                })
+                .catch(err => {
+                    console.error("Error fetching notifications:", err);
+                    if (err.code === 'failed-precondition') {
+                        setError("Las notificaciones no están listas, inténtalo de nuevo en unos minutos.");
+                    } else {
+                        setError("No se pudieron cargar las notificaciones.");
+                    }
+                });
         }
     }, [user]);
 
@@ -69,10 +80,16 @@ function NotificationsBell() {
                 <DropdownMenuLabel>Notificaciones</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup className="max-h-96 overflow-y-auto">
-                    {notifications.length === 0 && (
+                    {error && (
+                        <DropdownMenuItem disabled className="flex items-center gap-2 text-destructive">
+                           <AlertCircle className="h-4 w-4" />
+                           <span className="flex-1">{error}</span>
+                        </DropdownMenuItem>
+                    )}
+                    {!error && notifications.length === 0 && (
                         <DropdownMenuItem disabled>No tienes notificaciones</DropdownMenuItem>
                     )}
-                    {notifications.map(notif => (
+                    {!error && notifications.map(notif => (
                          <DropdownMenuItem key={notif.id} className="flex items-start gap-2" onSelect={(e) => e.preventDefault()}>
                             {!notif.isRead && <Circle className="h-2 w-2 mt-1.5 fill-primary text-primary" />}
                             <div className={cn("flex-1 space-y-1", notif.isRead && "pl-4")}>
