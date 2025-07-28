@@ -36,37 +36,47 @@ export default function SettingsPage() {
         async function fetchProfile() {
             if (user) {
                 setIsLoading(true);
-                const existingProfile = await getCompanyProfile(user.uid);
-                
-                const defaultProfile: CompanyProfile = {
-                    userId: user.uid,
-                    name: '', taxId: '', address: '', billingEmail: '', iban: '', fiscalData: '', logoUrl: '', terms: '', defaultTaxes: [],
-                    currency: 'EUR',
-                    templates: {
-                        newInvoice: { subject: '', body: '' },
-                        reminder: { subject: '', body: '' }
-                    },
-                    notifications: {
-                        invoicePaid: { email: true },
-                        invoiceOverdue: { email: true }
-                    }
-                };
+                try {
+                    const existingProfile = await getCompanyProfile(user.uid);
+                    
+                    const defaultProfile: CompanyProfile = {
+                        userId: user.uid,
+                        name: '', taxId: '', address: '', billingEmail: '', iban: '',
+                        currency: 'EUR',
+                        templates: {
+                            newInvoice: { subject: '', body: '' },
+                            reminder: { subject: '', body: '' }
+                        },
+                        notifications: {
+                            invoicePaid: { email: true, app: true },
+                            invoiceOverdue: { email: true, app: true }
+                        },
+                        theme: 'system',
+                    };
 
-                if (existingProfile) {
-                    setCompanyProfile({
-                        ...defaultProfile,
-                        ...existingProfile,
-                        templates: existingProfile.templates || defaultProfile.templates,
-                        notifications: existingProfile.notifications || defaultProfile.notifications,
+                    if (existingProfile) {
+                        setCompanyProfile({
+                            ...defaultProfile,
+                            ...existingProfile,
+                            notifications: existingProfile.notifications || defaultProfile.notifications,
+                        });
+                    } else {
+                        setCompanyProfile(defaultProfile);
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch company profile:", e);
+                     toast({
+                        title: "Error",
+                        description: "No se pudo cargar el perfil de la empresa.",
+                        variant: "destructive",
                     });
-                } else {
-                    setCompanyProfile(defaultProfile);
+                } finally {
+                    setIsLoading(false);
                 }
-                setIsLoading(false);
             }
         }
         fetchProfile();
-    }, [user]);
+    }, [user, toast]);
 
     const handleProfileChange = (updatedProfile: CompanyProfile) => {
         setCompanyProfile(updatedProfile);
@@ -159,7 +169,11 @@ export default function SettingsPage() {
                         />
                     </TabsContent>
                     <TabsContent value="appearance" className="m-0">
-                        <AppearanceSettings />
+                        <AppearanceSettings 
+                            profile={companyProfile}
+                            onProfileChange={handleProfileChange}
+                            isLoading={isLoading}
+                        />
                     </TabsContent>
                     <TabsContent value="language" className="m-0">
                         <LanguageSettings />
@@ -616,14 +630,17 @@ type NotificationsSettingsProps = {
 function NotificationsSettings({ profile, onProfileChange, isLoading }: NotificationsSettingsProps) {
     const { t } = useLocale();
 
-    const handleSwitchChange = (notification: keyof NotificationPreferences, value: boolean) => {
+    const handleSwitchChange = (notification: keyof NotificationPreferences, channel: 'app' | 'email', value: boolean) => {
         if (!profile) return;
 
         onProfileChange({
             ...profile,
             notifications: {
-                ...(profile.notifications || { invoicePaid: { email: true }, invoiceOverdue: { email: true } }),
-                [notification]: { email: value },
+                ...profile.notifications,
+                [notification]: { 
+                    ...profile.notifications[notification],
+                    [channel]: value 
+                },
             }
         });
     };
@@ -639,27 +656,45 @@ function NotificationsSettings({ profile, onProfileChange, isLoading }: Notifica
                 <CardDescription>{t('settings.notifications.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                        <Label htmlFor="invoice-paid-email">{t('settings.notifications.invoicePaid.title')}</Label>
-                        <p className="text-sm text-muted-foreground">{t('settings.notifications.invoicePaid.description')}</p>
+                <div className="p-4 border rounded-lg">
+                    <Label className="text-base">{t('settings.notifications.invoicePaid.title')}</Label>
+                    <p className="text-sm text-muted-foreground mb-4">{t('settings.notifications.invoicePaid.description')}</p>
+                    <div className="flex items-center justify-between">
+                       <Label htmlFor="invoice-paid-app">Notificación en la app</Label>
+                       <Switch 
+                            id="invoice-paid-app" 
+                            checked={profile.notifications?.invoicePaid.app}
+                            onCheckedChange={(checked) => handleSwitchChange('invoicePaid', 'app', checked)}
+                        />
                     </div>
-                    <Switch 
-                        id="invoice-paid-email" 
-                        checked={profile.notifications?.invoicePaid.email}
-                        onCheckedChange={(checked) => handleSwitchChange('invoicePaid', checked)}
-                    />
+                     <div className="flex items-center justify-between mt-4">
+                       <Label htmlFor="invoice-paid-email">Email</Label>
+                       <Switch 
+                            id="invoice-paid-email" 
+                            checked={profile.notifications?.invoicePaid.email}
+                            onCheckedChange={(checked) => handleSwitchChange('invoicePaid', 'email', checked)}
+                        />
+                    </div>
                 </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                        <Label htmlFor="invoice-overdue-email">{t('settings.notifications.invoiceOverdue.title')}</Label>
-                         <p className="text-sm text-muted-foreground">{t('settings.notifications.invoiceOverdue.description')}</p>
+                 <div className="p-4 border rounded-lg">
+                    <Label className="text-base">{t('settings.notifications.invoiceOverdue.title')}</Label>
+                    <p className="text-sm text-muted-foreground mb-4">{t('settings.notifications.invoiceOverdue.description')}</p>
+                    <div className="flex items-center justify-between">
+                       <Label htmlFor="invoice-overdue-app">Notificación en la app</Label>
+                       <Switch 
+                            id="invoice-overdue-app" 
+                            checked={profile.notifications?.invoiceOverdue.app}
+                            onCheckedChange={(checked) => handleSwitchChange('invoiceOverdue', 'app', checked)}
+                        />
                     </div>
-                    <Switch 
-                        id="invoice-overdue-email" 
-                        checked={profile.notifications?.invoiceOverdue.email}
-                        onCheckedChange={(checked) => handleSwitchChange('invoiceOverdue', checked)}
-                    />
+                     <div className="flex items-center justify-between mt-4">
+                       <Label htmlFor="invoice-overdue-email">Email</Label>
+                       <Switch 
+                            id="invoice-overdue-email" 
+                            checked={profile.notifications?.invoiceOverdue.email}
+                            onCheckedChange={(checked) => handleSwitchChange('invoiceOverdue', 'email', checked)}
+                        />
+                    </div>
                 </div>
             </CardContent>
         </Card>
@@ -700,9 +735,26 @@ function LanguageSettings() {
     )
 }
 
-function AppearanceSettings() {
+type AppearanceSettingsProps = {
+  profile: CompanyProfile | null;
+  onProfileChange: (profile: CompanyProfile) => void;
+  isLoading: boolean;
+};
+
+
+function AppearanceSettings({ profile, onProfileChange, isLoading }: AppearanceSettingsProps) {
     const { t } = useLocale();
-    const { theme, setTheme } = useTheme();
+    const { setTheme } = useTheme();
+
+    const handleThemeChange = (themeValue: 'light' | 'dark' | 'system') => {
+        if (!profile) return;
+        setTheme(themeValue);
+        onProfileChange({ ...profile, theme: themeValue });
+    }
+
+    if (isLoading || !profile) {
+        return <p>Cargando ajustes de apariencia...</p>
+    }
 
     return (
         <Card>
@@ -713,7 +765,7 @@ function AppearanceSettings() {
             <CardContent className="space-y-4">
                 <div className="w-full max-w-xs space-y-2">
                     <Label htmlFor="theme-select">{t('settings.appearance.theme')}</Label>
-                     <Select value={theme} onValueChange={setTheme}>
+                     <Select value={profile.theme || 'system'} onValueChange={handleThemeChange}>
                         <SelectTrigger id="theme-select">
                             <SelectValue placeholder={t('settings.appearance.theme')} />
                         </SelectTrigger>
@@ -743,5 +795,3 @@ function AppearanceSettings() {
         </Card>
     )
 }
-
-    

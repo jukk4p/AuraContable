@@ -6,7 +6,7 @@
 /**
  * Represents the status of an invoice.
  */
-export type InvoiceStatus = 'paid' | 'pending' | 'overdue';
+export type InvoiceStatus = 'Paid' | 'Pending' | 'Overdue';
 
 /**
  * Represents a user's company profile and settings.
@@ -17,19 +17,15 @@ export type CompanyProfile = {
   name: string;
   taxId?: string;
   address?: string;
-  country?: string;
   billingEmail?: string;
   iban?: string;
   logoUrl?: string; // URL to the company logo in Cloud Storage.
-  currency: 'EUR' | 'USD' | 'GBP'; // Default currency for the user.
-  language: 'en' | 'es' | 'fr' | 'it' | 'ca'; // Default language for the user.
+  currency?: 'EUR' | 'USD' | 'GBP';
+  fiscalData?: string;
 
   // Default invoice settings
-  invoicePrefix?: string;
-  invoiceStartNumber?: number;
   defaultTerms?: string;
-  defaultNotes?: string;
-  defaultTaxes?: InvoiceTax[]; // Default taxes to apply to new invoices.
+  defaultTaxes?: InvoiceTax[];
 
   // Email template settings
   templates?: {
@@ -38,11 +34,16 @@ export type CompanyProfile = {
   };
 
   // Notification preferences
-  notifications: {
+  notifications?: NotificationPreferences;
+
+  // Appearance preferences
+  theme?: 'light' | 'dark' | 'system';
+};
+
+export type NotificationPreferences = {
     invoicePaid: { email: boolean; app: boolean };
     invoiceOverdue: { email: boolean; app: boolean };
-  };
-};
+}
 
 /**
  * Represents a single client of a user.
@@ -56,9 +57,7 @@ export type Client = {
   taxId?: string;
   address?: string;
   country?: string;
-  phone?: string;
-  notes?: string;
-  createdAt: Date;
+  avatarUrl?: string;
 };
 
 /**
@@ -66,11 +65,10 @@ export type Client = {
  * This is stored as an object within the `items` array of an Invoice document.
  */
 export type InvoiceItem = {
-  productId?: string; // Optional reference to a product
+  id: string;
   description: string;
   quantity: number;
   price: number;
-  taxRate?: number; // Tax rate percentage for this specific item
 };
 
 /**
@@ -88,10 +86,10 @@ export type InvoiceTax = {
  * Maps to the "invoices" collection.
  */
 export type Invoice = {
-  id:string; // Firestore document ID.
+  id: string; // Firestore document ID.
   userId: string; // The UID of the user who owns this invoice.
   clientId: string; // Foreign key to the "clients" collection.
-  client: Omit<Client, 'id' | 'userId' | 'createdAt'>; // Denormalized client data for display.
+  client: Omit<Client, 'id' | 'userId'>; // Denormalized client data for display.
   invoiceNumber: string;
   status: InvoiceStatus;
   issueDate: Date;
@@ -100,28 +98,8 @@ export type Invoice = {
   taxes: InvoiceTax[];
   subtotal: number;
   total: number;
-  currency: 'EUR' | 'USD' | 'GBP';
   notes?: string;
   terms?: string;
-  pdfUrl?: string; // URL to the generated PDF in Cloud Storage.
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-/**
- * Represents a product or service that a user can bill for.
- * Maps to the "products" collection.
- */
-export type Product = {
-    id: string; // Firestore document ID.
-    userId: string; // The UID of the user who owns this product.
-    name: string;
-    description?: string;
-    price: number;
-    taxRate?: number; // Default tax rate for this product
-    unit?: string; // e.g., "hour", "item"
-    isActive: boolean;
-    createdAt: Date;
 };
 
 /**
@@ -133,16 +111,11 @@ export type Expense = {
   userId: string; // The UID of the user who owns this expense.
   date: Date;
   category: string;
-  provider?: string;
+  provider: string;
   description: string;
   amount: number;
-  tax?: number;
-  currency: 'EUR' | 'USD' | 'GBP';
-  invoiceId?: string; // Optional link to an invoice.
-  receiptUrl?: string; // URL to the uploaded receipt in Cloud Storage.
-  createdAt: Date;
+  tax: number;
 };
-
 
 /**
  * Represents a system notification for a user.
@@ -151,46 +124,33 @@ export type Expense = {
 export type AppNotification = {
   id: string; // Firestore document ID.
   userId: string; // The UID of the user this notification is for.
-  message: string;
-  type: 'invoice_paid' | 'invoice_due' | 'invoice_overdue' | 'expense_reminder';
-  channel: 'app' | 'email';
+  title: string;
+  body: string;
+  href: string;
   isRead: boolean;
-  reference: {
-    collection: 'invoices' | 'expenses';
-    documentId: string;
-  };
   createdAt: Date;
 };
 
-/**
- * Represents a generated report.
- * Maps to the "reports" collection.
- */
-export type Report = {
-    id: string; // Firestore document ID.
-    userId: string; // The UID of the user who owns this report.
-    type: 'invoicing' | 'expenses' | 'profit_loss';
-    period: {
-        from: Date;
-        to: Date;
-    };
-    filters: Record<string, any>; // e.g., { clientId: 'xyz', status: 'paid' }
-    summary: Record<string, any>; // JSON object with the report's key metrics.
-    fileUrl?: string; // URL to the generated PDF/CSV in Cloud Storage.
-    generatedAt: Date;
+
+export type ReportData = {
+    totalAmount: number;
+    totalPaid: number;
+    totalTaxes: number;
+    paidCount: number;
+    pendingCount: number;
+    overdueCount: number;
+    totalCount: number;
+    monthlyData: { month: string, total: number, paid: number, pending: number, overdue: number }[];
 };
 
 /**
- * Represents a data import or export operation history.
- * Maps to the "data_operations" collection.
+ * Represents dashboard data.
+ * This is a client-side type and is not stored in Firestore.
  */
-export type DataOperation = {
-    id: string; // Firestore document ID.
-    userId: string; // The UID of the user who performed the operation.
-    type: 'import' | 'export';
-    target: 'clients' | 'invoices' | 'expenses';
-    status: 'completed' | 'failed' | 'in_progress';
-    fileUrl?: string; // URL of the file used/generated.
-    details?: string; // e.g., "Imported 50 clients." or error message.
-    createdAt: Date;
+export interface DashboardData {
+    totalRevenue: number;
+    revenueChange: string;
+    paidInvoices: number;
+    pendingInvoices: number;
+    overdueInvoices: number;
 }

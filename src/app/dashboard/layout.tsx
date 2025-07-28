@@ -14,10 +14,11 @@ import { cn } from "@/lib/utils"
 import { auth } from "@/lib/firebase/config"
 import { signOut } from "firebase/auth"
 import { useAuthState } from "react-firebase-hooks/auth"
-import { AppNotification } from "@/lib/types"
-import { getNotifications, markNotificationAsRead } from "@/lib/firebase/firestore"
+import { AppNotification, CompanyProfile } from "@/lib/types"
+import { getNotifications, markNotificationAsRead, getCompanyProfile } from "@/lib/firebase/firestore"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
+import { useTheme } from "next-themes"
 
 function CustomSidebarTrigger() {
     const { toggleSidebar } = useSidebar();
@@ -42,26 +43,28 @@ function NotificationsBell() {
     useEffect(() => {
         if (user) {
             setError(null);
-            getNotifications(user.uid)
-                .then(data => {
-                    setNotifications(data);
-                    setUnreadCount(data.filter(n => !n.isRead).length);
-                })
-                .catch(err => {
-                    console.error("Error fetching notifications:", err);
-                    if (err.code === 'failed-precondition') {
-                        setError("Las notificaciones no están listas, inténtalo de nuevo en unos minutos.");
-                    } else {
-                        setError("No se pudieron cargar las notificaciones.");
-                    }
-                });
+            const unsubscribe = getNotifications(user.uid, (data) => {
+                setNotifications(data);
+                setUnreadCount(data.filter(n => !n.isRead).length);
+            }, (err) => {
+                 console.error("Error fetching notifications:", err);
+                if (err.code === 'failed-precondition') {
+                    setError("Las notificaciones no están listas, inténtalo de nuevo en unos minutos.");
+                } else if (err.code === 'permission-denied') {
+                     setError("No se pudieron cargar las notificaciones por falta de permisos.");
+                }
+                else {
+                    setError("No se pudieron cargar las notificaciones.");
+                }
+            });
+
+            return () => unsubscribe();
         }
     }, [user]);
 
     const handleMarkAsRead = async (id: string) => {
         await markNotificationAsRead(id);
-        setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        // The real-time listener will update the state automatically.
     };
 
     return (
@@ -122,6 +125,19 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
   const { t } = useLocale();
   const { state } = useSidebar();
   const [user, loading, error] = useAuthState(auth);
+  const { setTheme } = useTheme();
+
+  useEffect(() => {
+    async function fetchAndSetTheme() {
+        if (user) {
+            const profile = await getCompanyProfile(user.uid);
+            if (profile && profile.theme) {
+                setTheme(profile.theme);
+            }
+        }
+    }
+    fetchAndSetTheme();
+  }, [user, setTheme]);
 
   const navItems = [
     { href: "/dashboard", icon: LayoutGrid, label: t('nav.dashboard'), exact: true },
@@ -260,5 +276,3 @@ export default function DashboardLayout({
     </SidebarProvider>
   )
 }
-
-    
