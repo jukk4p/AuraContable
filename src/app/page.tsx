@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { FileText, AlertCircle, MailCheck } from "lucide-react";
+import { FileText, AlertCircle, MailCheck, MoveRight } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { auth, db } from "@/lib/firebase/config";
@@ -60,7 +60,6 @@ export default function LoginPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
-        // Create user document in Firestore
         await addDoc(collection(db, "users"), {
             uid: user.uid,
             email: user.email,
@@ -127,55 +126,72 @@ export default function LoginPage() {
 
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="flex justify-center mb-6">
-            <FileText className="h-8 w-8 text-primary" />
-        </div>
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold tracking-tight font-headline">InvoiceFlow</CardTitle>
-            <CardDescription>{isSignUp ? t('login.signUp') : t('login.title')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {error && (
-                 <Alert variant="destructive" className="mb-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
-                </Alert>
-            )}
-            <form onSubmit={handleAuthAction}>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">{t('login.email')}</Label>
-                  <Input id="email" type="email" placeholder="nombre@ejemplo.com" required value={email} onChange={e => setEmail(e.target.value)} disabled={isLoading} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">{t('login.password')}</Label>
-                  <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading}/>
-                </div>
-              </div>
-              <Button type="submit" className="w-full mt-6" disabled={isLoading}>
-                {isLoading ? "Cargando..." : (isSignUp ? t('login.signUp') : t('login.signIn'))}
-                </Button>
-            </form>
-            <Separator className="my-6">
-              <span className="px-2 text-muted-foreground bg-background">{t('login.or')}</span>
-            </Separator>
-            <Button variant="outline" className="w-full" disabled={isLoading}>
-              <GoogleIcon className="mr-2 h-4 w-4" />
-              {t('login.googleSignIn')}
-            </Button>
-            <div className="mt-4 text-center text-sm">
-                {isSignUp ? "¿Ya tienes una cuenta?" : t('login.noAccount')}{" "}
-                <Button variant="link" onClick={() => {setIsSignUp(!isSignUp); setError(null);}} className="p-0 h-auto" disabled={isLoading}>
-                    {isSignUp ? t('login.signIn') : t('login.signUp')}
-                </Button>
+    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
+        <div className="hidden bg-primary lg:flex lg:flex-col lg:items-center lg:justify-center p-12 text-primary-foreground">
+            <div className="flex items-center gap-2 mb-4">
+                <FileText className="h-10 w-10" />
+                <span className="text-4xl font-bold font-headline">InvoiceFlow</span>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            <p className="mt-4 text-xl text-center">
+               La herramienta definitiva para autónomos y pymes. Simplifica tu facturación y céntrate en lo que de verdad importa.
+            </p>
+        </div>
+        <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+            <div className="w-full max-w-md space-y-8">
+                 <div className="flex justify-center lg:hidden mb-6">
+                    <FileText className="h-8 w-8 text-primary" />
+                </div>
+                <div>
+                    <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-foreground">
+                        {isSignUp ? "Crea tu cuenta" : "Bienvenido de nuevo"}
+                    </h2>
+                    <p className="mt-2 text-center text-sm text-muted-foreground">
+                         {isSignUp ? "¿Ya tienes una cuenta?" : t('login.noAccount')}{" "}
+                        <Button variant="link" onClick={() => {setIsSignUp(!isSignUp); setError(null);}} className="p-0 h-auto font-medium text-primary" disabled={isLoading}>
+                            {isSignUp ? t('login.signIn') : t('login.signUp')}
+                        </Button>
+                    </p>
+                </div>
+                 {error && (
+                    <Alert variant="destructive" className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Error de autenticación</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
+                <form className="mt-8 space-y-6" onSubmit={handleAuthAction}>
+                    <div className="space-y-4 rounded-md shadow-sm">
+                        <div>
+                            <Label htmlFor="email">{t('login.email')}</Label>
+                            <Input id="email" type="email" placeholder="nombre@ejemplo.com" required value={email} onChange={e => setEmail(e.target.value)} disabled={isLoading} className="mt-1"/>
+                        </div>
+                        <div>
+                            <Label htmlFor="password">{t('login.password')}</Label>
+                            <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading} className="mt-1"/>
+                        </div>
+                    </div>
+
+                    <div>
+                        <Button type="submit" className="w-full group" disabled={isLoading}>
+                             {isLoading ? "Cargando..." : (isSignUp ? 'Crear cuenta' : 'Iniciar Sesión')}
+                            <span className="absolute right-4 transform transition-transform group-hover:translate-x-1">
+                                <MoveRight className="h-4 w-4" />
+                            </span>
+                        </Button>
+                    </div>
+                </form>
+                 <Separator className="my-6">
+                  <span className="px-2 text-muted-foreground bg-background">{t('login.or')}</span>
+                </Separator>
+
+                <div className="mt-6">
+                     <Button variant="outline" className="w-full" disabled={isLoading}>
+                        <GoogleIcon className="mr-2 h-4 w-4" />
+                        {t('login.googleSignIn')}
+                    </Button>
+                </div>
+            </div>
+        </div>
     </div>
   );
 }
