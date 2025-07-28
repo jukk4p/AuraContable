@@ -208,8 +208,10 @@ export default function NewInvoicePage() {
              return;
         }
 
+        const { clientId, ...restOfData } = data;
+
         const invoicePayload = {
-            ...data,
+            ...restOfData,
             client: selectedClient,
             subtotal,
             total,
@@ -531,3 +533,4 @@ export default function NewInvoicePage() {
         </Form>
     )
 }
+
