@@ -28,11 +28,12 @@ function ClientForm({ client, onSave, onCancel, isSaving }: { client?: Client | 
     const [taxId, setTaxId] = useState(client?.taxId || '');
     const [address, setAddress] = useState(client?.address || '');
     const [country, setCountry] = useState(client?.country || '');
+    const [phone, setPhone] = useState(client?.phone || '');
 
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ id: client?.id, name, email, taxId, address, country });
+        onSave({ id: client?.id, name, email, taxId, address, country, phone });
     };
 
     return (
@@ -51,6 +52,10 @@ function ClientForm({ client, onSave, onCancel, isSaving }: { client?: Client | 
                 <div className="space-y-2">
                     <Label htmlFor="email">{t('clients.email')}</Label>
                     <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contact@acme.com" required disabled={isSaving}/>
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="phone">Teléfono</Label>
+                    <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+34 600 000 000" disabled={isSaving}/>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="taxId">{t('settings.company.taxId')}</Label>
@@ -131,7 +136,7 @@ export default function ClientList() {
                 // Edit existing client
                 const { id, ...updatedClientData } = clientData;
                 await updateClient(id, updatedClientData);
-                setClients(clients.map(c => c.id === id ? { ...c, ...updatedClientData } : c));
+                setClients(clients.map(c => c.id === id ? { ...c, ...updatedClientData } as Client : c));
                 toast({ title: "Cliente Actualizado", description: "Los detalles del cliente han sido actualizados." });
             } else {
                 // Add new client
@@ -293,5 +298,7 @@ export default function ClientList() {
         </Card>
     );
 }
+
+    
 
     

@@ -18,7 +18,7 @@ import { format } from "date-fns"
 import { useToast } from "@/hooks/use-toast"
 import { es } from "date-fns/locale"
 import { useLocale } from "@/lib/i18n/locale-provider"
-import { Client, InvoiceStatus, InvoiceTax } from "@/lib/types"
+import { Client, InvoiceStatus, InvoiceTax, InvoiceItem } from "@/lib/types"
 import React, { useState, useEffect, useCallback } from 'react'
 import { auth } from "@/lib/firebase/config"
 import { useAuthState } from "react-firebase-hooks/auth"
@@ -208,11 +208,17 @@ export default function NewInvoicePage() {
              return;
         }
 
+        // Clean up the client object to remove undefined fields
+        const cleanClient = Object.fromEntries(
+            Object.entries(selectedClient).filter(([_, v]) => v !== undefined)
+        );
+
         const { clientId, ...restOfData } = data;
 
         const invoicePayload = {
             ...restOfData,
-            client: selectedClient,
+            clientId: data.clientId,
+            client: cleanClient,
             subtotal,
             total,
             taxes: data.taxes || [],
@@ -534,3 +540,4 @@ export default function NewInvoicePage() {
     )
 }
 
+    
