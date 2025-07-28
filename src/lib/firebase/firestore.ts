@@ -36,9 +36,14 @@ const clientFromSnapshot = (snapshot: QueryDocumentSnapshot<DocumentData>): Clie
 
 export async function getClients(userId: string): Promise<Client[]> {
     if (!userId) return [];
+    // This query previously had an .orderBy('name') which required a composite index.
+    // Removing it simplifies the query and avoids the need for a manual index.
+    // Sorting can be done on the client-side if needed.
     const q = query(collection(db, "clients"), where("userId", "==", userId));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(clientFromSnapshot);
+    const clients = querySnapshot.docs.map(clientFromSnapshot);
+    // Sort clients by name alphabetically on the client side
+    return clients.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function addClient(client: Omit<Client, 'id'>): Promise<Client> {

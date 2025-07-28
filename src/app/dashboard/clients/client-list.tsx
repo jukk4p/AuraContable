@@ -95,9 +95,9 @@ export default function ClientList() {
                     setClients(userClients);
                 } catch (e: any) {
                     console.error("Error fetching clients: ", e);
-                    if(e.code === 'failed-precondition') {
-                        setDbError("La base de datos de Firestore no está creada o configurada. Por favor, créala desde la consola de Firebase.");
-                    } else if (e.message.includes("permission-denied")) {
+                    if (e.code === 'failed-precondition' || (e.message && e.message.includes("requires an index"))) {
+                        setDbError("La base de datos de Firestore necesita un índice. Por favor, créalo desde la consola de Firebase. El error te proporcionará un enlace para crearlo con un solo clic.");
+                    } else if (e.message && e.message.includes("permission-denied")) {
                          setDbError("Permiso denegado. Revisa las reglas de seguridad de Firestore.");
                     } else {
                         setDbError("Ha ocurrido un error al cargar los clientes.");
@@ -199,8 +199,7 @@ export default function ClientList() {
                 <AlertTitle>Verifica tu correo electrónico</AlertTitle>
                 <AlertDescription>
                     Hemos enviado un correo de verificación a tu dirección. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta y poder continuar.
-                </Aler
-tDescription>
+                </AlertDescription>
             </Alert>
         )
     }
