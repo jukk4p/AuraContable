@@ -39,7 +39,7 @@ const invoiceFormSchema = z.object({
     clientId: z.string().min(1, "El cliente es obligatorio"),
     issueDate: z.date({required_error: "La fecha de emisión es obligatoria"}),
     dueDate: z.date({required_error: "La fecha de vencimiento es obligatoria"}),
-    status: z.enum(["Pending", "Paid", "Overdue"], {required_error: "El estado es obligatorio"}),
+    status: z.enum(["Pending", "Paid", "Overdue"]),
     items: z.array(z.object({
         description: z.string().min(1, "La descripción es obligatoria"),
         quantity: z.coerce.number().min(1, "La cantidad debe ser al menos 1"),
@@ -120,13 +120,14 @@ export default function NewInvoicePage() {
                             router.push('/dashboard/invoices');
                         }
                     } else {
-                        const [userClients, userInvoices, companyProfile] = await Promise.all([
+                         const [userClients, userInvoices] = await Promise.all([
                             getClients(user.uid),
                             getInvoices(user.uid),
-                            getCompanyProfile(user.uid)
                         ]);
                         
                         setClients(userClients);
+
+                        const companyProfile = await getCompanyProfile(user.uid);
 
                         const currentYear = new Date().getFullYear();
                         const yearPrefix = `FAC-${currentYear}-`;
@@ -148,7 +149,7 @@ export default function NewInvoicePage() {
                         form.reset({
                             ...form.getValues(),
                             invoiceNumber: newInvoiceNumber,
-                            terms: companyProfile?.terms || "",
+                            terms: companyProfile?.defaultTerms || "",
                             taxes: companyProfile?.defaultTaxes || [],
                         });
                     }
@@ -534,3 +535,5 @@ export default function NewInvoicePage() {
         </Form>
     )
 }
+
+    
