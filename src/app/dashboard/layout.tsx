@@ -206,12 +206,17 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
   return (
     <>
       <Sidebar>
-        <SidebarHeader className={cn("p-2 flex items-center", state === 'expanded' ? "justify-between" : "justify-center")}>
-          <Link href="/dashboard" className={cn("flex items-center gap-2", state === 'collapsed' && "hidden")}>
-            <FileText className="w-8 h-8 text-primary" />
-            <span className="text-xl font-semibold font-headline">InvoiceFlow</span>
-          </Link>
-          <CustomSidebarTrigger />
+        <SidebarHeader className={cn("p-2 flex", state === 'expanded' ? "justify-between" : "justify-center")}>
+            <Link href="/dashboard" className={cn("flex items-center gap-2", state === 'collapsed' && "hidden")}>
+                <FileText className="w-8 h-8 text-primary" />
+                <span className="text-xl font-semibold font-headline">InvoiceFlow</span>
+            </Link>
+            <div className={cn(state === 'expanded' ? "block" : "hidden")}>
+                <CustomSidebarTrigger />
+            </div>
+             <div className={cn("flex-1 flex justify-center", state === 'collapsed' ? "block" : "hidden")}>
+                 <CustomSidebarTrigger />
+            </div>
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
