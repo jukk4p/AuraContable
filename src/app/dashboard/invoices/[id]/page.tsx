@@ -76,7 +76,7 @@ export default function InvoiceDetailsPage() {
         if (!invoice) return;
         setIsDownloading(true);
         try {
-            await generateInvoicePdf(invoice, companyProfile, { t, formatCurrency });
+            await generateInvoicePdf(invoice, companyProfile, { t, formatCurrency, locale });
         } catch (error) {
             console.error("Error downloading PDF:", error);
             toast({ title: "Error", description: "Hubo un problema al generar el PDF.", variant: "destructive" });

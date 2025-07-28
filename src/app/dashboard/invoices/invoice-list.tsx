@@ -155,7 +155,7 @@ export default function InvoiceList() {
                 throw new Error("Invoice not found");
             }
 
-            await generateInvoicePdf(invoice, companyProfile, { t, formatCurrency });
+            await generateInvoicePdf(invoice, companyProfile, { t, formatCurrency, locale });
 
         } catch (error) {
             console.error("Error downloading PDF:", error);

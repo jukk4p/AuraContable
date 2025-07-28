@@ -3,6 +3,8 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import type { Invoice, CompanyProfile } from './types';
 import { format } from 'date-fns';
+import { es, fr, it, enUS } from 'date-fns/locale';
+import type { Locale } from './i18n/locales';
 
 // Extend jsPDF with autoTable
 interface jsPDFWithAutoTable extends jsPDF {
@@ -12,7 +14,16 @@ interface jsPDFWithAutoTable extends jsPDF {
 type Localization = {
     t: (key: string) => string;
     formatCurrency: (amount: number) => string;
+    locale: Locale;
 };
+
+const localeMap = {
+    es,
+    fr,
+    it,
+    en: enUS,
+    ca: es, // Use spanish locale for catalan as date-fns does not have 'ca'
+}
 
 export async function generateInvoicePdf(
     invoice: Invoice, 
@@ -20,7 +31,8 @@ export async function generateInvoicePdf(
     l10n: Localization
 ) {
     const doc = new jsPDF() as jsPDFWithAutoTable;
-    const { t, formatCurrency } = l10n;
+    const { t, formatCurrency, locale } = l10n;
+    const dateLocale = localeMap[locale] || enUS;
 
     const primaryColor = '#3399FF'; // HSL(210, 70%, 50%)
     const textColor = '#1E293B'; // approx. HSL(210, 25%, 15%)
@@ -56,8 +68,8 @@ export async function generateInvoicePdf(
     doc.setTextColor(textColor);
 
     doc.text(invoice.invoiceNumber, 60, detailsY);
-    doc.text(format(invoice.issueDate, 'PPP'), 60, detailsY + 7);
-    doc.text(format(invoice.dueDate, 'PPP'), 60, detailsY + 14);
+    doc.text(format(invoice.issueDate, 'PPP', { locale: dateLocale }), 60, detailsY + 7);
+    doc.text(format(invoice.dueDate, 'PPP', { locale: dateLocale }), 60, detailsY + 14);
 
     // --- Company & Client Info ---
     const infoStartY = detailsY + 30;
