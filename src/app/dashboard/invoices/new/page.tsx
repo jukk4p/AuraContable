@@ -41,6 +41,7 @@ const invoiceFormSchema = z.object({
     dueDate: z.date({required_error: "La fecha de vencimiento es obligatoria"}),
     status: z.enum(["Pending", "Paid", "Overdue"]),
     items: z.array(z.object({
+        id: z.string(),
         description: z.string().min(1, "La descripción es obligatoria"),
         quantity: z.coerce.number().min(1, "La cantidad debe ser al menos 1"),
         price: z.coerce.number().min(0, "El precio no puede ser negativo"),
@@ -92,7 +93,7 @@ export default function NewInvoicePage() {
         defaultValues: {
             invoiceNumber: "",
             status: "Pending",
-            items: [{ description: "", quantity: 1, price: 0 }],
+            items: [{ id: `item-${Date.now()}`, description: "", quantity: 1, price: 0 }],
             taxes: [],
             notes: "",
             terms: "",
@@ -218,11 +219,6 @@ export default function NewInvoicePage() {
             userId: user.uid,
         };
         
-        // Firestore doesn't accept undefined values
-        if (!invoicePayload.taxes) invoicePayload.taxes = [];
-        if (!invoicePayload.notes) invoicePayload.notes = '';
-        if (!invoicePayload.terms) invoicePayload.terms = '';
-
         try {
             if (isEditing) {
                 await updateInvoice(invoiceId, invoicePayload);
@@ -231,9 +227,7 @@ export default function NewInvoicePage() {
                     description: `La factura ${data.invoiceNumber} ha sido actualizada.`,
                 });
             } else {
-                // remove clientId from payload, as it's not in the Invoice type for creation
-                const { clientId, ...creationPayload } = invoicePayload;
-                await addInvoice(creationPayload);
+                await addInvoice(invoicePayload);
                 toast({
                     title: t('newInvoice.toast.title'),
                     description: `${t('newInvoice.toast.description')} ${data.invoiceNumber}`,
@@ -419,7 +413,7 @@ export default function NewInvoicePage() {
                                     </div>
                                 ))}
                             </div>
-                             <Button type="button" variant="outline" size="sm" onClick={() => appendItem({ description: "", quantity: 1, price: 0 })}>
+                             <Button type="button" variant="outline" size="sm" onClick={() => appendItem({ id: `item-${Date.now()}`, description: "", quantity: 1, price: 0 })}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 {t('newInvoice.addItem')}
                             </Button>
@@ -537,5 +531,3 @@ export default function NewInvoicePage() {
         </Form>
     )
 }
-
-    

@@ -95,7 +95,7 @@ export type Invoice = {
   id: string; // Firestore document ID.
   userId: string; // The UID of the user who owns this invoice.
   clientId: string; // Foreign key to the "clients" collection.
-  client: Omit<Client, 'id' | 'createdAt'>; // Denormalized client data for display.
+  client: Client; // Denormalized client data for display.
   invoiceNumber: string;
   status: InvoiceStatus;
   issueDate: Date;
@@ -228,5 +228,3 @@ export interface DashboardData {
     pendingInvoices: number;
     overdueInvoices: number;
 }
-
-    
