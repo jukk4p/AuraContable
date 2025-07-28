@@ -25,7 +25,7 @@ import { generateInvoicingReportCsv } from '@/lib/csv-generator';
 
 
 export default function ReportsPage() {
-    const { t } = useLocale();
+    const { t, locale } = useLocale();
     const [user, authLoading, authError] = useAuthState(auth);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -86,7 +86,7 @@ export default function ReportsPage() {
                 toast({ title: "Error", description: "Por favor, selecciona un rango de fechas.", variant: "destructive" });
                 return;
             }
-            await generateInvoicingReportPdf(filteredData.invoices, companyProfile, date, { t });
+            await generateInvoicingReportPdf(filteredData.invoices, companyProfile, date, { t, locale });
         } catch (error) {
             console.error("Error exporting PDF:", error);
             toast({ title: "Error", description: "Hubo un problema al generar el PDF.", variant: "destructive" });

@@ -4,6 +4,7 @@ import 'jspdf-autotable';
 import type { Invoice, CompanyProfile, ReportData } from './types';
 import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
+import { Locale } from './i18n/locales';
 
 interface jsPDFWithAutoTable extends jsPDF {
     autoTable: (options: any) => jsPDFWithAutoTable;
@@ -11,6 +12,7 @@ interface jsPDFWithAutoTable extends jsPDF {
 
 type Localization = {
     t: (key: string) => string;
+    locale: Locale;
 };
 
 // A simplified function to calculate report data, as we cannot share complex logic
@@ -61,10 +63,10 @@ export async function generateInvoicingReportPdf(
     l10n: Localization
 ) {
     const doc = new jsPDF() as jsPDFWithAutoTable;
-    const { t } = l10n;
+    const { t, locale } = l10n;
     
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat(doc.getLanguage(), {
+        return new Intl.NumberFormat(locale, {
             style: 'currency',
             currency: company?.currency || 'EUR',
         }).format(amount);
