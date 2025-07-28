@@ -135,12 +135,13 @@ export default function ClientList() {
                 toast({ title: "Cliente Actualizado", description: "Los detalles del cliente han sido actualizados." });
             } else {
                 // Add new client
-                const newClientData = {
-                    ...clientData,
-                    avatarUrl: `https://placehold.co/40x40?text=${clientData.name.charAt(0)}`,
+                const { id, ...newClientData } = clientData; // remove id from the object
+                const clientToAdd = {
+                    ...newClientData,
+                    avatarUrl: `https://placehold.co/40x40?text=${newClientData.name.charAt(0)}`,
                     userId: user.uid,
                 };
-                const newClient = await addClient(newClientData);
+                const newClient = await addClient(clientToAdd);
                 setClients([...clients, newClient]);
                 toast({ title: "Cliente Añadido", description: "El nuevo cliente ha sido añadido." });
             }
