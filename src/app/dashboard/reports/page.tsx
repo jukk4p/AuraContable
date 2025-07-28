@@ -14,18 +14,23 @@ import { cn } from "@/lib/utils"
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase/config';
-import { getInvoices, getExpenses } from '@/lib/firebase/firestore';
-import type { Invoice, Expense, ReportData } from '@/lib/types';
+import { getInvoices, getExpenses, getCompanyProfile } from '@/lib/firebase/firestore';
+import type { Invoice, Expense, ReportData, CompanyProfile } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart"
 import { BarChart, CartesianGrid, XAxis, YAxis, Bar, Tooltip } from 'recharts';
+import { toast } from '@/hooks/use-toast';
+import { generateInvoicingReportPdf } from '@/lib/report-pdf-generator';
+
 
 export default function ReportsPage() {
     const { t } = useLocale();
     const [user, authLoading, authError] = useAuthState(auth);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [expenses, setExpenses] = useState<Expense[]>([]);
+    const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
     const [dbLoading, setDbLoading] = useState(true);
+    const [isExporting, setIsExporting] = useState(false);
 
     const [date, setDate] = React.useState<DateRange | undefined>({
         from: startOfMonth(new Date()),
@@ -37,12 +42,14 @@ export default function ReportsPage() {
             if (user && user.emailVerified) {
                 setDbLoading(true);
                 try {
-                    const [userInvoices, userExpenses] = await Promise.all([
+                    const [userInvoices, userExpenses, profile] = await Promise.all([
                         getInvoices(user.uid),
-                        getExpenses(user.uid)
+                        getExpenses(user.uid),
+                        getCompanyProfile(user.uid)
                     ]);
                     setInvoices(userInvoices);
                     setExpenses(userExpenses);
+                    setCompanyProfile(profile);
                 } catch (e) {
                     console.error("Error fetching data for reports:", e);
                 } finally {
@@ -69,6 +76,23 @@ export default function ReportsPage() {
 
         return { invoices: filteredInvoices, expenses: filteredExpenses };
     }, [invoices, expenses, date]);
+
+    const handleExportPdf = async () => {
+        setIsExporting(true);
+        try {
+            if (!date?.from || !date?.to) {
+                toast({ title: "Error", description: "Por favor, selecciona un rango de fechas.", variant: "destructive" });
+                return;
+            }
+            // We pass the unfiltered data so the report can do its own calculations
+            await generateInvoicingReportPdf(filteredData.invoices, companyProfile, date, { t });
+        } catch (error) {
+            console.error("Error exporting PDF:", error);
+            toast({ title: "Error", description: "Hubo un problema al generar el PDF.", variant: "destructive" });
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
 
     if (authLoading) return <p>Cargando...</p>;
@@ -156,7 +180,10 @@ export default function ReportsPage() {
                         <TabsTrigger value="summary">Resumen</TabsTrigger>
                     </TabsList>
                      <div className="flex items-center gap-2">
-                        <Button variant="outline"><FileDown className="mr-2 h-4 w-4" /> Exportar a PDF</Button>
+                        <Button variant="outline" onClick={handleExportPdf} disabled={isExporting}>
+                            <FileDown className="mr-2 h-4 w-4" /> 
+                            {isExporting ? "Exportando..." : "Exportar a PDF"}
+                        </Button>
                         <Button variant="outline"><Download className="mr-2 h-4 w-4" /> Exportar a CSV</Button>
                     </div>
                 </div>
@@ -292,3 +319,4 @@ function InvoicingReport({ data }: { data: Invoice[] }) {
     )
 }
 
+    
