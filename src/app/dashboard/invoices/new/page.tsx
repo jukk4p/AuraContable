@@ -20,9 +20,10 @@ import { es } from "date-fns/locale"
 import { useLocale } from "@/lib/i18n/locale-provider"
 import { Client, InvoiceStatus, InvoiceTax, InvoiceItem } from "@/lib/types"
 import React, { useState, useEffect, useCallback } from 'react'
-import { auth } from "@/lib/firebase/config"
-import { useAuthState } from "react-firebase-hooks/auth"
-import { getClients, addInvoice, getInvoices, getCompanyProfile, getInvoiceById, updateInvoice } from "@/lib/firebase/firestore"
+import { useSession } from "next-auth/react";
+import { getClients } from "@/actions/clients";
+import { addInvoice, getInvoices, getInvoiceById, updateInvoice } from "@/actions/invoices";
+import { getCompanyProfile } from "@/actions/company";
 import { useRouter, useParams } from "next/navigation"
 import {
   DropdownMenu,
@@ -83,7 +84,8 @@ export default function NewInvoicePage() {
     const invoiceId = params.id as string | undefined;
     const isEditing = !!invoiceId;
 
-    const [user] = useAuthState(auth);
+    const { data: session, status: authStatus } = useSession();
+    const user = session?.user;
     const [clients, setClients] = useState<Client[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -105,7 +107,7 @@ export default function NewInvoicePage() {
             if(user) {
                 setIsLoading(true);
                 try {
-                    const userClients = await getClients(user.uid);
+                    const userClients = await getClients(user.id);
                     setClients(userClients);
 
                     if (isEditing) {
@@ -121,8 +123,8 @@ export default function NewInvoicePage() {
                         }
                     } else {
                         const [userInvoices, companyProfile] = await Promise.all([
-                            getInvoices(user.uid),
-                            getCompanyProfile(user.uid)
+                            getInvoices(user.id),
+                            getCompanyProfile(user.id)
                         ]);
 
                         const currentYear = new Date().getFullYear();
@@ -158,12 +160,12 @@ export default function NewInvoicePage() {
                 } finally {
                     setIsLoading(false);
                 }
-            } else {
+            } else if (authStatus !== "loading") {
                 setIsLoading(false);
             }
         }
         fetchData();
-    }, [user, isEditing, invoiceId, toast, router]);
+    }, [user, authStatus, isEditing, invoiceId, toast, router]);
 
 
     const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({
@@ -215,39 +217,48 @@ export default function NewInvoicePage() {
             Object.entries(selectedClient).filter(([_, v]) => v !== undefined)
         );
 
-        const { clientId, ...restOfData } = data;
-
         const invoicePayload = {
-            ...restOfData,
-            client: cleanClient,
+            ...data,
             subtotal,
             total,
             taxes: data.taxes || [],
             notes: data.notes || '',
             terms: data.terms || '',
-            userId: user.uid,
+            userId: user.id,
         };
         
         try {
+            let result;
             if (isEditing) {
-                await updateInvoice(invoiceId, invoicePayload);
-                toast({
-                    title: "Factura Actualizada",
-                    description: `La factura ${data.invoiceNumber} ha sido actualizada.`,
-                });
+                result = await updateInvoice(invoiceId, invoicePayload);
             } else {
-                await addInvoice(invoicePayload);
-                toast({
-                    title: t('newInvoice.toast.title'),
-                    description: `${t('newInvoice.toast.description')} ${data.invoiceNumber}`,
-                });
+                result = await addInvoice(invoicePayload);
             }
 
-            router.push('/dashboard/invoices');
+            if (result.success) {
+                toast({
+                    title: isEditing ? "Factura Actualizada" : t('newInvoice.toast.title'),
+                    description: isEditing 
+                        ? `La factura ${data.invoiceNumber} ha sido actualizada.` 
+                        : `${t('newInvoice.toast.description')} ${data.invoiceNumber}`,
+                    variant: "default",
+                });
+                router.push('/dashboard/invoices');
+            } else {
+                toast({ 
+                    title: "Error al guardar", 
+                    description: result.error, 
+                    variant: "destructive" 
+                });
+                setIsSubmitting(false);
+            }
         } catch (error) {
             console.error("Error saving invoice:", error);
-            toast({ title: "Error", description: "Hubo un problema al guardar la factura.", variant: "destructive" });
-        } finally {
+            toast({ 
+                title: "Error crítico", 
+                description: "Hubo un problema inesperado al guardar la factura.", 
+                variant: "destructive" 
+            });
             setIsSubmitting(false);
         }
     }

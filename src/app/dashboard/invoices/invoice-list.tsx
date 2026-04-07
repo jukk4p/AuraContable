@@ -1,385 +1,297 @@
-
-
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { MoreHorizontal, ArrowUpDown, View, Edit, Trash2, Download, CheckCircle, Send, FileDown } from 'lucide-react';
+import { 
+    MoreHorizontal, View, Edit, Trash2, 
+    Download, CheckCircle, Send, Plus, 
+    Search, Filter, Calendar as CalendarIcon,
+    ChevronDown, FileText, Mail, FileDown
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { motion, AnimatePresence } from "framer-motion";
+import { useSession } from "next-auth/react";
+
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { 
+    DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
+    DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator 
+} from '@/components/ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import type { Invoice, InvoiceStatus } from '@/lib/types';
-import InvoiceStatusBadge from '@/components/invoice-status-badge';
-import { useLocale } from '@/lib/i18n/locale-provider';
-import { auth } from '@/lib/firebase/config';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { getInvoices, deleteInvoice, getInvoiceById, getCompanyProfile, updateInvoice, addNotification } from '@/lib/firebase/firestore';
-import { format } from 'date-fns';
-import { es, fr, it, enUS } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, MailWarning } from "lucide-react";
-import { generateInvoicePdf, generateInvoicesZip } from '@/lib/pdf-generator';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+import { useLocale } from '@/lib/i18n/locale-provider';
+import { getInvoices, deleteInvoice } from '@/actions/invoices';
+import { getCompanyProfile } from '@/actions/company';
+import { generateInvoicePdf } from '@/lib/pdf-generator';
+import type { Invoice, InvoiceStatus, CompanyProfile } from '@/lib/types';
+import InvoiceStatusBadge from '@/components/invoice-status-badge';
+import { cn } from '@/lib/utils';
+import { AlertCircle } from 'lucide-react';
 
 export default function InvoiceList() {
     const { t, formatCurrency, locale } = useLocale();
-    const [user, authLoading, authError] = useAuthState(auth);
-    const [invoices, setInvoices] = useState<Invoice[]>([]);
-    const [dbLoading, setDbLoading] = useState(true);
+    const { data: session, status } = useSession();
+    const user = session?.user;
+    
+    const [invoices, setInvoices] = useState<any[]>([]);
+    const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
-    const [sortConfig, setSortConfig] = useState<{ key: keyof Invoice | 'client.name'; direction: 'ascending' | 'descending' } | null>(null);
-    const [isDownloading, setIsDownloading] = useState<string | null>(null);
-    const [isBulkDownloading, setIsBulkDownloading] = useState(false);
-    const [isUpdating, setIsUpdating] = useState<string | null>(null);
-    const [isSending, setIsSending] = useState<string | null>(null);
-
-    const localeMap = { es, fr, it, en: enUS, ca: es };
+    const [dbLoading, setDbLoading] = useState(true);
+    const [dbError, setDbError] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchInvoices = async () => {
-            if (user && user.emailVerified) {
+        const fetchData = async () => {
+            if (user?.id) {
                 setDbLoading(true);
                 try {
-                    const userInvoices = await getInvoices(user.uid);
-                    setInvoices(userInvoices);
-                } catch (e: any) {
-                    console.error("Error fetching invoices:", e);
-                    toast({ title: "Error", description: "Hubo un problema al cargar las facturas.", variant: "destructive" });
+                    const [invoicesData, companyData] = await Promise.all([
+                        getInvoices(user.id),
+                        getCompanyProfile(user.id)
+                    ]);
+                    setInvoices(invoicesData);
+                    setCompanyProfile(companyData);
+                } catch (e) {
+                    console.error(e);
+                    setDbError("No se pudieron cargar las facturas.");
                 } finally {
                     setDbLoading(false);
                 }
-            } else if (!authLoading) {
+            } else if (status !== 'loading') {
                 setDbLoading(false);
             }
         };
-        fetchInvoices();
-    }, [user, authLoading]);
+        fetchData();
+    }, [user, status]);
 
     const filteredInvoices = useMemo(() => {
-        let filtered = [...invoices];
-        if (statusFilter !== 'All') {
-            filtered = filtered.filter(invoice => invoice.status === statusFilter);
-        }
-        if (searchTerm) {
-            filtered = filtered.filter(invoice =>
+        return invoices.filter(invoice => {
+            const matchesSearch = 
                 invoice.client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-        }
-        return filtered;
+                invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesStatus = statusFilter === 'All' || invoice.status === statusFilter;
+            return matchesSearch && matchesStatus;
+        });
     }, [searchTerm, statusFilter, invoices]);
 
-    const sortedInvoices = useMemo(() => {
-        let sortableInvoices = [...filteredInvoices];
-        if (sortConfig !== null) {
-            sortableInvoices.sort((a, b) => {
-                const key = sortConfig.key;
-                let aValue: any;
-                let bValue: any;
-
-                if (key === 'client.name') {
-                    aValue = a.client.name;
-                    bValue = b.client.name;
-                } else if (key === 'issueDate' || key === 'dueDate') {
-                    aValue = new Date(a[key] as any);
-                }
-                else {
-                    aValue = a[key as keyof Invoice];
-                    bValue = b[key as keyof Invoice];
-                }
-
-                if (aValue < bValue) {
-                    return sortConfig.direction === 'ascending' ? -1 : 1;
-                }
-                if (aValue > bValue) {
-                    return sortConfig.direction === 'ascending' ? 1 : -1;
-                }
-                return 0;
-            });
+    const handleDownloadPdf = async (invoice: any) => {
+        try {
+            toast({ title: "Generando PDF...", description: "Estamos preparando tu factura para descargar." });
+            await generateInvoicePdf(
+                invoice, 
+                companyProfile, 
+                { t, formatCurrency, locale: locale as any }
+            );
+        } catch (error) {
+            console.error(error);
+            toast({ title: "Error", description: "No se pudo generar el PDF.", variant: "destructive" });
         }
-        return sortableInvoices;
-    }, [filteredInvoices, sortConfig]);
-
-    const requestSort = (key: keyof Invoice | 'client.name') => {
-        let direction: 'ascending' | 'descending' = 'ascending';
-        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
-            direction = 'descending';
-        }
-        setSortConfig({ key, direction });
     };
 
-    const handleDeleteInvoice = async (id: string) => {
+    const handleDelete = async (id: string) => {
         try {
             await deleteInvoice(id);
-            setInvoices(invoices.filter(invoice => invoice.id !== id));
-            toast({ title: t('invoices.deleteInvoice'), description: "La factura ha sido eliminada." });
+            setInvoices(invoices.filter(inv => inv.id !== id));
+            toast({ title: "Factura Eliminada", description: "La factura ha sido eliminada correctamente." });
         } catch (error) {
-            console.error("Error deleting invoice:", error);
-            toast({ title: "Error", description: "Hubo un problema al eliminar la factura.", variant: "destructive" });
-        }
-    }
-    
-    const handleMarkAsPaid = async (invoice: Invoice) => {
-        if (!user) return;
-        setIsUpdating(invoice.id);
-        try {
-            await updateInvoice(invoice.id, { status: 'Paid' });
-            setInvoices(invoices.map(inv => inv.id === invoice.id ? { ...inv, status: 'Paid' } : inv));
-            
-            await addNotification({
-                userId: user.uid,
-                title: "Pago Recibido",
-                body: `La factura ${invoice.invoiceNumber} ha sido pagada.`,
-                href: `/dashboard/invoices/${invoice.id}`,
-                isRead: false,
-            });
-
-            toast({ title: "Factura Actualizada", description: "La factura ha sido marcada como pagada." });
-        } catch (error) {
-             console.error("Error updating invoice status:", error);
-            toast({ title: "Error", description: "No se pudo actualizar el estado de la factura.", variant: "destructive" });
-        } finally {
-            setIsUpdating(null);
-        }
-    }
-
-    const handleDownloadPdf = async (invoiceId: string) => {
-        if (!user) return;
-        setIsDownloading(invoiceId);
-        try {
-            const invoice = await getInvoiceById(invoiceId);
-            const companyProfile = await getCompanyProfile(user.uid);
-            
-            if (!invoice) {
-                throw new Error("Invoice not found");
-            }
-
-            await generateInvoicePdf(invoice, companyProfile, { t, formatCurrency, locale });
-
-        } catch (error) {
-            console.error("Error downloading PDF:", error);
-            toast({ title: "Error", description: "Hubo un problema al generar el PDF.", variant: "destructive" });
-        } finally {
-            setIsDownloading(null);
-        }
-    }
-
-     const handleBulkDownload = async () => {
-        if (!user) return;
-        setIsBulkDownloading(true);
-        try {
-            const companyProfile = await getCompanyProfile(user.uid);
-            await generateInvoicesZip(sortedInvoices, companyProfile, { t, formatCurrency, locale });
-        } catch (error) {
-            console.error("Error downloading bulk PDF:", error);
-            toast({ title: "Error", description: "Hubo un problema al generar el ZIP.", variant: "destructive" });
-        } finally {
-            setIsBulkDownloading(false);
+            toast({ title: "Error", description: "No se pudo eliminar la factura.", variant: "destructive" });
         }
     };
 
-    const handleSendEmail = async (invoiceId: string) => {
-        if (!user) return;
-        setIsSending(invoiceId);
-        try {
-            // const invoice = await getInvoiceById(invoiceId);
-            // const companyProfile = await getCompanyProfile(user.uid);
-            // if (!invoice || !companyProfile) {
-            //     throw new Error("Invoice or company profile not found");
-            // }
-            // await sendInvoiceByEmail(invoice, companyProfile, { t, formatCurrency, locale });
-            toast({
-                title: "Función no disponible",
-                description: `Esta funcionalidad requiere configuración adicional.`,
-            });
-        } catch (error) {
-             console.error("Error sending email:", error);
-            toast({ title: "Error", description: "Hubo un problema al enviar el correo.", variant: "destructive" });
-        } finally {
-            setIsSending(null);
+    const handleExportCsv = () => {
+        if (!filteredInvoices.length) {
+            toast({ title: "Sin datos", description: "No hay facturas para exportar.", variant: "destructive" });
+            return;
         }
-    }
+        const headers = ['Nº Factura', 'Cliente', 'Email Cliente', 'Fecha Emisión', 'Fecha Vencimiento', 'Subtotal', 'Total', 'Estado'];
+        const rows = filteredInvoices.map(inv => [
+            inv.invoiceNumber,
+            inv.client.name,
+            inv.client.email || '',
+            format(new Date(inv.issueDate), 'dd/MM/yyyy'),
+            format(new Date(inv.dueDate), 'dd/MM/yyyy'),
+            inv.subtotal?.toFixed(2) ?? '0.00',
+            inv.total?.toFixed(2) ?? '0.00',
+            inv.status,
+        ]);
+        const statusMap: Record<string, string> = { Paid: 'Pagada', Pending: 'Pendiente', Overdue: 'Vencida', Draft: 'Borrador' };
+        const translatedRows = rows.map(r => [...r.slice(0, -1), statusMap[r[r.length - 1] as string] || r[r.length - 1]]);
+        const csvContent = '\uFEFF' + [headers, ...translatedRows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Facturas-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast({ title: "CSV Exportado", description: `Se han exportado ${filteredInvoices.length} facturas.` });
+    };
 
-    const getSortIcon = (key: keyof Invoice | 'client.name') => {
-        if (!sortConfig || sortConfig.key !== key) {
-          return <ArrowUpDown className="ml-2 h-4 w-4" />;
-        }
-        if (sortConfig.direction === 'ascending') {
-          return <ArrowUpDown className="ml-2 h-4 w-4" />; 
-        }
-        return <ArrowUpDown className="ml-2 h-4 w-4" />; 
-      };
-
-    if (authLoading) {
-        return <p>Cargando...</p>;
-    }
-    
-    if (authError) {
-        return <p>Error de autenticación: {authError.message}</p>
-    }
+    if (status === 'loading') return <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
 
     if (!user) {
-         return (
-            <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Acceso Denegado</AlertTitle>
-                <AlertDescription>Debes iniciar sesión para ver esta página.</AlertDescription>
-            </Alert>
-        )
-    }
-
-    if (!user.emailVerified) {
         return (
-            <Alert variant="destructive">
-                <MailWarning className="h-4 w-4" />
-                <AlertTitle>Verifica tu correo electrónico</AlertTitle>
-                <AlertDescription>
-                    Hemos enviado un correo de verificación a tu dirección. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta y poder continuar.
-                </AlertDescription>
-            </Alert>
-        )
+           <Alert variant="destructive" className="rounded-3xl border-none shadow-2xl">
+               <AlertCircle className="h-4 w-4" />
+               <AlertTitle className="font-black uppercase tracking-widest text-xs">Acceso Denegado</AlertTitle>
+               <AlertDescription className="font-bold">Debes iniciar sesión para ver esta página.</AlertDescription>
+           </Alert>
+       )
     }
-
 
     return (
-        <Card>
-            <CardHeader>
-                <div className="flex items-center justify-between gap-4">
-                    <CardTitle>{t('invoices.allInvoices')}</CardTitle>
-                    <div className="flex items-center gap-2">
-                        <Input
-                            placeholder={t('invoices.searchPlaceholder')}
+        <div className="space-y-8 animate-in fade-in duration-700 pb-20">
+            {/* Header & Actions */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div className="space-y-1">
+                    <h2 className="text-4xl font-black font-headline tracking-tighter capitalize">Listado de Facturas</h2>
+                    <p className="text-muted-foreground font-medium italic">Gestiona tus ventas y cobros del trimestre de forma profesional.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Button onClick={handleExportCsv} variant="outline" className="h-12 rounded-2xl px-6 font-bold border-2 border-dashed border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 hover:border-solid hover:text-primary transition-all active:scale-95 shadow-sm group/export">
+                        <FileDown className="mr-2 h-4 w-4 transition-transform group-hover/export:-translate-y-0.5" /> Exportar CSV
+                    </Button>
+                    <Link href="/dashboard/invoices/new">
+                        <Button className="h-12 rounded-2xl px-6 font-black shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all hover:scale-[1.02] active:scale-95">
+                            <Plus className="mr-2 h-5 w-5 stroke-[2.5]" />
+                            Crear Factura
+                        </Button>
+                    </Link>
+                </div>
+            </div>
+
+            {/* Filters Rack */}
+            <Card className="glass-card border-none shadow-xl shadow-black/5 p-2 rounded-[2rem]">
+                <CardContent className="p-2 flex flex-col lg:flex-row items-center gap-4">
+                    <div className="relative flex-1 w-full group">
+                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                        <Input 
+                            placeholder="Buscar por cliente o número de factura..." 
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-64"
+                            className="h-14 pl-14 rounded-2xl bg-muted/30 border-none group-focus-within:ring-2 ring-primary/10 transition-all font-bold text-lg"
                         />
-                         <Button onClick={handleBulkDownload} disabled={isBulkDownloading || sortedInvoices.length === 0} variant="outline">
-                            <FileDown className="mr-2 h-4 w-4" />
-                            {isBulkDownloading ? "Descargando..." : "Descargar Filtradas"}
-                        </Button>
-                        <Tabs value={statusFilter} onValueChange={(value) => setStatusFilter(value as InvoiceStatus | 'All')}>
-                            <TabsList>
-                                <TabsTrigger value="All">{t('common.all')}</TabsTrigger>
-                                <TabsTrigger value="Paid">{t('invoices.statusPaid')}</TabsTrigger>
-                                <TabsTrigger value="Pending">{t('invoices.statusPending')}</TabsTrigger>
-                                <TabsTrigger value="Overdue">{t('invoices.statusOverdue')}</TabsTrigger>
+                    </div>
+                    <div className="flex items-center gap-2 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0 h-12 scrollbar-hide">
+                        <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)} className="h-10">
+                            <TabsList className="bg-muted/40 p-1 rounded-xl h-full font-bold">
+                                <TabsTrigger value="All" className="rounded-lg text-xs px-4">Todas</TabsTrigger>
+                                <TabsTrigger value="Paid" className="rounded-lg text-xs px-4 text-emerald-500 data-[state=active]:bg-emerald-500/10">Pagadas</TabsTrigger>
+                                <TabsTrigger value="Pending" className="rounded-lg text-xs px-4 text-amber-500 data-[state=active]:bg-amber-500/10">Pendientes</TabsTrigger>
+                                <TabsTrigger value="Overdue" className="rounded-lg text-xs px-4 text-destructive data-[state=active]:bg-destructive/10">Vencidas</TabsTrigger>
                             </TabsList>
                         </Tabs>
                     </div>
-                </div>
-            </CardHeader>
-            <CardContent>
-                {dbLoading && <p>Cargando facturas...</p>}
-                {!dbLoading && (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>
-                                    <Button variant="ghost" onClick={() => requestSort('client.name')}>
-                                        {t('invoices.client')} {getSortIcon('client.name')}
-                                    </Button>
-                                </TableHead>
-                                <TableHead>
-                                    <Button variant="ghost" onClick={() => requestSort('invoiceNumber')}>
-                                        {t('invoices.invoiceNumberShort')} {getSortIcon('invoiceNumber')}
-                                    </Button>
-                                </TableHead>
-                                <TableHead>
-                                    <Button variant="ghost" onClick={() => requestSort('total')}>
-                                        {t('invoices.amount')} {getSortIcon('total')}
-                                    </Button>
-                                </TableHead>
-                                <TableHead>
-                                    <Button variant="ghost" onClick={() => requestSort('status')}>
-                                        {t('invoices.status')} {getSortIcon('status')}
-                                    </Button>
-                                </TableHead>
-                                <TableHead>
-                                    <Button variant="ghost" onClick={() => requestSort('dueDate')}>
-                                        {t('invoices.dueDate')} {getSortIcon('dueDate')}
-                                    </Button>
-                                </TableHead>
-                                <TableHead>
-                                    <span className="sr-only">{t('common.actions')}</span>
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {sortedInvoices.map((invoice) => (
-                                <TableRow key={invoice.id}>
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="hidden h-9 w-9 sm:flex">
-                                                <AvatarImage src={invoice.client.avatarUrl} alt="Avatar" data-ai-hint="person avatar" />
-                                                <AvatarFallback>{invoice.client.name.charAt(0)}</AvatarFallback>
-                                            </Avatar>
-                                            <div className="font-medium">{invoice.client.name}</div>
+                </CardContent>
+            </Card>
+
+            {/* Invoices List */}
+            <div className="grid gap-4">
+                <AnimatePresence>
+                    {dbLoading ? (
+                        <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>
+                    ) : (
+                        filteredInvoices.map((invoice, idx) => (
+                            <motion.div 
+                                key={invoice.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: idx * 0.05 }}
+                                whileHover={{ y: -4, scale: 1.005 }}
+                                className="group relative glass-card p-6 shadow-xl shadow-black/[0.02] hover:shadow-primary/10 transition-all cursor-pointer overflow-hidden rounded-[2.5rem]"
+                            >
+                                <div className="absolute top-0 left-0 w-2 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                                
+                                {/* Full-card click overlay */}
+                                <Link href={`/dashboard/invoices/${invoice.id}`} className="absolute inset-0 z-0" />
+
+                                <div className="relative z-[1] flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pointer-events-none">
+                                    <div className="flex items-center gap-5">
+                                        <div className="h-16 w-16 rounded-2xl bg-primary/5 flex items-center justify-center group-hover:bg-primary/20 transition-colors shadow-inner group-hover:rotate-3 duration-500">
+                                            <FileText className="h-7 w-7 text-primary/60 group-hover:text-primary transition-colors" />
                                         </div>
-                                    </TableCell>
-                                    <TableCell>{invoice.invoiceNumber}</TableCell>
-                                    <TableCell>{formatCurrency(invoice.total)}</TableCell>
-                                    <TableCell>
-                                        <InvoiceStatusBadge status={invoice.status} />
-                                    </TableCell>
-                                    <TableCell>{format(invoice.dueDate, 'PPP', { locale: localeMap[locale as keyof typeof localeMap] || undefined })}</TableCell>
-                                    <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button aria-haspopup="true" size="icon" variant="ghost" disabled={isDownloading === invoice.id || isUpdating === invoice.id || isSending === invoice.id}>
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                    <span className="sr-only">{t('common.menu')}</span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
-                                                <DropdownMenuItem asChild>
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-3">
+                                                <h3 className="text-xl font-black font-headline tracking-tighter group-hover:text-primary transition-colors">{invoice.client.name}</h3>
+                                                <Badge variant="outline" className="font-mono text-[10px] py-0.5 px-2 border-primary/20 text-primary bg-primary/5 uppercase font-black rounded-lg">#{invoice.invoiceNumber.split('-').pop()}</Badge>
+                                            </div>
+                                            <div className="flex items-center gap-4 text-muted-foreground font-medium text-xs italic opacity-70">
+                                                <span className="flex items-center gap-1.5"><CalendarIcon className="h-3 w-3" /> {format(new Date(invoice.issueDate), 'dd MMM yyyy', { locale: es })}</span>
+                                                <span className="h-1 w-1 rounded-full bg-border" />
+                                                <span className="flex items-center gap-1.5 text-destructive/70"><AlertCircle className="h-3 w-3" /> {format(new Date(invoice.dueDate), 'dd MMM yyyy', { locale: es })}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center justify-between md:justify-end gap-10 w-full md:w-auto border-t md:border-t-0 pt-4 md:pt-0">
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Total Factura</p>
+                                            <p className="text-2xl font-black tracking-tighter text-gradient">{formatCurrency(invoice.total)}</p>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-4 pointer-events-auto">
+                                            <InvoiceStatusBadge status={invoice.status} />
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl hover:bg-primary/10 group/dots transition-all">
+                                                        <MoreHorizontal className="h-5 w-5 text-muted-foreground group-hover/dots:text-primary transition-colors" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="glass rounded-3xl border-white/10 shadow-2xl p-1 w-64 font-bold animate-in fade-in zoom-in-95 duration-200">
+                                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest px-4 py-3 opacity-50 flex items-center justify-between">
+                                                        <span>Gestión de Factura</span>
+                                                        <FileText className="h-3 w-3" />
+                                                    </DropdownMenuLabel>
+                                                    <DropdownMenuItem onClick={() => handleDownloadPdf(invoice)} className="rounded-2xl p-3.5 gap-3 text-sm focus:bg-primary/5 cursor-pointer">
+                                                        <div className="p-2 bg-muted/30 rounded-lg group-hover:bg-primary/20"><Download className="h-4 w-4" /></div> Descargar PDF
+                                                    </DropdownMenuItem>
                                                     <Link href={`/dashboard/invoices/${invoice.id}`}>
-                                                        <View className="mr-2 h-4 w-4"/>{t('common.viewDetails')}
+                                                        <DropdownMenuItem className="rounded-2xl p-3.5 gap-3 text-sm focus:bg-primary/5 cursor-pointer">
+                                                            <div className="p-2 bg-muted/30 rounded-lg"><View className="h-4 w-4" /></div> Ver Detalles
+                                                        </DropdownMenuItem>
                                                     </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`/dashboard/invoices/${invoice.id}/edit`}>
-                                                        <Edit className="mr-2 h-4 w-4"/>{t('common.edit')}
+                                                    <Link href={`/dashboard/invoices/edit/${invoice.id}`}>
+                                                        <DropdownMenuItem className="rounded-2xl p-3.5 gap-3 text-sm focus:bg-primary/5 cursor-pointer">
+                                                            <div className="p-2 bg-muted/30 rounded-lg"><Edit className="h-4 w-4" /></div> Editar Factura
+                                                        </DropdownMenuItem>
                                                     </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem onClick={() => handleMarkAsPaid(invoice)} disabled={invoice.status === 'Paid' || isUpdating === invoice.id}>
-                                                    <CheckCircle className="mr-2 h-4 w-4" />
-                                                    {isUpdating === invoice.id ? "Actualizando..." : t('invoices.markAsPaid')}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleSendEmail(invoice.id)} disabled={isSending === invoice.id}>
-                                                    <Send className="mr-2 h-4 w-4"/> 
-                                                    {isSending === invoice.id ? "Enviando..." : "Enviar por Email"}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleDownloadPdf(invoice.id)} disabled={isDownloading === invoice.id}>
-                                                    <Download className="mr-2 h-4 w-4"/>
-                                                    {isDownloading === invoice.id ? "Descargando..." : t('invoices.downloadPdf')}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem onClick={() => handleDeleteInvoice(invoice.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                                                    <Trash2 className="mr-2 h-4 w-4"/>
-                                                    {t('invoices.deleteInvoice')}
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                )}
-                {!dbLoading && sortedInvoices.length === 0 && (
-                    <div className="text-center py-10">
-                        <p className="text-muted-foreground">No tienes facturas todavía.</p>
-                    </div>
-                )}
-            </CardContent>
-        </Card>
+                                                    <DropdownMenuItem className="rounded-2xl p-3.5 gap-3 text-sm focus:bg-primary/5 cursor-pointer">
+                                                        <div className="p-2 bg-muted/30 rounded-lg"><Mail className="h-4 w-4" /></div> Enviar por Email
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator className="bg-border/50 mx-2" />
+                                                    <DropdownMenuItem onClick={() => handleDelete(invoice.id)} className="rounded-2xl p-3.5 gap-3 text-sm text-destructive focus:bg-destructive/5 cursor-pointer">
+                                                        <div className="p-2 bg-destructive/10 rounded-lg"><Trash2 className="h-4 w-4" /></div> Eliminar Factura
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))
+                    )}
+                </AnimatePresence>
+            </div>
+            
+            {!dbLoading && filteredInvoices.length === 0 && (
+                <div className="text-center py-20 bg-muted/20 rounded-[3rem] border-2 border-dashed border-muted">
+                    <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                    <p className="text-muted-foreground font-black uppercase tracking-widest text-xs">No hay facturas emitidas todavía</p>
+                    <Link href="/dashboard/invoices/new" className="mt-4 inline-block">
+                        <Button variant="link" className="font-bold text-primary">Crea tu primera factura ahora</Button>
+                    </Link>
+                </div>
+            )}
+        </div>
     );
 }

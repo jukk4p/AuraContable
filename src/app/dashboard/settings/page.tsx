@@ -1,816 +1,493 @@
+"use client"
 
-"use client";
+import React, { useState, useEffect } from 'react';
+import { 
+    User, Building, FileText, Mail, 
+    Palette, Bell, Languages, CreditCard, 
+    Shield, Check, Save, Globe,
+    Trash2, Edit, Sun, Moon, Monitor,
+    Sparkles, Palette as PaletteIcon, Zap, Camera, Smartphone
+} from 'lucide-react';
+import { motion, AnimatePresence } from "framer-motion";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { useLocale } from "@/lib/i18n/locale-provider";
-import type { Locale } from "@/lib/i18n/locales";
-import { Building, Languages, Shield, User, Bell, Palette, FileText, Moon, Sun, Monitor, PlusCircle, Trash2, Mail, Image as ImageIcon } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { useTheme } from "next-themes";
-import { Switch } from "@/components/ui/switch";
-import React, { useState, useEffect, useRef } from "react";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth } from "@/lib/firebase/config";
-import { updateProfile, updateEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
-import { useToast } from "@/hooks/use-toast";
-import type { CompanyProfile, InvoiceTax, NotificationPreferences } from "@/lib/types";
-import { getCompanyProfile, saveCompanyProfile } from "@/lib/firebase/firestore";
-import Image from "next/image";
+import { 
+    Select, SelectContent, SelectItem, 
+    SelectTrigger, SelectValue 
+} from '@/components/ui/select';
 
+import { useLocale } from '@/lib/i18n/locale-provider';
+import { cn } from '@/lib/utils';
+import { useSession } from "next-auth/react";
+import { getCompanyProfile, saveCompanyProfile } from '@/actions/company';
+import { toast } from '@/hooks/use-toast';
 
 export default function SettingsPage() {
     const { t } = useLocale();
-    const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    const [user] = useAuthState(auth);
-    const { toast } = useToast();
-
+    const { data: session } = useSession();
+    const user = session?.user;
+    const [activeTab, setActiveTab] = useState("profile");
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const { setTheme, theme } = useTheme();
+    const [companyData, setCompanyData] = useState<any>({
+        companyName: '',
+        taxId: '',
+        address: '',
+        email: '',
+        phone: '',
+        logoUrl: '',
+        iban: '',
+        currency: 'EUR',
+    });
 
     useEffect(() => {
-        async function fetchProfile() {
-            if (user) {
-                setIsLoading(true);
-                try {
-                    const existingProfile = await getCompanyProfile(user.uid);
-                    
-                    const defaultProfile: CompanyProfile = {
-                        userId: user.uid,
-                        name: '', taxId: '', address: '', billingEmail: '', iban: '',
-                        currency: 'EUR',
-                        language: 'es',
-                        templates: {
-                            newInvoice: { subject: '', body: '' },
-                            reminder: { subject: '', body: '' }
-                        },
-                        notifications: {
-                            invoicePaid: { email: true, app: true },
-                            invoiceOverdue: { email: true, app: true }
-                        },
-                        theme: 'system',
-                    };
-
-                    if (existingProfile) {
-                        setCompanyProfile({
-                            ...defaultProfile,
-                            ...existingProfile,
-                            notifications: existingProfile.notifications || defaultProfile.notifications,
-                        });
-                    } else {
-                        setCompanyProfile(defaultProfile);
-                    }
-                } catch (e) {
-                    console.error("Failed to fetch company profile:", e);
-                     toast({
-                        title: "Error",
-                        description: "No se pudo cargar el perfil de la empresa.",
-                        variant: "destructive",
-                    });
-                } finally {
-                    setIsLoading(false);
+        async function loadProfile() {
+            if (user?.id) {
+                const profile = await getCompanyProfile(user.id);
+                if (profile) {
+                    setCompanyData(profile);
                 }
+                setLoading(false);
             }
         }
-        fetchProfile();
-    }, [user, toast]);
+        loadProfile();
+    }, [user]);
 
-    const handleProfileChange = (updatedProfile: CompanyProfile) => {
-        setCompanyProfile(updatedProfile);
-    }
-    
-    const handleSaveAllChanges = async () => {
-        if (!user || !companyProfile) return;
-        setIsSaving(true);
+    const handleSave = async () => {
+        if (!user?.id) return;
+        setSaving(true);
         try {
-            await saveCompanyProfile(companyProfile);
-            toast({
-                title: "Ajustes guardados",
-                description: "Todos tus cambios se han guardado correctamente.",
-            });
+            const result = await saveCompanyProfile({ ...companyData, userId: user.id });
+            if (result.success) {
+                toast({ title: "Configuración Guardada", description: "Los cambios se han aplicado correctamente." });
+            } else {
+                toast({ title: "Error al guardar", description: result.error, variant: "destructive" });
+            }
         } catch (error) {
-             toast({
-                title: "Error",
-                description: "Hubo un problema al guardar los ajustes.",
-                variant: "destructive",
-            });
+            toast({ title: "Error crítico", description: "Ocurrió un error inesperado.", variant: "destructive" });
         } finally {
-            setIsSaving(false);
+            setSaving(false);
         }
-    }
-
+    };
 
     const tabs = [
-        { value: "profile", label: t('settings.profile.title'), icon: User },
-        { value: "company", label: t('settings.company.title'), icon: Building },
-        { value: "invoicing", label: t('settings.invoicing.title'), icon: FileText },
-        { value: "templates", label: t('settings.templates.title'), icon: Mail },
-        { value: "appearance", label: t('settings.appearance.title'), icon: Palette },
-        { value: "notifications", label: t('settings.notifications.title'), icon: Bell },
-        { value: "language", label: t('settings.language.title'), icon: Languages },
-        { value: "security", label: t('settings.security.title'), icon: Shield },
+        { id: "profile", label: "Perfil de Usuario", icon: User },
+        { id: "appearance", label: "Personalización", icon: PaletteIcon },
+        { id: "company", label: "Datos de Empresa", icon: Building },
+        { id: "payments", label: "Pagos y Pasarelas", icon: CreditCard },
+        { id: "notifs", label: "Notificaciones", icon: Bell },
+        { id: "billing", label: "Suscripción SaaS", icon: Zap },
     ];
 
+    if (loading && user) return <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold font-headline">{t('nav.settings')}</h1>
-                <Button onClick={handleSaveAllChanges} disabled={isSaving || isLoading}>
-                    {isSaving ? "Guardando..." : t('common.saveChanges')}
+        <div className="space-y-10 animate-in fade-in duration-700 pb-20">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div className="space-y-1">
+                    <h2 className="text-3xl font-black font-headline tracking-tighter text-foreground">Configuración</h2>
+                    <p className="text-muted-foreground font-medium italic">Personaliza tu experiencia y configura AuraContable.</p>
+                </div>
+                <Button 
+                    onClick={handleSave} 
+                    disabled={saving}
+                    className="h-12 rounded-2xl px-8 font-black shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all hover:scale-[1.02] active:scale-95"
+                >
+                    <Save className="mr-2 h-4 w-4" /> 
+                    {saving ? "Guardando..." : "Guardar Todos los Cambios"}
                 </Button>
             </div>
-            
-            <Tabs defaultValue="profile" className="grid md:grid-cols-[180px_1fr] lg:grid-cols-[250px_1fr] gap-6 items-start">
-                <TabsList className="w-full h-auto bg-transparent p-0 flex-col items-start" orientation="vertical">
-                    {tabs.map((tab) => (
-                         <TabsTrigger key={tab.value} value={tab.value} className="w-full justify-start gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
-                            <tab.icon className="h-4 w-4" />
-                            {tab.label}
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
-                
-                <div className="col-span-1">
-                    <TabsContent value="profile" className="m-0">
-                        <ProfileSettings />
-                    </TabsContent>
-                    <TabsContent value="company" className="m-0">
-                        <CompanySettings 
-                            profile={companyProfile}
-                            onProfileChange={handleProfileChange}
-                            isLoading={isLoading}
-                        />
-                    </TabsContent>
-                    <TabsContent value="invoicing" className="m-0">
-                        <InvoicingSettings 
-                            profile={companyProfile}
-                            onProfileChange={handleProfileChange}
-                            isLoading={isLoading}
-                        />
-                    </TabsContent>
-                    <TabsContent value="templates" className="m-0">
-                        <TemplateSettings 
-                             profile={companyProfile}
-                            onProfileChange={handleProfileChange}
-                            isLoading={isLoading}
-                        />
-                    </TabsContent>
-                    <TabsContent value="security" className="m-0">
-                        <SecuritySettings />
-                    </TabsContent>
-                    <TabsContent value="notifications" className="m-0">
-                        <NotificationsSettings
-                             profile={companyProfile}
-                            onProfileChange={handleProfileChange}
-                            isLoading={isLoading}
-                        />
-                    </TabsContent>
-                    <TabsContent value="appearance" className="m-0">
-                        <AppearanceSettings 
-                            profile={companyProfile}
-                            onProfileChange={handleProfileChange}
-                            isLoading={isLoading}
-                        />
-                    </TabsContent>
-                    <TabsContent value="language" className="m-0">
-                        <LanguageSettings 
-                            profile={companyProfile}
-                            onProfileChange={handleProfileChange}
-                            isLoading={isLoading}
-                        />
-                    </TabsContent>
+
+            <div className="grid gap-8 md:grid-cols-[280px_1fr] items-start">
+                {/* Lateral Navigation */}
+                <Card className="glass-card border-none shadow-2xl shadow-black/[0.03] p-2 rounded-[2rem] md:sticky md:top-28">
+                    <div className="flex flex-col gap-1">
+                        {tabs.map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={cn(
+                                    "flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-sm tracking-tight transition-all text-left group",
+                                    activeTab === tab.id 
+                                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                                        : "hover:bg-primary/5 text-muted-foreground hover:text-primary"
+                                )}
+                            >
+                                <tab.icon className={cn("h-5 w-5", activeTab === tab.id ? "stroke-[2.5]" : "stroke-2")} />
+                                {tab.label}
+                                {tab.id === 'payments' && (
+                                    <span className="ml-auto h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </Card>
+
+                {/* Main Content Area */}
+                <div className="space-y-8 animate-in slide-in-from-bottom-5 duration-500">
+                    <AnimatePresence mode="wait">
+                        {activeTab === 'profile' && (
+                            <motion.div 
+                                key="profile"
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                className="space-y-8"
+                            >
+                                <Card className="glass-card border-none shadow-xl shadow-black/[0.02] rounded-[2.5rem] p-8">
+                                    <div className="flex flex-col md:flex-row items-center gap-8 mb-10">
+                                        <div className="relative group">
+                                            <Avatar className="h-32 w-32 border-4 border-white shadow-2xl ring-1 ring-black/5 overflow-hidden">
+                                                <AvatarImage src={user?.image || undefined} />
+                                                <AvatarFallback className="bg-primary/10 text-primary text-3xl font-black">
+                                                    {user?.name?.charAt(0) || "U"}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <button className="absolute bottom-0 right-0 h-10 w-10 bg-primary text-primary-foreground rounded-full border-4 border-white shadow-lg flex items-center justify-center hover:scale-110 transition-transform active:scale-90">
+                                                <Camera className="h-5 w-5" />
+                                            </button>
+                                        </div>
+                                        <div className="space-y-1 text-center md:text-left">
+                                            <h3 className="text-2xl font-black font-headline tracking-tight">{user?.name || "Usuario"}</h3>
+                                            <p className="text-muted-foreground font-medium italic">{user?.email}</p>
+                                            <div className="flex gap-3 mt-4 justify-center md:justify-start">
+                                                <Badge className="bg-emerald-500/10 text-emerald-500 border-none font-black text-[10px] uppercase py-1 px-4 rounded-full transition-all duration-300 hover:bg-emerald-500 hover:text-white cursor-default shadow-sm hover:shadow-emerald-500/20 active:scale-95">Cuenta Verificada</Badge>
+                                                <Badge className="bg-primary/10 text-primary border-none font-black text-[10px] uppercase py-1 px-4 rounded-full transition-all duration-300 hover:bg-primary hover:text-white cursor-default shadow-sm hover:shadow-primary/20 active:scale-95">Plan Enterprise</Badge>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid md:grid-cols-2 gap-8">
+                                        <SettingField label="Nombre Completo" placeholder="Ej. Juan Pérez" value={user?.name || ""} disabled />
+                                        <SettingField label="Correo Electrónico" placeholder="tu@email.com" value={user?.email || ""} disabled />
+                                    </div>
+                                </Card>
+                            </motion.div>
+                        )}
+
+                        {activeTab === 'appearance' && (
+                            <motion.div 
+                                key="appearance"
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                className="space-y-8"
+                            >
+                                <Card className="glass-card border-none shadow-xl shadow-black/[0.02] rounded-[2.5rem] p-10 space-y-10">
+                                    <div className="space-y-6">
+                                        <div className="space-y-2">
+                                            <h4 className="text-2xl font-black font-headline tracking-tighter flex items-center gap-3">
+                                                <Sparkles className="h-6 w-6 text-primary" /> Personalización Visual
+                                            </h4>
+                                            <p className="text-sm font-medium text-muted-foreground italic leading-relaxed">Configura la atmósfera de AuraContable para que se adapte perfectamente a tu entorno de trabajo.</p>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                            <ThemeCard 
+                                                active={theme === 'light'} 
+                                                onClick={() => setTheme('light')}
+                                                icon={<Sun />} 
+                                                label="Modo Claro" 
+                                                desc="Claridad cristalina para el día."
+                                            />
+                                            <ThemeCard 
+                                                active={theme === 'dark'} 
+                                                onClick={() => setTheme('dark')}
+                                                icon={<Moon />} 
+                                                label="Modo Oscuro" 
+                                                desc="Elegancia profunda para la noche."
+                                            />
+                                            <ThemeCard 
+                                                active={theme === 'system'} 
+                                                onClick={() => setTheme('system')}
+                                                icon={<Monitor />} 
+                                                label="Modo Sistema" 
+                                                desc="Armonía absoluta con tu equipo."
+                                            />
+                                        </div>
+                                    </div>
+                                </Card>
+                            </motion.div>
+                        )}
+
+                        {activeTab === 'company' && (
+                            <motion.div 
+                                key="company"
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                className="space-y-8"
+                            >
+                                <Card className="glass-card border-none shadow-xl shadow-black/[0.02] rounded-[2.5rem] p-8">
+                                    <div className="grid md:grid-cols-2 gap-8">
+                                        <div className="space-y-3">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Nombre Comercial</Label>
+                                            <Input 
+                                                value={companyData.companyName || ''} 
+                                                onChange={(e) => setCompanyData({...companyData, companyName: e.target.value})}
+                                                placeholder="Ej. Aura Contable SL" 
+                                                className="h-14 rounded-2xl bg-muted/30 border-none font-bold text-base focus:ring-2 ring-primary/20 transition-all px-6 text-foreground"
+                                            />
+                                        </div>
+                                        <div className="space-y-3">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">CIF / NIF / Tax ID</Label>
+                                            <Input 
+                                                value={companyData.taxId || ''} 
+                                                onChange={(e) => setCompanyData({...companyData, taxId: e.target.value})}
+                                                placeholder="Ej. B12345678" 
+                                                className="h-14 rounded-2xl bg-muted/30 border-none font-bold text-base focus:ring-2 ring-primary/20 transition-all px-6 text-foreground"
+                                            />
+                                        </div>
+                                        <div className="space-y-3 md:col-span-2">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Dirección Fiscal</Label>
+                                            <Input 
+                                                value={companyData.address || ''} 
+                                                onChange={(e) => setCompanyData({...companyData, address: e.target.value})}
+                                                placeholder="Calle Falsa 123, Madrid" 
+                                                className="h-14 rounded-2xl bg-muted/30 border-none font-bold text-base focus:ring-2 ring-primary/20 transition-all px-6 text-foreground"
+                                            />
+                                        </div>
+                                        <div className="space-y-3">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Moneda Predeterminada</Label>
+                                            <Select 
+                                                value={companyData.currency || 'EUR'} 
+                                                onValueChange={(v) => setCompanyData({...companyData, currency: v})}
+                                            >
+                                                <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none font-bold text-base focus:ring-2 ring-primary/20 transition-all text-foreground">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-2xl border-white/10 glass shadow-2xl">
+                                                    <SelectItem value="EUR" className="font-bold">Euro (€)</SelectItem>
+                                                    <SelectItem value="USD" className="font-bold">US Dollar ($)</SelectItem>
+                                                    <SelectItem value="GBP" className="font-bold">British Pound (£)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email de Facturación</Label>
+                                            <Input 
+                                                value={companyData.email || ''} 
+                                                onChange={(e) => setCompanyData({...companyData, email: e.target.value})}
+                                                placeholder="facturas@empresa.com" 
+                                                className="h-14 rounded-2xl bg-muted/30 border-none font-bold text-base focus:ring-2 ring-primary/20 transition-all px-6 text-foreground"
+                                            />
+                                        </div>
+                                    </div>
+                                </Card>
+                            </motion.div>
+                        )}
+
+                        {activeTab === 'payments' && (
+                            <motion.div 
+                                key="payments"
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                className="space-y-8"
+                            >
+                                <div className="grid gap-6">
+                                    <IntegrationCard 
+                                        name="Stripe" 
+                                        desc="Acepta pagos con tarjeta y Apple Pay directamente en tus facturas." 
+                                        icon="/images/stripe.svg" 
+                                        connected={true} 
+                                    />
+                                    <IntegrationCard 
+                                        name="PayPal" 
+                                        desc="Ofrece PayPal como método de pago global para tus clientes." 
+                                        icon="/images/PP_logo_h_200x51.png" 
+                                        connected={true}
+                                    />
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {activeTab === 'notifs' && (
+                            <motion.div 
+                                key="notifs"
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                className="space-y-8"
+                            >
+                                <Card className="glass-card border-none shadow-xl shadow-black/[0.02] rounded-[2.5rem] p-8 space-y-10">
+                                    <div className="space-y-6">
+                                        <h4 className="text-xl font-black font-headline tracking-tight flex items-center gap-3">
+                                            <Mail className="h-5 w-5 text-primary" /> Alertas por Email
+                                        </h4>
+                                        <div className="space-y-4">
+                                            <NotificationSwitch label="Facturas Vencidas" desc="Avisame cuando una factura supere su fecha de vencimiento." defaultChecked />
+                                            <NotificationSwitch label="Nuevos Pagos" desc="Recibe un email cuando un cliente complete un pago." defaultChecked />
+                                            <NotificationSwitch label="Resumen Semanal" desc="Un reporte con el estado de tu tesorería cada lunes." />
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-10 border-t border-border/50 space-y-6">
+                                        <h4 className="text-xl font-black font-headline tracking-tight flex items-center gap-3">
+                                            <Smartphone className="h-5 w-5 text-primary" /> Notificaciones Directas
+                                        </h4>
+                                        <div className="space-y-4">
+                                            <NotificationSwitch label="Alertas de Sistema" desc="Mantenimiento, actualizaciones y avisos críticos de AuraContable." defaultChecked />
+                                            <NotificationSwitch label="Actividad de Seguridad" desc="Avisos de nuevos inicios de sesión desde otros dispositivos." defaultChecked />
+                                        </div>
+                                    </div>
+                                </Card>
+                            </motion.div>
+                        )}
+
+                        {activeTab === 'billing' && (
+                            <motion.div 
+                                key="billing"
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                className="space-y-8"
+                            >
+                                <div className="grid md:grid-cols-3 gap-8">
+                                    <Card className="md:col-span-2 glass-card border-none shadow-xl shadow-black/[0.02] rounded-[2.5rem] p-10 space-y-8 overflow-hidden relative">
+                                        <div className="absolute top-0 right-0 p-10 opacity-[0.03] -rotate-12">
+                                            <Zap className="h-40 w-40" />
+                                        </div>
+                                        <div className="space-y-2 relative z-10">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Tu Plan Actual</p>
+                                            <h3 className="text-4xl font-black font-headline tracking-tighter">Aura Enterprise</h3>
+                                            <p className="text-sm font-medium text-muted-foreground italic">Renueva el 15 de Abril, 2026</p>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-8 pt-4">
+                                            <div className="space-y-1">
+                                                <p className="text-xs font-black opacity-40">Facturación anual</p>
+                                                <p className="text-2xl font-black">490,00€ <span className="text-sm opacity-30">/ año</span></p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-xs font-black opacity-40">Método de pago</p>
+                                                <p className="text-lg font-black flex items-center gap-2 italic">Visa **** 4242</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-6 flex gap-4">
+                                            <Button variant="outline" className="h-12 flex-1 rounded-2xl font-black border-2 border-dashed border-primary/20">Cambiar Método</Button>
+                                            <Button className="h-12 flex-1 rounded-2xl font-black shadow-lg shadow-primary/20">Gestionar Plan</Button>
+                                        </div>
+                                    </Card>
+
+                                    <Card className="bg-primary border-none p-8 rounded-[2.5rem] text-primary-foreground space-y-6 shadow-2xl shadow-primary/40 flex flex-col justify-between">
+                                        <div className="space-y-4">
+                                            <Zap className="h-10 w-10 stroke-[3]" />
+                                            <h4 className="text-xl font-black font-headline leading-tight">Potencia tu Negocio con Aura Plus</h4>
+                                            <ul className="space-y-3">
+                                               <li className="flex items-center gap-3 text-xs font-bold opacity-80"><Check className="h-4 w-4" /> Multi-empresa Ilimitado</li>
+                                               <li className="flex items-center gap-3 text-xs font-bold opacity-80"><Check className="h-4 w-4" /> Conciliación Bancaria IA</li>
+                                               <li className="flex items-center gap-3 text-xs font-bold opacity-80"><Check className="h-4 w-4" /> API de Desarrollador</li>
+                                            </ul>
+                                        </div>
+                                        <Button className="w-full bg-white text-primary hover:bg-white/90 font-black h-12 rounded-2xl">Descubre Aura Plus</Button>
+                                    </Card>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
-            </Tabs>
+            </div>
         </div>
     );
 }
 
-
-function ProfileSettings() {
-    const { t } = useLocale();
-    const [user, loading, error] = useAuthState(auth);
-    const { toast } = useToast();
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
-
-    useEffect(() => {
-        if (user) {
-            setName(user.displayName || '');
-            setEmail(user.email || '');
-        }
-    }, [user]);
-
-    const handleSaveChanges = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!user) return;
-
-        setIsSaving(true);
-        try {
-            if (name !== user.displayName) {
-                await updateProfile(user, { displayName: name });
-            }
-            if (email !== user.email) {
-                // This is a sensitive operation and might require re-authentication.
-                // For simplicity, we are not handling re-authentication here,
-                // but in a real-world app, you should.
-                await updateEmail(user, email);
-            }
-            toast({
-                title: "Perfil actualizado",
-                description: "Tus cambios se han guardado correctamente.",
-            });
-        } catch (error: any) {
-            console.error("Error updating profile:", error);
-            toast({
-                title: "Error",
-                description: `Hubo un problema al actualizar tu perfil: ${error.message}`,
-                variant: "destructive",
-            });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-    
-    if (loading) {
-        return <p>Cargando perfil...</p>
-    }
-
+function SettingField({ label, placeholder, value, disabled }: { label: string, placeholder: string, value?: string, disabled?: boolean }) {
     return (
-        <Card>
-            <form onSubmit={handleSaveChanges}>
-                <CardHeader>
-                    <CardTitle>{t('settings.profile.title')}</CardTitle>
-                    <CardDescription>
-                        {t('settings.profile.description')}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="name">{t('settings.profile.name')}</Label>
-                        <Input 
-                            id="name" 
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            disabled={isSaving}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="email">{t('settings.profile.email')}</Label>
-                        <Input 
-                            id="email" 
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            disabled={isSaving}
-                        />
-                    </div>
-                </CardContent>
-                <CardFooter>
-                    <Button type="submit" disabled={isSaving || loading}>
-                        {isSaving ? "Guardando..." : t('common.saveChanges')}
-                    </Button>
-                </CardFooter>
-            </form>
-        </Card>
-    )
+        <div className="space-y-3">
+            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">{label}</Label>
+            <Input 
+                defaultValue={value} 
+                placeholder={placeholder} 
+                disabled={disabled}
+                className="h-14 rounded-2xl bg-muted/30 border-none font-bold text-base focus:ring-2 ring-primary/20 transition-all px-6"
+            />
+        </div>
+    );
 }
 
-type CompanySettingsProps = {
-  profile: CompanyProfile | null;
-  onProfileChange: (profile: CompanyProfile) => void;
-  isLoading: boolean;
-};
-
-
-function CompanySettings({ profile, onProfileChange, isLoading }: CompanySettingsProps) {
-    const { t } = useLocale();
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        if (!profile) return;
-        onProfileChange({ ...profile, [e.target.id]: e.target.value });
-    };
-
-    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!profile) return;
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                onProfileChange({ ...profile, logoUrl: reader.result as string });
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-    
-    if (isLoading || !profile) {
-        return <p>Cargando datos de la empresa...</p>
-    }
-
+function IntegrationCard({ name, desc, icon, connected }: { name: string, desc: string, icon: string, connected?: boolean }) {
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>{t('settings.company.title')}</CardTitle>
-                <CardDescription>{t('settings.company.description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="name">{t('settings.company.name')}</Label>
-                        <Input id="name" placeholder="Acme Inc." value={profile.name} onChange={handleChange}/>
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="taxId">{t('settings.company.taxId')}</Label>
-                        <Input id="taxId" placeholder="ESB12345678" value={profile.taxId} onChange={handleChange}/>
-                    </div>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="address">{t('settings.company.address')}</Label>
-                    <Input id="address" placeholder="123 Main St, Anytown" value={profile.address} onChange={handleChange}/>
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                     <div className="space-y-2">
-                        <Label htmlFor="billingEmail">{t('settings.company.billingEmail')}</Label>
-                        <Input id="billingEmail" type="email" placeholder="billing@acme.com" value={profile.billingEmail} onChange={handleChange}/>
+        <Card className="glass-card border-none shadow-xl shadow-black/[0.02] rounded-[3rem] p-8 group hover:shadow-primary/5 transition-all duration-500 overflow-hidden relative">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                <div className="flex items-center gap-8">
+                    <div className="h-20 w-20 rounded-[2rem] bg-white dark:bg-slate-900 border border-border/50 flex items-center justify-center p-3 group-hover:scale-105 transition-transform duration-500 overflow-hidden shadow-sm">
+                        <img src={icon} alt={name} className="h-full w-full object-contain" />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="iban">{t('settings.company.iban')}</Label>
-                        <Input id="iban" placeholder="ES91 2100 0418 4502 0005 1332" value={profile.iban} onChange={handleChange}/>
-                    </div>
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="fiscalData">{t('settings.company.fiscalData')}</Label>
-                    <Textarea id="fiscalData" placeholder={t('settings.company.fiscalDataPlaceholder')} value={profile.fiscalData} onChange={handleChange}/>
-                </div>
-                 <div className="space-y-2">
-                    <Label>{t('settings.company.logo')}</Label>
-                    <div className="flex items-center gap-4">
-                        <div className="w-24 h-24 rounded-md border flex items-center justify-center bg-muted/50 overflow-hidden">
-                            {profile.logoUrl ? (
-                                <Image src={profile.logoUrl} alt="Company Logo" width={96} height={96} className="object-contain" />
-                            ) : (
-                                <ImageIcon className="w-10 h-10 text-muted-foreground" />
+                        <div className="flex items-center gap-3">
+                            <h4 className="text-2xl font-black font-headline tracking-tighter">{name}</h4>
+                            {connected && (
+                                <Badge className="bg-emerald-500/10 text-emerald-500 border-none font-black text-[10px] uppercase py-1 px-3 flex gap-1 items-center animate-pulse">
+                                    <Check className="h-3 w-3" /> Conectado
+                                </Badge>
                             )}
                         </div>
-                        <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                            {t('settings.company.uploadLogo')}
-                        </Button>
-                        <Input ref={fileInputRef} id="company-logo" type="file" className="hidden" onChange={handleLogoChange} accept="image/png, image/jpeg, image/gif"/>
+                        <p className="text-sm font-medium text-muted-foreground leading-relaxed max-w-md italic">{desc}</p>
                     </div>
-                    <p className="text-xs text-muted-foreground">{t('settings.company.logoHint')}</p>
                 </div>
-            </CardContent>
-        </Card>
-    )
-}
-
-type InvoicingSettingsProps = {
-  profile: CompanyProfile | null;
-  onProfileChange: (profile: CompanyProfile) => void;
-  isLoading: boolean;
-};
-
-function InvoicingSettings({ profile, onProfileChange, isLoading }: InvoicingSettingsProps) {
-    const { t } = useLocale();
-
-    const handleFieldChange = (field: keyof CompanyProfile, value: any) => {
-        if (!profile) return;
-        onProfileChange({ ...profile, [field]: value });
-    };
-
-    const handleTaxChange = (index: number, field: keyof InvoiceTax, value: string | number) => {
-        if (!profile || !profile.defaultTaxes) return;
-        const newTaxes = [...profile.defaultTaxes];
-        const taxToUpdate = { ...newTaxes[index], [field]: value };
-        
-        if(field === 'percentage' && typeof value === 'string') {
-            taxToUpdate.percentage = parseFloat(value) || 0;
-        }
-
-        newTaxes[index] = taxToUpdate;
-        onProfileChange({ ...profile, defaultTaxes: newTaxes });
-    };
-
-    const addTax = () => {
-        if (!profile) return;
-        const newTaxes = [...(profile.defaultTaxes || []), { id: `new-${Date.now()}`, name: '', percentage: 0 }];
-        onProfileChange({ ...profile, defaultTaxes: newTaxes });
-    };
-
-    const removeTax = (index: number) => {
-        if (!profile || !profile.defaultTaxes) return;
-        const newTaxes = profile.defaultTaxes.filter((_, i) => i !== index);
-        onProfileChange({ ...profile, defaultTaxes: newTaxes });
-    };
-
-     if (isLoading || !profile) {
-        return <p>Cargando ajustes de facturación...</p>
-    }
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>{t('settings.invoicing.title')}</CardTitle>
-                <CardDescription>{t('settings.invoicing.description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8">
-                 <div className="space-y-2">
-                    <Label htmlFor="currency">{t('settings.invoicing.defaultCurrency')}</Label>
-                    <Select value={profile.currency} onValueChange={(value) => handleFieldChange('currency', value)}>
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder={t('settings.invoicing.selectCurrency')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="EUR">Euro (€)</SelectItem>
-                            <SelectItem value="USD">US Dollar ($)</SelectItem>
-                            <SelectItem value="GBP">British Pound (£)</SelectItem>
-                        </SelectContent>
-                    </Select>
-                 </div>
-                <div className="space-y-2">
-                    <Label>{t('settings.invoicing.defaultTaxes')}</Label>
-                    <div className="space-y-2">
-                        {(profile.defaultTaxes || []).map((tax, index) => (
-                             <div key={index} className="flex items-center gap-2">
-                                <Input 
-                                    placeholder="IVA" 
-                                    className="w-1/3" 
-                                    value={tax.name}
-                                    onChange={(e) => handleTaxChange(index, 'name', e.target.value)}
-                                />
-                                <Input 
-                                    type="number" 
-                                    placeholder="21" 
-                                    className="w-1/4" 
-                                    value={tax.percentage}
-                                    onChange={(e) => handleTaxChange(index, 'percentage', e.target.value)}
-                                />
-                                <span className="text-muted-foreground">%</span>
-                                <Button variant="ghost" size="icon" onClick={() => removeTax(index)}><Trash2 className="h-4 w-4" /></Button>
-                            </div>
-                        ))}
-                    </div>
-                     <Button variant="outline" size="sm" onClick={addTax}><PlusCircle className="h-4 w-4 mr-2" /> {t('settings.invoicing.addTax')}</Button>
-                </div>
-
-                <div className="space-y-2">
-                    <Label htmlFor="terms">{t('settings.invoicing.defaultTerms')}</Label>
-                    <Textarea 
-                        id="terms" 
-                        placeholder={t('settings.invoicing.defaultTermsPlaceholder')} 
-                        value={profile.defaultTerms || ''}
-                        onChange={(e) => handleFieldChange('defaultTerms', e.target.value)}
-                    />
-                </div>
-
-            </CardContent>
-        </Card>
-    );
-}
-
-type TemplateSettingsProps = {
-  profile: CompanyProfile | null;
-  onProfileChange: (profile: CompanyProfile) => void;
-  isLoading: boolean;
-};
-
-function TemplateSettings({ profile, onProfileChange, isLoading }: TemplateSettingsProps) {
-    const { t } = useLocale();
-
-    const handleChange = (template: 'newInvoice' | 'reminder', field: 'subject' | 'body', value: string) => {
-        if (!profile) return;
-        
-        onProfileChange({
-            ...profile,
-            templates: {
-                ...(profile.templates || { newInvoice: { subject: '', body: '' }, reminder: { subject: '', body: '' } }),
-                [template]: {
-                    ...profile.templates?.[template],
-                    [field]: value
-                }
-            }
-        });
-    };
-
-    if (isLoading || !profile) {
-        return <p>Cargando plantillas...</p>;
-    }
-    
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>{t('settings.templates.title')}</CardTitle>
-                <CardDescription>{t('settings.templates.description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="space-y-2">
-                    <Label>{t('settings.templates.newInvoice.title')}</Label>
-                    <Input 
-                        placeholder={t('settings.templates.newInvoice.subjectPlaceholder')} 
-                        value={profile.templates?.newInvoice.subject || ''}
-                        onChange={(e) => handleChange('newInvoice', 'subject', e.target.value)}
-                    />
-                    <Textarea 
-                        rows={5} 
-                        placeholder={t('settings.templates.newInvoice.bodyPlaceholder')} 
-                        value={profile.templates?.newInvoice.body || ''}
-                        onChange={(e) => handleChange('newInvoice', 'body', e.target.value)}
-                    />
-                </div>
-                 <div className="space-y-2">
-                    <Label>{t('settings.templates.reminder.title')}</Label>
-                    <Input 
-                        placeholder={t('settings.templates.reminder.subjectPlaceholder')} 
-                        value={profile.templates?.reminder.subject || ''}
-                        onChange={(e) => handleChange('reminder', 'subject', e.target.value)}
-                    />
-                    <Textarea 
-                        rows={5} 
-                        placeholder={t('settings.templates.reminder.bodyPlaceholder')}
-                        value={profile.templates?.reminder.body || ''}
-                        onChange={(e) => handleChange('reminder', 'body', e.target.value)}
-                    />
-                </div>
-                <div>
-                    <p className="text-sm text-muted-foreground">{t('settings.templates.variablesInfo')}</p>
-                    <p className="text-sm font-mono text-muted-foreground">{"{{clientName}} {{invoiceNumber}} {{invoiceTotal}} {{dueDate}}"}</p>
-                </div>
-            </CardContent>
-        </Card>
-    )
-}
-
-
-function SecuritySettings() {
-    const { t } = useLocale();
-    const { toast } = useToast();
-    const [currentPassword, setCurrentPassword] = useState('');
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
-
-    const handleUpdatePassword = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const user = auth.currentUser;
-        if (!user || !user.email) {
-            toast({ title: "Error", description: "No se ha encontrado el usuario.", variant: "destructive"});
-            return;
-        }
-        if (newPassword !== confirmPassword) {
-            toast({ title: "Error", description: "Las nuevas contraseñas no coinciden.", variant: "destructive"});
-            return;
-        }
-        if (newPassword.length < 6) {
-            toast({ title: "Error", description: "La nueva contraseña debe tener al menos 6 caracteres.", variant: "destructive"});
-            return;
-        }
-
-        setIsSaving(true);
-        try {
-            const credential = EmailAuthProvider.credential(user.email, currentPassword);
-            await reauthenticateWithCredential(user, credential);
-            await updatePassword(user, newPassword);
-            toast({ title: "Éxito", description: "Contraseña actualizada correctamente."});
-            setCurrentPassword('');
-            setNewPassword('');
-            setConfirmPassword('');
-        } catch (error: any) {
-            console.error("Password update error:", error);
-            let errorMessage = "Ocurrió un error al actualizar la contraseña.";
-            if (error.code === 'auth/wrong-password') {
-                errorMessage = "La contraseña actual es incorrecta.";
-            } else if (error.code === 'auth/too-many-requests') {
-                errorMessage = "Demasiados intentos. Inténtalo de nuevo más tarde.";
-            }
-            toast({ title: "Error", description: errorMessage, variant: "destructive"});
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    return (
-        <Card>
-            <form onSubmit={handleUpdatePassword}>
-                <CardHeader>
-                    <CardTitle>{t('settings.security.title')}</CardTitle>
-                    <CardDescription>
-                        {t('settings.security.description')}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="current-password">{t('settings.security.currentPassword')}</Label>
-                        <Input id="current-password" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required disabled={isSaving}/>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="new-password">{t('settings.security.newPassword')}</Label>
-                        <Input id="new-password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required disabled={isSaving}/>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="confirm-password">{t('settings.security.confirmPassword')}</Label>
-                        <Input id="confirm-password" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required disabled={isSaving}/>
-                    </div>
-                </CardContent>
-                <CardFooter>
-                    <Button type="submit" disabled={isSaving}>
-                        {isSaving ? "Actualizando..." : t('settings.security.updatePassword')}
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <Button variant={connected ? "outline" : "default"} className={cn(
+                        "h-12 flex-1 md:flex-none rounded-2xl px-8 font-black transition-all",
+                        connected ? "border-2 hover:bg-destructive/5 hover:text-destructive hover:border-destructive/30" : "shadow-lg shadow-primary/20"
+                    )}>
+                        {connected ? "Desconectar" : "Configurar Pasarela"}
                     </Button>
-                </CardFooter>
-            </form>
-        </Card>
-    )
-}
-
-type NotificationsSettingsProps = {
-    profile: CompanyProfile | null;
-    onProfileChange: (profile: CompanyProfile) => void;
-    isLoading: boolean;
-};
-
-function NotificationsSettings({ profile, onProfileChange, isLoading }: NotificationsSettingsProps) {
-    const { t } = useLocale();
-
-    const handleSwitchChange = (notification: keyof NotificationPreferences, channel: 'app' | 'email', value: boolean) => {
-        if (!profile) return;
-
-        onProfileChange({
-            ...profile,
-            notifications: {
-                ...profile.notifications,
-                [notification]: { 
-                    ...profile.notifications![notification],
-                    [channel]: value 
-                },
-            }
-        });
-    };
-    
-    if (isLoading || !profile) {
-        return <p>Cargando ajustes de notificaciones...</p>;
-    }
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>{t('settings.notifications.title')}</CardTitle>
-                <CardDescription>{t('settings.notifications.description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="p-4 border rounded-lg">
-                    <Label className="text-base">{t('settings.notifications.invoicePaid.title')}</Label>
-                    <p className="text-sm text-muted-foreground mb-4">{t('settings.notifications.invoicePaid.description')}</p>
-                    <div className="flex items-center justify-between">
-                       <Label htmlFor="invoice-paid-app">Notificación en la app</Label>
-                       <Switch 
-                            id="invoice-paid-app" 
-                            checked={profile.notifications?.invoicePaid.app}
-                            onCheckedChange={(checked) => handleSwitchChange('invoicePaid', 'app', checked)}
-                        />
-                    </div>
-                     <div className="flex items-center justify-between mt-4">
-                       <Label htmlFor="invoice-paid-email">Email</Label>
-                       <Switch 
-                            id="invoice-paid-email" 
-                            checked={profile.notifications?.invoicePaid.email}
-                            onCheckedChange={(checked) => handleSwitchChange('invoicePaid', 'email', checked)}
-                        />
-                    </div>
                 </div>
-                 <div className="p-4 border rounded-lg">
-                    <Label className="text-base">{t('settings.notifications.invoiceOverdue.title')}</Label>
-                    <p className="text-sm text-muted-foreground mb-4">{t('settings.notifications.invoiceOverdue.description')}</p>
-                    <div className="flex items-center justify-between">
-                       <Label htmlFor="invoice-overdue-app">Notificación en la app</Label>
-                       <Switch 
-                            id="invoice-overdue-app" 
-                            checked={profile.notifications?.invoiceOverdue.app}
-                            onCheckedChange={(checked) => handleSwitchChange('invoiceOverdue', 'app', checked)}
-                        />
-                    </div>
-                     <div className="flex items-center justify-between mt-4">
-                       <Label htmlFor="invoice-overdue-email">Email</Label>
-                       <Switch 
-                            id="invoice-overdue-email" 
-                            checked={profile.notifications?.invoiceOverdue.email}
-                            onCheckedChange={(checked) => handleSwitchChange('invoiceOverdue', 'email', checked)}
-                        />
-                    </div>
-                </div>
-            </CardContent>
+            </div>
         </Card>
     );
 }
 
-type LanguageSettingsProps = {
-  profile: CompanyProfile | null;
-  onProfileChange: (profile: CompanyProfile) => void;
-  isLoading: boolean;
-};
-
-
-function LanguageSettings({ profile, onProfileChange, isLoading }: LanguageSettingsProps) {
-    const { t, setLocale } = useLocale();
-
-    const handleLanguageChange = (value: string) => {
-        if (!profile) return;
-        const newLocale = value as Locale;
-        setLocale(newLocale);
-        onProfileChange({ ...profile, language: newLocale });
-    }
-    
-    if (isLoading || !profile) {
-        return <p>Cargando ajustes de idioma...</p>
-    }
-
+function NotificationSwitch({ label, desc, defaultChecked }: { label: string, desc: string, defaultChecked?: boolean }) {
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>{t('settings.language.title')}</CardTitle>
-                <CardDescription>{t('settings.language.description')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-                    <div className="w-full max-w-xs">
-                        <Label htmlFor="language-select">{t('settings.language.select')}</Label>
-                    <Select value={profile.language} onValueChange={handleLanguageChange}>
-                        <SelectTrigger id="language-select">
-                            <SelectValue placeholder={t('settings.language.select')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="en">English</SelectItem>
-                            <SelectItem value="es">Español</SelectItem>
-                            <SelectItem value="fr">Français</SelectItem>
-                            <SelectItem value="it">Italiano</SelectItem>
-                            <SelectItem value="ca">Català</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    </div>
-            </CardContent>
-        </Card>
-    )
+        <div className="flex items-center justify-between gap-6 group/notif transition-all">
+            <div className="space-y-1">
+                <p className="text-sm font-black group-hover/notif:text-primary transition-colors">{label}</p>
+                <p className="text-xs font-medium text-muted-foreground italic">{desc}</p>
+            </div>
+            <Switch defaultChecked={defaultChecked} className="data-[state=checked]:bg-primary shadow-lg shadow-black/5" />
+        </div>
+    );
 }
 
-type AppearanceSettingsProps = {
-  profile: CompanyProfile | null;
-  onProfileChange: (profile: CompanyProfile) => void;
-  isLoading: boolean;
-};
-
-
-function AppearanceSettings({ profile, onProfileChange, isLoading }: AppearanceSettingsProps) {
-    const { t } = useLocale();
-    const { setTheme } = useTheme();
-
-    const handleThemeChange = (themeValue: 'light' | 'dark' | 'system') => {
-        if (!profile) return;
-        setTheme(themeValue);
-        onProfileChange({ ...profile, theme: themeValue });
-    }
-
-    if (isLoading || !profile) {
-        return <p>Cargando ajustes de apariencia...</p>
-    }
-
+function ThemeCard({ active, onClick, icon, label, desc }: { active: boolean, onClick: () => void, icon: React.ReactElement, label: string, desc: string }) {
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>{t('settings.appearance.title')}</CardTitle>
-                <CardDescription>{t('settings.appearance.description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="w-full max-w-xs space-y-2">
-                    <Label htmlFor="theme-select">{t('settings.appearance.theme')}</Label>
-                     <Select value={profile.theme || 'system'} onValueChange={handleThemeChange}>
-                        <SelectTrigger id="theme-select">
-                            <SelectValue placeholder={t('settings.appearance.theme')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="light">
-                                <div className="flex items-center gap-2">
-                                    <Sun className="h-4 w-4"/>
-                                    {t('settings.appearance.light')}
-                                </div>
-                            </SelectItem>
-                            <SelectItem value="dark">
-                                <div className="flex items-center gap-2">
-                                    <Moon className="h-4 w-4"/>
-                                    {t('settings.appearance.dark')}
-                                </div>
-                            </SelectItem>
-                            <SelectItem value="system">
-                                <div className="flex items-center gap-2">
-                                    <Monitor className="h-4 w-4"/>
-                                    {t('settings.appearance.system')}
-                                </div>
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
+        <button 
+            onClick={onClick}
+            className={cn(
+                "flex flex-col items-center gap-6 p-10 rounded-[2.5rem] transition-all duration-700 border-4 relative overflow-hidden group",
+                active 
+                    ? "bg-primary/10 border-primary shadow-[0_20px_40px_rgba(var(--primary-rgb),0.15)] scale-[1.02]" 
+                    : "bg-muted/10 border-transparent hover:bg-muted/20 hover:border-muted/30 hover:scale-[1.01]"
+            )}
+        >
+            <div className={cn(
+                "h-20 w-20 rounded-[1.8rem] flex items-center justify-center transition-all duration-700",
+                active ? "bg-primary text-primary-foreground shadow-xl shadow-primary/30 rotate-3" : "bg-muted/40 text-muted-foreground group-hover:bg-muted/60"
+            )}>
+                {React.cloneElement(icon, { className: "h-10 w-10 stroke-[2.5]" })}
+            </div>
+            <div className="text-center space-y-2">
+                <p className={cn("text-lg font-black tracking-tight transition-colors", active ? "text-foreground" : "text-muted-foreground")}>{label}</p>
+                <p className="text-[10px] font-bold opacity-50 italic uppercase tracking-widest">{desc}</p>
+            </div>
+            {active && (
+                <div className="absolute top-5 right-5 h-8 w-8 bg-primary text-white rounded-full flex items-center justify-center shadow-lg animate-in zoom-in-50 duration-500">
+                    <Check className="h-4 w-4 stroke-[4]" />
                 </div>
-            </CardContent>
-        </Card>
-    )
+            )}
+        </button>
+    );
 }

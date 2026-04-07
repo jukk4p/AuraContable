@@ -1,197 +1,192 @@
-
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { FileText, AlertCircle, MailCheck, MoveRight } from "lucide-react";
-import { useLocale } from "@/lib/i18n/locale-provider";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
-import { auth, db } from "@/lib/firebase/config";
-import { collection, addDoc } from "firebase/firestore";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { FileText, Users, BarChart3, Bell, CheckCircle2, ArrowRight, Layers, ShieldCheck, Zap } from "lucide-react";
+import { motion } from "framer-motion";
+import { TiltCard } from "@/components/tilt-card";
+import { cn } from "@/lib/utils";
 
+import Image from "next/image";
 
-function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
+export default function LandingPage() {
     return (
-      <svg
-        {...props}
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-        <path d="M12 22c-2.39 0-4.63-.82-6.4-2.2" />
-        <path d="M20.2 13.8c.12-.6.2-1.2.2-1.8 0-5.523-4.477-10-10-10-2.39 0-4.63.82-6.4 2.2" />
-        <path d="M3.8 10.2c-.12.6-.2 1.2-.2 1.8 0 5.523 4.477 10 10 10 2.39 0 4.63-.82 6.4-2.2" />
-        <path d="M12 12h.01" />
-      </svg>
-    )
-}
-
-export default function LoginPage() {
-  const { t } = useLocale();
-  const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [verificationSent, setVerificationSent] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleAuthAction = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-
-    try {
-      if (isSignUp) {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        await addDoc(collection(db, "users"), {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName || '',
-            createdAt: new Date()
-        });
-
-        await sendEmailVerification(user);
-        setVerificationSent(true);
-      } else {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        if (!userCredential.user.emailVerified) {
-            setError("Por favor, verifica tu correo electrónico antes de iniciar sesión.");
-            await auth.signOut();
-        } else {
-            router.push('/dashboard');
-        }
-      }
-    } catch (err: any) {
-        switch (err.code) {
-            case 'auth/user-not-found':
-                setError("No existe ningún usuario con este correo electrónico.");
-                break;
-            case 'auth/wrong-password':
-                setError("La contraseña es incorrecta.");
-                break;
-            case 'auth/email-already-in-use':
-                setError("Este correo electrónico ya está en uso.");
-                break;
-            case 'auth/weak-password':
-                setError("La contraseña debe tener al menos 6 caracteres.");
-                break;
-            default:
-                setError("Ha ocurrido un error. Por favor, inténtalo de nuevo.");
-                break;
-        }
-    } finally {
-        setIsLoading(false);
-    }
-  };
-  
-  if (verificationSent) {
-    return (
-        <div className="flex min-h-screen items-center justify-center bg-background p-4">
-             <Card className="w-full max-w-md">
-                <CardHeader className="text-center">
-                    <div className="flex justify-center mb-4">
-                        <MailCheck className="h-12 w-12 text-green-500" />
-                    </div>
-                    <CardTitle className="text-2xl">¡Verifica tu correo!</CardTitle>
-                    <CardDescription>
-                        Hemos enviado un enlace de verificación a <strong>{email}</strong>. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                     <Button variant="link" onClick={() => {setVerificationSent(false); setIsSignUp(false);}} className="w-full">
-                        Volver a inicio de sesión
-                    </Button>
-                </CardContent>
-            </Card>
-        </div>
-    )
-  }
-
-
-  return (
-    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
-        <div className="hidden bg-primary lg:flex lg:flex-col lg:items-center lg:justify-center p-12 text-primary-foreground">
-            <div className="flex items-center gap-2 mb-4">
-                <FileText className="h-10 w-10" />
-                <span className="text-4xl font-bold font-headline">InvoiceFlow</span>
-            </div>
-            <p className="mt-4 text-xl text-center">
-               La herramienta definitiva para autónomos y pymes. Simplifica tu facturación y céntrate en lo que de verdad importa.
-            </p>
-        </div>
-        <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-            <div className="w-full max-w-md space-y-8">
-                 <div className="flex justify-center lg:hidden mb-6">
-                    <FileText className="h-8 w-8 text-primary" />
+        <div className="min-h-screen bg-background text-foreground overflow-x-hidden selection:bg-primary/30">
+            {/* Header / Navbar */}
+            <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/10 px-6 py-4 flex items-center justify-between backdrop-blur-md">
+                <div className="flex items-center gap-2 group cursor-pointer">
+                    <FileText className="h-8 w-8 text-primary transition-transform group-hover:scale-110" />
+                    <span className="text-2xl font-bold font-headline tracking-tighter">AuraContable</span>
                 </div>
-                <div>
-                    <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-foreground">
-                        {isSignUp ? "Crea tu cuenta" : "Bienvenido de nuevo"}
-                    </h2>
-                    <p className="mt-2 text-center text-sm text-muted-foreground">
-                         {isSignUp ? "¿Ya tienes una cuenta?" : t('login.noAccount')}{" "}
-                        <Button variant="link" onClick={() => {setIsSignUp(!isSignUp); setError(null);}} className="p-0 h-auto font-medium text-primary" disabled={isLoading}>
-                            {isSignUp ? t('login.signIn') : t('login.signUp')}
-                        </Button>
-                    </p>
+                <nav className="hidden md:flex items-center gap-8">
+                    <a href="#features" className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest">Características</a>
+                    <a href="#stats" className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest">Estadísticas</a>
+                    <Link href="/login" className="text-sm font-bold text-foreground hover:text-primary transition-colors uppercase tracking-widest">Acceder</Link>
+                    <Link href="/login">
+                        <Button className="h-10 px-6 rounded-full font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all uppercase tracking-widest text-xs">Registrarse</Button>
+                    </Link>
+                </nav>
+            </header>
+
+            {/* Hero Section */}
+            <section className="relative pt-32 pb-20 px-6 lg:pt-48 lg:pb-32 overflow-hidden">
+                <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
+                    <div className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-primary to-emerald-400 opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"></div>
                 </div>
-                 {error && (
-                    <Alert variant="destructive" className="mb-4">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Error de autenticación</AlertTitle>
-                        <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                )}
-                <form className="mt-8 space-y-6" onSubmit={handleAuthAction}>
-                    <div className="space-y-4 rounded-md shadow-sm">
-                        <div>
-                            <Label htmlFor="email">{t('login.email')}</Label>
-                            <Input id="email" type="email" placeholder="nombre@ejemplo.com" required value={email} onChange={e => setEmail(e.target.value)} disabled={isLoading} className="mt-1"/>
+
+                <div className="container mx-auto grid lg:grid-cols-2 gap-12 items-center">
+                    <motion.div 
+                        initial={{ x: -50, opacity: 0 }} 
+                        animate={{ x: 0, opacity: 1 }} 
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                    >
+                        <h1 className="text-6xl lg:text-8xl font-black font-headline tracking-tighter leading-[0.9] text-foreground mb-8">
+                            Tus facturas, <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-emerald-400">brillando con éxito.</span>
+                        </h1>
+                        <p className="text-xl lg:text-2xl text-muted-foreground mb-12 max-w-lg font-medium leading-relaxed">
+                            Gestiona tu facturación de forma sencilla, profesional y elegante. Diseñada para que te centres en lo que realmente importa: hacer crecer tu negocio.
+                        </p>
+                        <div className="flex flex-wrap gap-4">
+                            <Link href="/login">
+                                <Button className="h-14 px-8 rounded-full text-lg font-bold shadow-xl shadow-primary/30 group hover:shadow-2xl transition-all">
+                                    Empezar Gratis
+                                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                                </Button>
+                            </Link>
+                            <Link href="/demo">
+                                <Button variant="ghost" className="h-14 px-8 rounded-full text-lg font-bold glass-card border border-white/10 hover:bg-primary/20 hover:text-primary transition-all">Ver Demo</Button>
+                            </Link>
                         </div>
-                        <div>
-                            <Label htmlFor="password">{t('login.password')}</Label>
-                            <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} disabled={isLoading} className="mt-1"/>
+                    </motion.div>
+
+                    <motion.div 
+                        initial={{ scale: 0.8, opacity: 0, rotate: 2 }} 
+                        animate={{ scale: 1, opacity: 1, rotate: 0 }} 
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className="relative"
+                    >
+                        <TiltCard intensity={10}>
+                            <div className="absolute -inset-4 bg-gradient-to-tr from-primary/20 to-emerald-400/20 rounded-[2rem] blur-2xl opacity-50 -z-10"></div>
+                            <Image 
+                                src="/images/real_aura_dashboard.png" 
+                                alt="Dashboard Real de AuraContable" 
+                                width={1200}
+                                height={800}
+                                priority
+                                className="w-full rounded-[1.5rem] shadow-2xl shadow-black/40 border border-white/10 glass-card object-cover"
+                            />
+                        </TiltCard>
+                        <div className="absolute -bottom-6 -right-6 glass-card p-6 border border-white/10 rounded-2xl animate-bounce-slow">
+                            <CheckCircle2 className="h-12 w-12 text-emerald-400" />
                         </div>
-                    </div>
-
-                    <div>
-                        <Button type="submit" className="w-full group" disabled={isLoading}>
-                             {isLoading ? "Cargando..." : (isSignUp ? 'Crear cuenta' : 'Iniciar Sesión')}
-                            <span className="absolute right-4 transform transition-transform group-hover:translate-x-1">
-                                <MoveRight className="h-4 w-4" />
-                            </span>
-                        </Button>
-                    </div>
-                </form>
-                 <Separator className="my-6">
-                  <span className="px-2 text-muted-foreground bg-background">{t('login.or')}</span>
-                </Separator>
-
-                <div className="mt-6">
-                     <Button variant="outline" className="w-full" disabled={isLoading}>
-                        <GoogleIcon className="mr-2 h-4 w-4" />
-                        {t('login.googleSignIn')}
-                    </Button>
+                    </motion.div>
                 </div>
-            </div>
+            </section>
+
+            {/* Features Section */}
+            <section id="features" className="py-24 bg-white/5 relative overflow-hidden">
+                <div className="container mx-auto px-6">
+                    <div className="text-center mb-20 space-y-4">
+                        <motion.h2 
+                            initial={{ y: 20, opacity: 0 }} 
+                            whileInView={{ y: 0, opacity: 1 }} 
+                            viewport={{ once: true }}
+                            className="text-4xl lg:text-6xl font-black font-headline tracking-tighter"
+                        >
+                            Todo lo que necesitas <br />
+                            en un solo lugar.
+                        </motion.h2>
+                        <p className="text-xl text-muted-foreground font-medium max-w-2xl mx-auto">Potencia tu negocio con herramientas diseñadas para el crecimiento.</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {[
+                            { icon: Layers, title: "Facturación Ágil", desc: "Crea y gestiona facturas profesionales en segundos. Olvídate de los errores manuales.", color: "primary" },
+                            { icon: BarChart3, title: "Informes Inteligentes", desc: "Visualiza tu rentabilidad en tiempo real con gráficos modernos y precisos.", color: "emerald-400" },
+                            { icon: Users, title: "Gestión de Clientes", desc: "Mantén tu base de clientes organizada y accede a su historial con un clic.", color: "amber-400" },
+                            { icon: Bell, title: "Notificaciones Live", desc: "Mantente informado de pagos realizados y facturas vencidas al instante.", color: "blue-400" },
+                            { icon: Zap, title: "Velocidad Extrema", desc: "Utilizamos Next.js y PostgreSQL para ofrecerte la experiencia más rápida y segura.", color: "emerald-400" },
+                            { icon: ShieldCheck, title: "Privacidad Total", desc: "Tus datos están seguros y encriptados. Autalojado y bajo tu control total.", color: "rose-400" },
+                        ].map((f, i) => (
+                            <motion.div 
+                                key={i}
+                                initial={{ opacity: 0, y: 20 }} 
+                                whileInView={{ opacity: 1, y: 0 }} 
+                                viewport={{ once: true }}
+                                transition={{ delay: i * 0.1 }}
+                            >
+                                <TiltCard intensity={15} className="h-full">
+                                    <Card className="glass-card border-white/10 h-full hover:shadow-2xl transition-all duration-300">
+                                        <CardHeader>
+                                            <div className="h-12 w-12 bg-muted/10 rounded-xl flex items-center justify-center mb-4 transition-transform">
+                                                <f.icon className="h-6 w-6 opacity-80" />
+                                            </div>
+                                            <CardTitle className="text-2xl font-bold tracking-tight">{f.title}</CardTitle>
+                                            <CardDescription className="text-muted-foreground font-medium text-lg leading-relaxed">{f.desc}</CardDescription>
+                                        </CardHeader>
+                                    </Card>
+                                </TiltCard>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* Stats Section */}
+            <section id="stats" className="py-24 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px] -z-10"></div>
+                <div className="container mx-auto px-6 grid md:grid-cols-3 gap-12 text-center items-center">
+                    <motion.div initial={{ scale: 0.9, opacity: 0 }} whileInView={{ scale: 1, opacity: 1 }} viewport={{ once: true }} className="space-y-2">
+                        <p className="text-5xl lg:text-7xl font-black font-headline tracking-tighter text-primary">10k+</p>
+                        <p className="text-lg font-bold text-muted-foreground tracking-widest uppercase">Facturas Generadas</p>
+                    </motion.div>
+                    <motion.div initial={{ scale: 0.9, opacity: 0 }} whileInView={{ scale: 1, opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="space-y-2">
+                        <p className="text-5xl lg:text-7xl font-black font-headline tracking-tighter text-emerald-400">1k+</p>
+                        <p className="text-lg font-bold text-muted-foreground tracking-widest uppercase">Usuarios Felices</p>
+                    </motion.div>
+                    <motion.div initial={{ scale: 0.9, opacity: 0 }} whileInView={{ scale: 1, opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.2 }} className="space-y-2">
+                        <p className="text-5xl lg:text-7xl font-black font-headline tracking-tighter text-amber-400">99.9%</p>
+                        <p className="text-lg font-bold text-muted-foreground tracking-widest uppercase">Disponibilidad</p>
+                    </motion.div>
+                </div>
+            </section>
+
+            {/* CTA Section */}
+            <section className="py-24 bg-primary text-primary-foreground relative overflow-hidden">
+                <div className="absolute inset-x-0 -top-40 -z-0 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
+                    <div className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-white to-emerald-200 opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"></div>
+                </div>
+
+                <div className="container mx-auto px-6 text-center space-y-12 relative z-10">
+                    <h2 className="text-5xl lg:text-7xl font-black font-headline tracking-tighter">¿Listo para hacer brillar <br />tu negocio?</h2>
+                    <p className="text-2xl font-medium opacity-90 max-w-2xl mx-auto">Únete a miles de emprendedores que ya han transformado su gestión financiera.</p>
+                    <Link href="/login" className="inline-block pt-8">
+                        <Button className="h-16 px-12 rounded-full text-2xl font-bold bg-white text-primary hover:bg-emerald-50 transition-all shadow-2xl">
+                            Consigue AuraContable Ahora
+                            <ArrowRight className="ml-3 h-6 w-6" />
+                        </Button>
+                    </Link>
+                </div>
+            </section>
+
+            {/* Footer */}
+            <footer className="py-12 border-t border-white/10 px-6">
+                <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-8 text-muted-foreground font-medium">
+                    <div className="flex items-center gap-2">
+                        <FileText className="h-6 w-6 text-primary" />
+                        <span className="text-xl font-bold text-foreground font-headline tracking-tighter">AuraContable</span>
+                    </div>
+                    <p className="text-sm">© 2026 AuraContable. Todos los derechos reservados.</p>
+                    <div className="flex gap-8 text-sm">
+                        <Link href="/terminos" className="hover:text-primary transition-colors">Términos</Link>
+                        <Link href="/privacidad" className="hover:text-primary transition-colors">Privacidad</Link>
+                        <Link href="/contacto" className="hover:text-primary transition-colors">Contacto</Link>
+                    </div>
+                </div>
+            </footer>
         </div>
-    </div>
-  );
+    );
 }

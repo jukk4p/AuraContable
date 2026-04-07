@@ -1,4 +1,4 @@
-# **App Name**: InvoiceFlow
+# **App Name**: BillSpark
 
 ## Core Features:
 

@@ -41,6 +41,18 @@ export type CompanyProfile = {
 
   // Appearance preferences
   theme?: 'light' | 'dark' | 'system';
+
+  // Stripe Integration
+  stripeEnabled?: boolean;
+  stripePublishableKey?: string;
+  stripeSecretKey?: string;
+  stripeWebhookSecret?: string;
+
+  // PayPal Integration
+  paypalEnabled?: boolean;
+  paypalClientId?: string;
+  paypalSecret?: string;
+  paypalSandbox?: boolean;
 };
 
 export type NotificationPreferences = {
@@ -106,6 +118,12 @@ export type Invoice = {
   total: number;
   notes?: string;
   terms?: string;
+  
+  // Payment Integration
+  paymentMethod?: 'Stripe' | 'PayPal' | 'Manual';
+  paymentId?: string;
+  paymentStatus?: string;
+  
   createdAt: Date;
 };
 

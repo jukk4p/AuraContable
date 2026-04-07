@@ -4,15 +4,15 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuthState } from 'react-firebase-hooks/auth';
+import { useSession } from "next-auth/react";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ArrowLeft, Download, Edit, Trash2, CheckCircle, Clock, AlertCircle as AlertCircleIcon, Send } from 'lucide-react';
+import { ArrowLeft, Download, Edit, Trash2, CheckCircle, Clock, AlertCircle as AlertCircleIcon, Send, Link as LinkIcon, Share2 } from 'lucide-react';
 import Link from 'next/link';
 
 import type { Invoice, CompanyProfile } from '@/lib/types';
-import { auth } from '@/lib/firebase/config';
-import { getInvoiceById, getCompanyProfile, updateInvoice, deleteInvoice, addNotification } from '@/lib/firebase/firestore';
+import { getInvoiceById, updateInvoice, deleteInvoice } from '@/actions/invoices';
+import { getCompanyProfile } from '@/actions/company';
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -30,7 +30,8 @@ export default function InvoiceDetailsPage() {
     const params = useParams();
     const router = useRouter();
     const { t, formatCurrency, locale } = useLocale();
-    const [user] = useAuthState(auth);
+    const { data: session, status } = useSession();
+    const user = session?.user;
     const [invoice, setInvoice] = useState<Invoice | null>(null);
     const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -49,10 +50,10 @@ export default function InvoiceDetailsPage() {
                 try {
                     const [invoiceData, companyData] = await Promise.all([
                         getInvoiceById(invoiceId),
-                        getCompanyProfile(user.uid)
+                        getCompanyProfile(user.id)
                     ]);
 
-                    if (invoiceData && invoiceData.userId === user.uid) {
+                    if (invoiceData && invoiceData.userId === user.id) {
                         setInvoice(invoiceData);
                     } else {
                         toast({ title: "Error", description: "Factura no encontrada o sin acceso.", variant: "destructive" });
@@ -89,19 +90,13 @@ export default function InvoiceDetailsPage() {
         if (!invoice || !user) return;
         setIsUpdating(true);
         try {
-            await updateInvoice(invoice.id, { status: 'Paid' });
-            setInvoice({ ...invoice, status: 'Paid' });
-            
-            // Add a notification for the payment
-            await addNotification({
-                userId: user.uid,
-                title: "Pago Recibido",
-                body: `La factura ${invoice.invoiceNumber} ha sido pagada.`,
-                href: `/dashboard/invoices/${invoice.id}`,
-                isRead: false,
-            });
-
-            toast({ title: "Factura Actualizada", description: "La factura ha sido marcada como pagada." });
+            const result = await updateInvoice(invoice.id, { ...invoice, status: 'Paid' });
+            if (result.success) {
+                setInvoice({ ...invoice, status: 'Paid' });
+                toast({ title: "Factura Actualizada", description: "La factura ha sido marcada como pagada." });
+            } else {
+                toast({ title: "Error", description: result.error, variant: "destructive" });
+            }
         } catch (error) {
              console.error("Error updating invoice status:", error);
             toast({ title: "Error", description: "No se pudo actualizar el estado de la factura.", variant: "destructive" });
@@ -114,9 +109,14 @@ export default function InvoiceDetailsPage() {
         if (!invoice) return;
         setIsDeleting(true);
         try {
-            await deleteInvoice(invoice.id);
-            toast({ title: "Factura Eliminada", description: "La factura ha sido eliminada correctamente." });
-            router.push('/dashboard/invoices');
+            const result = await deleteInvoice(invoice.id);
+            if (result.success) {
+                toast({ title: "Factura Eliminada", description: "La factura ha sido eliminada correctamente." });
+                router.push('/dashboard/invoices');
+            } else {
+                toast({ title: "Error", description: result.error, variant: "destructive" });
+                setIsDeleting(false);
+            }
         } catch (error) {
             console.error("Error deleting invoice:", error);
             toast({ title: "Error", description: "Hubo un problema al eliminar la factura.", variant: "destructive" });
@@ -132,7 +132,7 @@ export default function InvoiceDetailsPage() {
             // await sendInvoiceByEmail(invoice, companyProfile, { t, formatCurrency, locale });
             toast({
                 title: "Función no disponible",
-                description: `Esta funcionalidad requiere configuración adicional.`,
+                description: `El envío de emails está en el roadmap.`,
             });
         } catch (error) {
             console.error("Error sending email:", error);
@@ -144,6 +144,16 @@ export default function InvoiceDetailsPage() {
         }
 
         setIsSending(false);
+    }
+
+    const handleCopyLink = () => {
+        if (!invoice) return;
+        const publicUrl = `${window.location.origin}/invoice/${invoice.id}`;
+        navigator.clipboard.writeText(publicUrl);
+        toast({
+            title: "Enlace copiado",
+            description: "El enlace de la factura se ha copiado al portapapeles.",
+        });
     }
 
     if (isLoading) {
@@ -180,14 +190,19 @@ export default function InvoiceDetailsPage() {
             </div>
 
             <Card>
-                <CardHeader className="flex flex-row items-start justify-between">
-                    <div>
-                        <CardTitle className="text-2xl font-bold mb-1">{invoice.invoiceNumber}</CardTitle>
-                        <InvoiceStatusBadge status={invoice.status} />
+                <CardHeader className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <CardTitle className="text-2xl font-bold">{invoice.invoiceNumber}</CardTitle>
+                            <InvoiceStatusBadge status={invoice.status} />
+                        </div>
                     </div>
-                     <div className="flex items-center gap-2">
+                     <div className="flex flex-wrap items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={handleCopyLink} title="Copiar enlace para el cliente">
+                            <LinkIcon className="mr-2 h-4 w-4"/> Enlace
+                        </Button>
                         <Button variant="outline" size="sm" disabled={isActionDisabled} onClick={handleSendEmail}>
-                            <Send className="mr-2 h-4 w-4"/> {isSending ? "Enviando..." : "Enviar por Email"}
+                            <Send className="mr-2 h-4 w-4"/> {isSending ? "Enviando..." : "Email"}
                         </Button>
                         <Button variant="outline" size="sm" disabled={isActionDisabled} onClick={handleDownloadPdf}>
                             <Download className="mr-2 h-4 w-4"/> {isDownloading ? "Generando..." : "PDF"}

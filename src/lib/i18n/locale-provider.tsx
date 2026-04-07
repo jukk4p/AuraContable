@@ -4,9 +4,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { locales, defaultLocale, type Locale } from './locales';
 import { setCookie, getCookie } from 'cookies-next';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '../firebase/config';
-import { getCompanyProfile } from '../firebase/firestore';
+import { useSession } from "next-auth/react";
+import { getCompanyProfile } from '@/actions/company';
 import type { CompanyProfile } from '../types';
 
 type LocaleContextType = {
@@ -23,17 +22,18 @@ function getNestedValue(obj: any, key: string): string {
 }
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [user] = useAuthState(auth);
+  const { data: session } = useSession();
+  const user = session?.user;
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [locale, setLocaleState] = useState<Locale>(defaultLocale);
 
   useEffect(() => {
     async function fetchProfileAndSetLocale() {
         if (user) {
-            const profile = await getCompanyProfile(user.uid);
+            const profile = await getCompanyProfile(user.id);
             setCompanyProfile(profile);
-            if (profile?.language && locales[profile.language]) {
-                setLocale(profile.language);
+            if (profile?.language && profile.language in locales) {
+                setLocale(profile.language as Locale);
                 return;
             }
         }
