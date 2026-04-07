@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
+  debug: true,
   session: {
     strategy: "jwt",
   },
