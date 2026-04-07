@@ -3,6 +3,9 @@ FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
+# Forzamos NODE_ENV a development para asegurarnos de que se instalen las devDependencies (necesarias para compilar)
+ENV NODE_ENV=development
+
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
 RUN npm ci --legacy-peer-deps
