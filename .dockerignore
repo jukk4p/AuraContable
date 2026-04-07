@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.env*
+*.local
+README.md
+Dockerfile
+.dockerignore
+.idx
+.modified
+plan_implementacion.md
+docs
+tests
+playwright.config.ts
