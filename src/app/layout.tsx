@@ -8,6 +8,7 @@ import SchemaOrg from '@/components/seo/schema-org';
 
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://auracontable.ivangonzalez.cloud'),
   title: {
     default: 'AuraContable | Gestión de Facturas Premium',
     template: '%s | AuraContable'
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'es_ES',
-    url: 'https://auracontable.app',
+    url: 'https://auracontable.ivangonzalez.cloud',
     title: 'AuraContable | Facturación Inteligente y Elegante',
     description: 'Gestiona tu negocio con la plataforma de facturación más avanzada y visualmente impactante.',
     siteName: 'AuraContable',
