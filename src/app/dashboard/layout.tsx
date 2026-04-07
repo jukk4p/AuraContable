@@ -147,7 +147,9 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             >
                 {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-                <span className={cn(state === 'collapsed' && "hidden")}>Cambiado a {theme === 'dark' ? 'Claro' : 'Oscuro'}</span>
+                <span className={cn(state === 'collapsed' && "hidden")}>
+                    {theme === 'dark' ? t('settings.appearance.light') : t('settings.appearance.dark')}
+                </span>
             </Button>
         </div>
       </Sidebar>
