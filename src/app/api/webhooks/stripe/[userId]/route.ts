@@ -5,10 +5,10 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createNotification } from "@/actions/notifications";
 
-export async function POST(req: Request, { params }: { params: { userId: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ userId: string }> }) {
     const body = await req.text();
     const signature = req.headers.get("stripe-signature") as string;
-    const { userId } = params;
+    const { userId } = await params;
 
     const company = await db.query.companyProfiles.findFirst({
         where: eq(companyProfiles.userId, userId),
