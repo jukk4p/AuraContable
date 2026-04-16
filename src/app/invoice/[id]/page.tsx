@@ -254,7 +254,7 @@ export default function PublicInvoicePage() {
                                             onApprove={async (data, actions) => {
                                                 if (actions.order) {
                                                     const order = await actions.order.capture();
-                                                    await capturePayPalOrder(order.id, id);
+                                                    if (order.id) await capturePayPalOrder(order.id, id);
                                                     window.location.reload();
                                                 }
                                             }}
