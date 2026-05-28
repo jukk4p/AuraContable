@@ -38,11 +38,18 @@ import type { Expense } from '@/lib/types';
 function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: any | null, onSave: (data: any) => void, onCancel: () => void, isSaving: boolean }) {
     const { t } = useLocale();
     const [amount, setAmount] = useState(expense?.amount?.toString() || '');
-    const [category, setCategory] = useState(expense?.category || 'General');
     const [provider, setProvider] = useState(expense?.provider || '');
     const [description, setDescription] = useState(expense?.description || '');
     const [date, setDate] = useState(expense?.date ? format(new Date(expense.date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
     const [receiptUrl, setReceiptUrl] = useState(expense?.receiptUrl || '');
+    const [quantity, setQuantity] = useState(expense?.quantity?.toString() || '1');
+
+    const standardCategories = ['Suministros', 'Software', 'Marketing', 'Viajes'];
+    const initialCategory = expense?.category ? (standardCategories.includes(expense.category) ? expense.category : 'Otros') : 'Suministros';
+    const initialCustomCategory = expense?.category && !standardCategories.includes(expense.category) ? expense.category : '';
+    
+    const [category, setCategory] = useState(initialCategory);
+    const [customCategory, setCustomCategory] = useState(initialCustomCategory);
 
     const handleReceiptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -68,11 +75,12 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: any | 
         onSave({ 
             id: expense?.id, 
             amount: parseFloat(amount), 
-            category, 
+            category: category === 'Otros' ? customCategory : category, 
             provider, 
             description, 
             date: new Date(date),
-            receiptUrl
+            receiptUrl,
+            quantity: parseInt(quantity) || 1
         });
     };
 
@@ -95,22 +103,23 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: any | 
             </DialogHeader>
 
             <div className="grid gap-6 py-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                        <Label htmlFor="provider" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                            <ShoppingCart className="h-3.5 w-3.5 text-destructive" /> Proveedor
-                        </Label>
-                        <Input 
-                            id="provider" 
-                            value={provider} 
-                            onChange={(e) => setProvider(e.target.value)} 
-                            placeholder="Amazon, Movistar..." 
-                            required 
-                            disabled={isSaving} 
-                            className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-6 focus:ring-4 focus:ring-destructive/5" 
-                        />
-                    </div>
-                    <div className="space-y-3">
+                <div className="space-y-3">
+                    <Label htmlFor="provider" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
+                        <ShoppingCart className="h-3.5 w-3.5 text-destructive" /> Proveedor
+                    </Label>
+                    <Input 
+                        id="provider" 
+                        value={provider} 
+                        onChange={(e) => setProvider(e.target.value)} 
+                        placeholder="Amazon, Movistar..." 
+                        required 
+                        disabled={isSaving} 
+                        className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-6 focus:ring-4 focus:ring-destructive/5" 
+                    />
+                </div>
+
+                <div className="grid grid-cols-3 gap-6">
+                    <div className="space-y-3 col-span-2">
                         <Label htmlFor="amount" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
                             <CreditCard className="h-3.5 w-3.5 text-destructive" /> Importe (Base Imponible)
                         </Label>
@@ -128,6 +137,21 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: any | 
                             />
                             <span className="absolute right-6 top-1/2 -translate-y-1/2 text-sm font-black text-muted-foreground">€</span>
                         </div>
+                    </div>
+                    <div className="space-y-3 col-span-1">
+                        <Label htmlFor="quantity" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
+                            <PlusCircle className="h-3.5 w-3.5 text-destructive" /> Cantidad
+                        </Label>
+                        <Input 
+                            id="quantity" 
+                            type="number" 
+                            min="1"
+                            value={quantity} 
+                            onChange={(e) => setQuantity(e.target.value)} 
+                            required 
+                            disabled={isSaving} 
+                            className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-6 focus:ring-4 focus:ring-destructive/5" 
+                        />
                     </div>
                 </div>
 
@@ -167,6 +191,23 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: any | 
                         />
                     </div>
                 </div>
+
+                {category === 'Otros' && (
+                    <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
+                        <Label htmlFor="customCategory" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
+                            <PlusCircle className="h-3.5 w-3.5 text-destructive" /> Categoría Personalizada
+                        </Label>
+                        <Input 
+                            id="customCategory" 
+                            value={customCategory} 
+                            onChange={(e) => setCustomCategory(e.target.value)} 
+                            placeholder="Escribe el nombre de la categoría..." 
+                            required 
+                            disabled={isSaving} 
+                            className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-6 focus:ring-4 focus:ring-destructive/5" 
+                        />
+                    </div>
+                )}
 
                 <div className="space-y-3">
                     <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
@@ -396,8 +437,9 @@ export default function ExpensesPage() {
                                 Nuevo Gasto
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-xl glass rounded-[2.5rem] border-white/10 shadow-3xl p-8">
+                        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto glass rounded-[2.5rem] border-white/10 shadow-3xl p-8">
                             <ExpenseForm 
+                                key={editingExpense?.id || 'new'}
                                 expense={editingExpense} 
                                 onSave={handleSaveExpense} 
                                 onCancel={() => setIsFormOpen(false)} 
@@ -410,7 +452,7 @@ export default function ExpensesPage() {
 
             {/* Stats Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard title="Gasto Acumulado" value={formatCurrency(expenses.reduce((s, e) => s + (e.amount || 0), 0))} trend="Total Bruto" />
+                <StatCard title="Gasto Acumulado" value={formatCurrency(expenses.reduce((s, e) => s + ((e.amount || 0) * (e.quantity || 1)), 0))} trend="Total Bruto" />
                 <StatCard title="Categoría Principal" value={expenses.length > 0 ? (expenses[0].category) : "N/A"} trend="Reciente" />
                 <StatCard title="Nº Registros" value={expenses.length.toString()} trend="Últimos 30 días" />
             </div>
@@ -466,7 +508,14 @@ export default function ExpensesPage() {
                                     <div className="flex items-center justify-between md:justify-end gap-10 w-full md:w-auto border-t md:border-t-0 pt-4 md:pt-0">
                                         <div className="text-right">
                                             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Importe Total</p>
-                                            <p className="text-2xl font-black tracking-tighter text-destructive">{formatCurrency(expense.amount)}</p>
+                                            <p className="text-2xl font-black tracking-tighter text-destructive">
+                                                {formatCurrency((expense.amount || 0) * (expense.quantity || 1))}
+                                            </p>
+                                            {(expense.quantity && expense.quantity > 1) && (
+                                                <p className="text-[10px] font-medium text-muted-foreground">
+                                                    {expense.quantity} x {formatCurrency(expense.amount)}
+                                                </p>
+                                            )}
                                         </div>
                                         
                                         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>

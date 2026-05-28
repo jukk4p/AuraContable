@@ -143,6 +143,7 @@ export type Expense = {
   facturaVinculadaId?: string;
   justificanteURL?: string;
   receiptUrl?: string;
+  quantity?: number;
   editable?: boolean;
 };
 

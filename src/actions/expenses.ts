@@ -17,6 +17,7 @@ export async function getExpenses(userId: string): Promise<any[]> {
     provider: row.provider,
     description: row.description || undefined,
     receiptUrl: row.receiptUrl || undefined,
+    quantity: row.quantity,
     createdAt: row.createdAt,
   }));
 }
@@ -30,6 +31,7 @@ export async function addExpense(expenseData: Omit<Expense, 'id' | 'createdAt'>)
     provider: expenseData.provider,
     description: expenseData.description,
     receiptUrl: expenseData.receiptUrl,
+    quantity: expenseData.quantity || 1,
   }).returning();
   
   const row = newExpense[0];
@@ -42,17 +44,19 @@ export async function addExpense(expenseData: Omit<Expense, 'id' | 'createdAt'>)
     provider: row.provider,
     description: row.description || undefined,
     receiptUrl: row.receiptUrl || undefined,
+    quantity: row.quantity,
   };
 }
 
 export async function updateExpense(expenseId: string, expenseData: Partial<Omit<Expense, 'id' | 'userId'>>): Promise<void> {
   let updateObj: any = {};
-  if (expenseData.amount) updateObj.amount = Math.round(expenseData.amount * 100);
-  if (expenseData.date) updateObj.date = expenseData.date;
-  if (expenseData.category) updateObj.category = expenseData.category;
-  if (expenseData.provider) updateObj.provider = expenseData.provider;
-  if (expenseData.description) updateObj.description = expenseData.description;
+  if (expenseData.amount !== undefined) updateObj.amount = Math.round(expenseData.amount * 100);
+  if (expenseData.date !== undefined) updateObj.date = expenseData.date;
+  if (expenseData.category !== undefined) updateObj.category = expenseData.category;
+  if (expenseData.provider !== undefined) updateObj.provider = expenseData.provider;
+  if (expenseData.description !== undefined) updateObj.description = expenseData.description;
   if (expenseData.hasOwnProperty('receiptUrl')) updateObj.receiptUrl = expenseData.receiptUrl;
+  if (expenseData.quantity !== undefined) updateObj.quantity = expenseData.quantity;
 
   await db.update(expenses).set(updateObj).where(eq(expenses.id, expenseId));
 }

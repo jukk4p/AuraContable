@@ -106,6 +106,7 @@ export const expenses = pgTable('expenses', {
   provider: varchar('provider', { length: 255 }).notNull(),
   description: text('description'),
   receiptUrl: text('receipt_url'),
+  quantity: integer('quantity').default(1).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
