@@ -260,11 +260,24 @@ export default function ExpensesPage() {
                                         </div>
                                     </div>
                                 </div>
-                                {expense.description && (
-                                    <div className="mt-4 pt-4 border-t border-dashed border-border/40">
-                                        <p className="text-xs text-muted-foreground italic font-medium">"{expense.description}"</p>
-                                    </div>
-                                )}
+                                 {expense.description && (() => {
+                                     let displayDescription = expense.description;
+                                     try {
+                                         const parsed = JSON.parse(expense.description);
+                                         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Array.isArray(parsed.items)) {
+                                             displayDescription = parsed.items.map((it: any) => `${it.description} (x${it.quantity})`).join(', ');
+                                         } else if (Array.isArray(parsed)) {
+                                             displayDescription = parsed.map((it: any) => `${it.description} (x${it.quantity})`).join(', ');
+                                         }
+                                     } catch (e) {
+                                         // Keep original plain text
+                                     }
+                                     return (
+                                         <div className="mt-4 pt-4 border-t border-dashed border-border/40">
+                                             <p className="text-xs text-muted-foreground italic font-medium">"{displayDescription}"</p>
+                                         </div>
+                                     );
+                                 })()}
                             </motion.div>
                         ))
                      )}
