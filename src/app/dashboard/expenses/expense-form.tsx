@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { 
     Calendar as CalendarIcon, ShoppingCart, 
-    CreditCard, Trash2, Camera, Receipt, ArrowLeft, PlusCircle
+    CreditCard, Trash2, Camera, Receipt, ArrowLeft, PlusCircle, FileText
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -182,7 +182,7 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
         if (file) {
             if (file.size > 1024 * 1024) {
                 toast({ 
-                    title: "Imagen demasiado grande", 
+                    title: "Archivo demasiado grande", 
                     description: "Por favor selecciona un archivo de menos de 1MB.", 
                     variant: "destructive" 
                 });
@@ -510,7 +510,14 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
                                 <div className="flex flex-col sm:flex-row items-center gap-6 p-6 rounded-[2rem] border-2 border-dashed border-destructive/20 bg-muted/10 transition-colors hover:border-destructive/40">
                                     <div className="h-24 w-32 rounded-2xl border border-border bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden relative shadow-inner">
                                         {watchedReceiptUrl ? (
-                                            <img src={watchedReceiptUrl} alt="Justificante" className="h-full w-full object-contain p-2" />
+                                            watchedReceiptUrl.startsWith('data:application/pdf') || watchedReceiptUrl.endsWith('.pdf') ? (
+                                                <div className="flex flex-col items-center justify-center gap-1 text-destructive animate-fade-in">
+                                                    <FileText className="h-8 w-8 stroke-[2]" />
+                                                    <span className="text-[9px] font-black uppercase tracking-wider bg-destructive/10 px-2 py-0.5 rounded-md">PDF</span>
+                                                </div>
+                                            ) : (
+                                                <img src={watchedReceiptUrl} alt="Justificante" className="h-full w-full object-contain p-2" />
+                                            )
                                         ) : (
                                             <div className="text-center p-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-55">
                                                 Sin Archivo
@@ -521,7 +528,7 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
                                         <input 
                                             type="file" 
                                             id="expense-receipt-input-full" 
-                                            accept="image/*" 
+                                            accept="image/*,application/pdf" 
                                             onChange={handleReceiptChange}
                                             className="hidden" 
                                         />
@@ -547,7 +554,7 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
                                                 </Button>
                                             )}
                                         </div>
-                                        <p className="text-[10px] text-muted-foreground italic font-medium">Sube una imagen de tu recibo para justificar el gasto. Tamaño máx. 1MB.</p>
+                                        <p className="text-[10px] text-muted-foreground italic font-medium">Sube una imagen o PDF de tu recibo para justificar el gasto. Tamaño máx. 1MB.</p>
                                     </div>
                                 </div>
                             </div>
