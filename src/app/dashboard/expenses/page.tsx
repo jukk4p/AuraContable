@@ -222,9 +222,26 @@ export default function ExpensesPage() {
                                                     <DropdownMenuItem 
                                                         onClick={() => {
                                                             if (expense.receiptUrl) {
-                                                                const win = window.open();
-                                                                if (win) {
-                                                                    win.document.write(`<iframe src="${expense.receiptUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                                                                const url = expense.receiptUrl;
+                                                                if (url.startsWith('data:')) {
+                                                                    try {
+                                                                        const parts = url.split(',');
+                                                                        const mime = parts[0].match(/:(.*?);/)?.[1] || '';
+                                                                        const bstr = atob(parts[1]);
+                                                                        let n = bstr.length;
+                                                                        const u8arr = new Uint8Array(n);
+                                                                        while (n--) {
+                                                                            u8arr[n] = bstr.charCodeAt(n);
+                                                                        }
+                                                                        const file = new Blob([u8arr], { type: mime });
+                                                                        const fileURL = URL.createObjectURL(file);
+                                                                        window.open(fileURL, '_blank');
+                                                                    } catch (err) {
+                                                                        console.error(err);
+                                                                        window.open(url, '_blank');
+                                                                    }
+                                                                } else {
+                                                                    window.open(url, '_blank');
                                                                 }
                                                             } else {
                                                                 toast({ title: "Sin justificante", description: "Este gasto no tiene un recibo o ticket asociado.", variant: "destructive" });
