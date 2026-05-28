@@ -142,6 +142,7 @@ export type Expense = {
   tax: number;
   facturaVinculadaId?: string;
   justificanteURL?: string;
+  receiptUrl?: string;
   editable?: boolean;
 };
 

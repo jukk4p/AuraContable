@@ -16,6 +16,7 @@ export async function getExpenses(userId: string): Promise<any[]> {
     category: row.category,
     provider: row.provider,
     description: row.description || undefined,
+    receiptUrl: row.receiptUrl || undefined,
     createdAt: row.createdAt,
   }));
 }
@@ -28,6 +29,7 @@ export async function addExpense(expenseData: Omit<Expense, 'id' | 'createdAt'>)
     category: expenseData.category,
     provider: expenseData.provider,
     description: expenseData.description,
+    receiptUrl: expenseData.receiptUrl,
   }).returning();
   
   const row = newExpense[0];
@@ -39,6 +41,7 @@ export async function addExpense(expenseData: Omit<Expense, 'id' | 'createdAt'>)
     category: row.category,
     provider: row.provider,
     description: row.description || undefined,
+    receiptUrl: row.receiptUrl || undefined,
   };
 }
 
@@ -49,6 +52,7 @@ export async function updateExpense(expenseId: string, expenseData: Partial<Omit
   if (expenseData.category) updateObj.category = expenseData.category;
   if (expenseData.provider) updateObj.provider = expenseData.provider;
   if (expenseData.description) updateObj.description = expenseData.description;
+  if (expenseData.hasOwnProperty('receiptUrl')) updateObj.receiptUrl = expenseData.receiptUrl;
 
   await db.update(expenses).set(updateObj).where(eq(expenses.id, expenseId));
 }

@@ -7,7 +7,7 @@ import {
     Receipt, ShoppingCart, Smartphone, 
     CreditCard, Trash2, Edit, View,
     ArrowUpRight, AlertCircle, PlusCircle,
-    X
+    X, Camera
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -42,6 +42,26 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: any | 
     const [provider, setProvider] = useState(expense?.provider || '');
     const [description, setDescription] = useState(expense?.description || '');
     const [date, setDate] = useState(expense?.date ? format(new Date(expense.date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
+    const [receiptUrl, setReceiptUrl] = useState(expense?.receiptUrl || '');
+
+    const handleReceiptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 1024 * 1024) {
+                toast({ 
+                    title: "Imagen demasiado grande", 
+                    description: "Por favor selecciona un archivo de menos de 1MB.", 
+                    variant: "destructive" 
+                });
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setReceiptUrl(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -51,7 +71,8 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: any | 
             category, 
             provider, 
             description, 
-            date: new Date(date) 
+            date: new Date(date),
+            receiptUrl
         });
     };
 
@@ -73,11 +94,11 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: any | 
                 </div>
             </DialogHeader>
 
-            <div className="grid gap-8 py-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid gap-6 py-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-3">
                         <Label htmlFor="provider" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                            <ShoppingCart className="h-3 w-3 text-destructive" /> Proveedor
+                            <ShoppingCart className="h-3.5 w-3.5 text-destructive" /> Proveedor
                         </Label>
                         <Input 
                             id="provider" 
@@ -86,12 +107,12 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: any | 
                             placeholder="Amazon, Movistar..." 
                             required 
                             disabled={isSaving} 
-                            className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-bold text-lg px-6" 
+                            className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-6 focus:ring-4 focus:ring-destructive/5" 
                         />
                     </div>
                     <div className="space-y-3">
                         <Label htmlFor="amount" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                            <CreditCard className="h-3 w-3 text-destructive" /> Importe (Base Imponible)
+                            <CreditCard className="h-3.5 w-3.5 text-destructive" /> Importe (Base Imponible)
                         </Label>
                         <div className="relative">
                             <Input 
@@ -103,24 +124,24 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: any | 
                                 placeholder="0.00" 
                                 required 
                                 disabled={isSaving} 
-                                className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-bold text-lg px-6" 
+                                className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-6 focus:ring-4 focus:ring-destructive/5" 
                             />
                             <span className="absolute right-6 top-1/2 -translate-y-1/2 text-sm font-black text-muted-foreground">€</span>
                         </div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-3">
                         <Label htmlFor="category" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                            <PlusCircle className="h-3 w-3 text-destructive" /> Categoría
+                            <PlusCircle className="h-3.5 w-3.5 text-destructive" /> Categoría
                         </Label>
                         <div className="relative">
                             <select 
                                 id="category" 
                                 value={category} 
                                 onChange={(e) => setCategory(e.target.value)} 
-                                className="flex h-14 w-full rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 px-6 py-2 text-sm font-bold shadow-sm focus:outline-none focus:border-destructive/20 transition-all appearance-none cursor-pointer"
+                                className="flex h-14 w-full rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 px-6 py-2 text-sm font-semibold shadow-sm focus:outline-none focus:border-destructive/20 focus:ring-4 focus:ring-destructive/5 transition-all appearance-none cursor-pointer"
                             >
                                 <option value="Suministros">Suministros</option>
                                 <option value="Software">Software</option>
@@ -133,7 +154,7 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: any | 
                     </div>
                     <div className="space-y-3">
                         <Label htmlFor="date" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                            <CalendarIcon className="h-3 w-3 text-destructive" /> Fecha de Operación
+                            <CalendarIcon className="h-3.5 w-3.5 text-destructive" /> Fecha de Operación
                         </Label>
                         <Input 
                             id="date" 
@@ -142,14 +163,14 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: any | 
                             onChange={(e) => setDate(e.target.value)} 
                             required 
                             disabled={isSaving} 
-                            className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-bold text-lg px-6" 
+                            className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-6 focus:ring-4 focus:ring-destructive/5" 
                         />
                     </div>
                 </div>
 
                 <div className="space-y-3">
                     <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                        <Smartphone className="h-3 w-3 text-destructive" /> Descripción Adicional
+                        <Smartphone className="h-3.5 w-3.5 text-destructive" /> Descripción Adicional
                     </Label>
                     <Textarea 
                         id="description" 
@@ -157,8 +178,57 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: any | 
                         onChange={(e) => setDescription(e.target.value)} 
                         placeholder="Compra de servidores, suscripción mensual..." 
                         disabled={isSaving} 
-                        className="min-h-[120px] rounded-[1.5rem] bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-medium p-6 resize-none" 
+                        className="min-h-[100px] rounded-[1.5rem] bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base p-6 resize-none focus:ring-4 focus:ring-destructive/5" 
                     />
+                </div>
+
+                <div className="space-y-3">
+                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
+                        <Receipt className="h-3.5 w-3.5 text-destructive" /> Justificante / Recibo (Opcional)
+                    </Label>
+                    <div className="flex flex-col sm:flex-row items-center gap-6 p-5 rounded-2xl border-2 border-dashed border-destructive/20 bg-muted/20">
+                        <div className="h-20 w-28 rounded-xl border border-border/50 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden relative shadow-inner">
+                            {receiptUrl ? (
+                                <img src={receiptUrl} alt="Justificante" className="h-full w-full object-contain p-2" />
+                            ) : (
+                                <div className="text-center p-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-55">
+                                    Sin Archivo
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex-1 text-center sm:text-left space-y-2">
+                            <input 
+                                type="file" 
+                                id="expense-receipt-input" 
+                                accept="image/*" 
+                                onChange={handleReceiptChange}
+                                className="hidden" 
+                            />
+                            <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                                <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => document.getElementById('expense-receipt-input')?.click()}
+                                    className="h-9 rounded-xl font-bold text-xs border-destructive/20 text-destructive hover:bg-destructive/5"
+                                >
+                                    <Camera className="mr-1.5 h-3.5 w-3.5" /> {receiptUrl ? "Cambiar Ticket" : "Subir Ticket / Factura"}
+                                </Button>
+                                {receiptUrl && (
+                                    <Button 
+                                        type="button" 
+                                        variant="destructive" 
+                                        size="sm"
+                                        onClick={() => setReceiptUrl('')}
+                                        className="h-9 rounded-xl font-bold text-xs px-3"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                )}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground italic font-medium">Sube una imagen de tu recibo para justificar el gasto. Tamaño máx. 1MB.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -411,7 +481,19 @@ export default function ExpensesPage() {
                                                     <DropdownMenuItem onClick={() => { setEditingExpense(expense); setIsFormOpen(true); }} className="rounded-xl p-3 gap-3 text-xs focus:bg-primary/5 cursor-pointer">
                                                         <Edit className="h-4 w-4" /> Editar Gasto
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem className="rounded-xl p-3 gap-3 text-xs focus:bg-primary/5 cursor-pointer">
+                                                    <DropdownMenuItem 
+                                                        onClick={() => {
+                                                            if (expense.receiptUrl) {
+                                                                const win = window.open();
+                                                                if (win) {
+                                                                    win.document.write(`<iframe src="${expense.receiptUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                                                                }
+                                                            } else {
+                                                                toast({ title: "Sin justificante", description: "Este gasto no tiene un recibo o ticket asociado.", variant: "destructive" });
+                                                            }
+                                                        }} 
+                                                        className="rounded-xl p-3 gap-3 text-xs focus:bg-primary/5 cursor-pointer"
+                                                    >
                                                         <View className="h-4 w-4" /> Ver Recibo
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator className="bg-border/50" />
