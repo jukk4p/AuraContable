@@ -64,3 +64,21 @@ export async function updateExpense(expenseId: string, expenseData: Partial<Omit
 export async function deleteExpense(expenseId: string): Promise<void> {
   await db.delete(expenses).where(eq(expenses.id, expenseId));
 }
+
+export async function getExpenseById(expenseId: string): Promise<any | null> {
+  const results = await db.select().from(expenses).where(eq(expenses.id, expenseId)).limit(1);
+  if (results.length === 0) return null;
+  const row = results[0];
+  return {
+    id: row.id,
+    userId: row.userId,
+    date: row.date,
+    amount: row.amount / 100,
+    category: row.category,
+    provider: row.provider,
+    description: row.description || undefined,
+    receiptUrl: row.receiptUrl || undefined,
+    quantity: row.quantity,
+    createdAt: row.createdAt,
+  };
+}

@@ -139,7 +139,7 @@ export type Expense = {
   provider: string;
   description: string;
   amount: number;
-  tax: number;
+  tax?: number;
   facturaVinculadaId?: string;
   justificanteURL?: string;
   receiptUrl?: string;
