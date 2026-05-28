@@ -79,6 +79,25 @@ export default function SettingsPage() {
         }
     };
 
+    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 1024 * 1024) {
+                toast({ 
+                    title: "Imagen demasiado grande", 
+                    description: "Por favor selecciona una imagen de menos de 1MB para optimizar el almacenamiento.", 
+                    variant: "destructive" 
+                });
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setCompanyData((prev: any) => ({ ...prev, logoUrl: reader.result as string }));
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const tabs = [
         { id: "profile", label: "Perfil de Usuario", icon: User },
         { id: "appearance", label: "Personalización", icon: PaletteIcon },
@@ -229,6 +248,53 @@ export default function SettingsPage() {
                                 className="space-y-8"
                             >
                                 <Card className="glass-card border-none shadow-xl shadow-black/[0.02] rounded-[2.5rem] p-8">
+                                    <div className="flex flex-col md:flex-row items-center gap-8 mb-8 border-b border-border/40 pb-8">
+                                        <div className="relative group">
+                                            <div className="h-32 w-48 rounded-2xl border-2 border-dashed border-primary/20 bg-muted/20 flex flex-col items-center justify-center overflow-hidden relative shadow-inner">
+                                                {companyData.logoUrl ? (
+                                                    <img src={companyData.logoUrl} alt="Logo" className="h-full w-full object-contain p-4" />
+                                                ) : (
+                                                    <div className="text-center space-y-2 p-4">
+                                                        <Building className="h-10 w-10 text-muted-foreground/40 mx-auto" />
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sin Logotipo</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <input 
+                                                type="file" 
+                                                id="company-logo-input" 
+                                                accept="image/*" 
+                                                onChange={handleLogoChange}
+                                                className="hidden" 
+                                            />
+                                            <div className="flex gap-2 mt-3 justify-center">
+                                                <Button 
+                                                    type="button" 
+                                                    variant="outline" 
+                                                    size="sm"
+                                                    onClick={() => document.getElementById('company-logo-input')?.click()}
+                                                    className="h-9 rounded-xl font-bold text-xs"
+                                                >
+                                                    <Camera className="mr-1.5 h-3.5 w-3.5" /> Subir Logo
+                                                </Button>
+                                                {companyData.logoUrl && (
+                                                    <Button 
+                                                        type="button" 
+                                                        variant="destructive" 
+                                                        size="sm"
+                                                        onClick={() => setCompanyData({...companyData, logoUrl: ''})}
+                                                        className="h-9 rounded-xl font-bold text-xs px-3"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2 text-center md:text-left flex-1">
+                                            <h3 className="text-xl font-black tracking-tight">Logotipo de la Empresa</h3>
+                                            <p className="text-muted-foreground font-medium text-xs italic max-w-sm">Este logo aparecerá en la cabecera de tus facturas generadas en PDF. Se recomienda un archivo PNG con fondo transparente e inferior a 1MB.</p>
+                                        </div>
+                                    </div>
                                     <div className="grid md:grid-cols-2 gap-8">
                                         <div className="space-y-3">
                                             <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Nombre Comercial</Label>

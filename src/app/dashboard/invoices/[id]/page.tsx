@@ -7,7 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from "next-auth/react";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ArrowLeft, Download, Edit, Trash2, CheckCircle, Clock, AlertCircle as AlertCircleIcon, Send, Link as LinkIcon, Share2 } from 'lucide-react';
+import { ArrowLeft, Download, Edit, Trash2, CheckCircle, Clock, AlertCircle as AlertCircleIcon, Send, Link as LinkIcon, Share2, Eye } from 'lucide-react';
 import Link from 'next/link';
 
 import type { Invoice, CompanyProfile } from '@/lib/types';
@@ -36,6 +36,7 @@ export default function InvoiceDetailsPage() {
     const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [isPreviewing, setIsPreviewing] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSending, setIsSending] = useState(false);
@@ -83,6 +84,23 @@ export default function InvoiceDetailsPage() {
             toast({ title: "Error", description: "Hubo un problema al generar el PDF.", variant: "destructive" });
         } finally {
             setIsDownloading(false);
+        }
+    };
+
+    const handlePreviewPdf = async () => {
+        if (!invoice) return;
+        setIsPreviewing(true);
+        try {
+            const blob = await generateInvoicePdf(invoice, companyProfile, { t, formatCurrency, locale }, 'blob');
+            if (blob) {
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+            }
+        } catch (error) {
+            console.error("Error previewing PDF:", error);
+            toast({ title: "Error", description: "Hubo un problema al previsualizar el PDF.", variant: "destructive" });
+        } finally {
+            setIsPreviewing(false);
         }
     };
     
@@ -178,7 +196,7 @@ export default function InvoiceDetailsPage() {
         );
     }
     
-    const isActionDisabled = isDownloading || isDeleting || isUpdating || isSending;
+    const isActionDisabled = isDownloading || isPreviewing || isDeleting || isUpdating || isSending;
     
     return (
         <div className="max-w-4xl mx-auto space-y-6">
@@ -205,8 +223,11 @@ export default function InvoiceDetailsPage() {
                             <Send className="mr-2 h-4 w-4"/> {isSending ? "Enviando..." : "Email"}
                         </Button>
                         <Button variant="outline" size="sm" disabled={isActionDisabled} onClick={handleDownloadPdf}>
-                            <Download className="mr-2 h-4 w-4"/> {isDownloading ? "Generando..." : "PDF"}
-                        </Button>
+                             <Download className="mr-2 h-4 w-4"/> {isDownloading ? "Generando..." : "PDF"}
+                         </Button>
+                         <Button variant="outline" size="sm" disabled={isActionDisabled} onClick={handlePreviewPdf}>
+                             <Eye className="mr-2 h-4 w-4"/> {isPreviewing ? "Abriendo..." : "Ver PDF"}
+                         </Button>
                         <Button variant="outline" size="sm" asChild>
                            <Link href={`/dashboard/invoices/${invoice.id}/edit`}>
                                 <Edit className="mr-2 h-4 w-4"/> {t('common.edit')}
@@ -260,11 +281,11 @@ export default function InvoiceDetailsPage() {
                     <div className="grid grid-cols-3 gap-4 text-sm text-muted-foreground mb-8">
                         <div className="space-y-1">
                             <p className="font-semibold">{t('invoices.issueDate')}</p>
-                            <p className="text-foreground">{format(invoice.issueDate, 'PPP', { locale: localeMap[locale as keyof typeof localeMap] || undefined })}</p>
+                            <p className="text-foreground">{format(new Date(invoice.issueDate), 'PPP', { locale: localeMap[locale as keyof typeof localeMap] || undefined })}</p>
                         </div>
                          <div className="space-y-1">
                             <p className="font-semibold">{t('invoices.dueDate')}</p>
-                            <p className="text-foreground">{format(invoice.dueDate, 'PPP', { locale: localeMap[locale as keyof typeof localeMap] || undefined })}</p>
+                            <p className="text-foreground">{format(new Date(invoice.dueDate), 'PPP', { locale: localeMap[locale as keyof typeof localeMap] || undefined })}</p>
                         </div>
                          <div className="space-y-1">
                             <p className="font-semibold">Importe Total</p>

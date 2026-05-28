@@ -51,43 +51,41 @@ function ClientForm({ client, onSave, onCancel, isSaving }: { client?: Client | 
                 </div>
             </DialogHeader>
 
-            <div className="grid gap-8 py-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-3">
-                        <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                            <Users className="h-3 w-3 text-primary" /> {t('clients.name')}
-                        </Label>
-                        <Input 
-                            id="name" 
-                            value={name} 
-                            onChange={(e) => setName(e.target.value)} 
-                            placeholder="Exoddus Inc." 
-                            required 
-                            disabled={isSaving} 
-                            className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-primary/5 focus:border-primary/20 focus:bg-white transition-all shadow-sm font-bold text-lg px-6" 
-                        />
-                    </div>
-                    <div className="space-y-3">
-                        <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                            <Mail className="h-3 w-3 text-primary" /> {t('clients.email')}
-                        </Label>
-                        <Input 
-                            id="email" 
-                            type="email" 
-                            value={email} 
-                            onChange={(e) => setEmail(e.target.value)} 
-                            placeholder="hola@exoddus.es" 
-                            required 
-                            disabled={isSaving} 
-                            className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-primary/5 focus:border-primary/20 focus:bg-white transition-all shadow-sm font-bold text-lg px-6" 
-                        />
-                    </div>
+            <div className="grid gap-6 py-2">
+                <div className="space-y-3">
+                    <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
+                        <Users className="h-3.5 w-3.5 text-primary" /> {t('clients.name')}
+                    </Label>
+                    <Input 
+                        id="name" 
+                        value={name} 
+                        onChange={(e) => setName(e.target.value)} 
+                        placeholder="Exoddus Inc." 
+                        required 
+                        disabled={isSaving} 
+                        className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-primary/5 focus:border-primary/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-6 focus:ring-4 focus:ring-primary/5" 
+                    />
+                </div>
+                <div className="space-y-3">
+                    <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
+                        <Mail className="h-3.5 w-3.5 text-primary" /> {t('clients.email')}
+                    </Label>
+                    <Input 
+                        id="email" 
+                        type="email" 
+                        value={email} 
+                        onChange={(e) => setEmail(e.target.value)} 
+                        placeholder="hola@exoddus.es" 
+                        required 
+                        disabled={isSaving} 
+                        className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-primary/5 focus:border-primary/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-6 focus:ring-4 focus:ring-primary/5" 
+                    />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-3">
                         <Label htmlFor="phone" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                            <Phone className="h-3 w-3 text-primary" /> Teléfono
+                            <Phone className="h-3.5 w-3.5 text-primary" /> Teléfono
                         </Label>
                         <Input 
                             id="phone" 
@@ -96,12 +94,12 @@ function ClientForm({ client, onSave, onCancel, isSaving }: { client?: Client | 
                             onChange={(e) => setPhone(e.target.value)} 
                             placeholder="+34 600 000 000" 
                             disabled={isSaving} 
-                            className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-primary/5 focus:border-primary/20 focus:bg-white transition-all shadow-sm font-bold text-lg px-6" 
+                            className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-primary/5 focus:border-primary/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-6 focus:ring-4 focus:ring-primary/5" 
                         />
                     </div>
                     <div className="space-y-3">
                         <Label htmlFor="taxId" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                            <AlertCircle className="h-3 w-3 text-primary" /> CIF/NIF
+                            <AlertCircle className="h-3.5 w-3.5 text-primary" /> CIF/NIF
                         </Label>
                         <Input 
                             id="taxId" 
@@ -109,14 +107,14 @@ function ClientForm({ client, onSave, onCancel, isSaving }: { client?: Client | 
                             onChange={(e) => setTaxId(e.target.value)} 
                             placeholder="ESB12345678" 
                             disabled={isSaving} 
-                            className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-primary/5 focus:border-primary/20 focus:bg-white transition-all shadow-sm font-bold text-lg px-6" 
+                            className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-primary/5 focus:border-primary/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-6 focus:ring-4 focus:ring-primary/5" 
                         />
                     </div>
                 </div>
 
                 <div className="space-y-3">
                     <Label htmlFor="address" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                        <MapPin className="h-3 w-3 text-primary" /> Dirección Completa
+                        <MapPin className="h-3.5 w-3.5 text-primary" /> Dirección Completa
                     </Label>
                     <Textarea 
                         id="address" 
@@ -124,7 +122,7 @@ function ClientForm({ client, onSave, onCancel, isSaving }: { client?: Client | 
                         onChange={(e) => setAddress(e.target.value)} 
                         placeholder="Calle Principal 123, 28001 Madrid" 
                         disabled={isSaving} 
-                        className="min-h-[120px] rounded-[1.5rem] bg-white dark:bg-slate-900 border-2 border-primary/5 focus:border-primary/20 focus:bg-white transition-all shadow-sm font-medium p-6 resize-none" 
+                        className="min-h-[100px] rounded-[1.5rem] bg-white dark:bg-slate-900 border-2 border-primary/5 focus:border-primary/20 focus:bg-white transition-all shadow-sm font-semibold text-base p-6 resize-none focus:ring-4 focus:ring-primary/5" 
                     />
                 </div>
             </div>
