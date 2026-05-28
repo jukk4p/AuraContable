@@ -3,12 +3,12 @@
 import React, { useEffect, useMemo } from 'react';
 import { 
     Calendar as CalendarIcon, ShoppingCart, 
-    CreditCard, Trash2, Camera, Receipt, ArrowLeft
+    CreditCard, Trash2, Camera, Receipt, ArrowLeft, PlusCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useSession } from "next-auth/react";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
@@ -30,12 +30,14 @@ import { cn } from '@/lib/utils';
 
 const expenseFormSchema = z.object({
     provider: z.string().min(1, "El proveedor es obligatorio"),
-    amount: z.coerce.number().min(0.01, "El importe debe ser mayor a 0"),
-    quantity: z.coerce.number().min(1, "La cantidad debe ser al menos 1"),
     category: z.string().min(1, "La categoría es obligatoria"),
     customCategory: z.string().optional(),
     date: z.date({required_error: "La fecha es obligatoria"}),
-    description: z.string().min(1, "La descripción o concepto es obligatoria"),
+    items: z.array(z.object({
+        description: z.string().min(1, "El concepto es obligatorio"),
+        quantity: z.coerce.number().min(1, "La cantidad debe ser al menos 1"),
+        price: z.coerce.number().min(0.01, "El precio debe ser mayor a 0"),
+    })).min(1, "Se requiere al menos un concepto"),
     receiptUrl: z.string().optional(),
 }).refine(data => data.category !== 'Otros' || (data.customCategory && data.customCategory.trim().length > 0), {
     message: "Debes ingresar una categoría personalizada",
@@ -62,30 +64,66 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
     const initialCategory = expense?.category ? (STANDARD_CATEGORIES.includes(expense.category) ? expense.category : 'Otros') : 'Suministros';
     const initialCustomCategory = expense?.category && !STANDARD_CATEGORIES.includes(expense.category) ? expense.category : '';
 
+    let parsedItems = [{ description: '', quantity: 1, price: 0 }];
+    if (expense?.description) {
+        try {
+            const parsed = JSON.parse(expense.description);
+            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].description !== undefined) {
+                parsedItems = parsed.map(item => ({
+                    description: item.description || '',
+                    quantity: item.quantity || 1,
+                    price: item.price || 0
+                }));
+            } else {
+                parsedItems = [{
+                    description: expense.description,
+                    quantity: expense.quantity || 1,
+                    price: expense.amount || 0
+                }];
+            }
+        } catch (e) {
+            parsedItems = [{
+                description: expense.description,
+                quantity: expense.quantity || 1,
+                price: expense.amount || 0
+            }];
+        }
+    } else if (expense) {
+        parsedItems = [{
+            description: '',
+            quantity: expense.quantity || 1,
+            price: expense.amount || 0
+        }];
+    }
+
     const form = useForm<ExpenseFormValues>({
         resolver: zodResolver(expenseFormSchema),
         defaultValues: {
             provider: expense?.provider || '',
-            amount: expense?.amount || '',
-            quantity: expense?.quantity || 1,
             category: initialCategory,
             customCategory: initialCustomCategory,
             date: expense?.date ? new Date(expense.date) : new Date(),
-            description: expense?.description || '',
+            items: parsedItems,
             receiptUrl: expense?.receiptUrl || '',
         }
     });
 
+    const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({
+        control: form.control,
+        name: "items"
+    });
+
     const watchedCategory = form.watch("category");
-    const watchedAmount = form.watch("amount");
-    const watchedQuantity = form.watch("quantity");
+    const watchedItems = form.watch("items");
     const watchedReceiptUrl = form.watch("receiptUrl");
 
     const totalCalculated = useMemo(() => {
-        const amt = parseFloat(String(watchedAmount)) || 0;
-        const qty = parseInt(String(watchedQuantity)) || 1;
-        return amt * qty;
-    }, [watchedAmount, watchedQuantity]);
+        return (watchedItems || []).reduce((acc, item) => {
+            const price = parseFloat(String(item?.price)) || 0;
+            const qty = parseInt(String(item?.quantity)) || 1;
+            return acc + (price * qty);
+        }, 0);
+    }, [watchedItems]);
 
     const handleReceiptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -108,14 +146,28 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
 
     const onSubmit = async (data: ExpenseFormValues) => {
         try {
+            let finalDescription = "";
+            let finalQuantity = 1;
+            let finalAmount = 0;
+
+            if (data.items.length === 1) {
+                finalDescription = data.items[0].description;
+                finalQuantity = data.items[0].quantity;
+                finalAmount = data.items[0].price;
+            } else {
+                finalDescription = JSON.stringify(data.items);
+                finalQuantity = 1;
+                finalAmount = totalCalculated;
+            }
+
             const payload = {
-                amount: data.amount,
+                amount: finalAmount,
                 category: data.category === 'Otros' ? (data.customCategory || 'Otros') : data.category,
                 provider: data.provider,
-                description: data.description || '',
+                description: finalDescription,
                 date: data.date,
                 receiptUrl: data.receiptUrl,
-                quantity: data.quantity,
+                quantity: finalQuantity,
                 userId
             };
 
@@ -286,82 +338,111 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
                             </Label>
                             
                             {/* Header row */}
-                            <div className="hidden md:grid grid-cols-[1fr_120px_160px_160px] gap-4 items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground px-2">
+                            <div className="hidden md:grid grid-cols-[1fr_100px_160px_160px_48px] gap-4 items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground px-2">
                                 <span>Concepto / Descripción</span>
                                 <span className="text-center">Cant.</span>
                                 <span className="text-right">Precio Unit.</span>
                                 <span className="text-right">Total</span>
+                                <span className="sr-only">Eliminar</span>
                             </div>
 
                             {/* Inputs row */}
-                            <div className="grid grid-cols-1 md:grid-cols-[1fr_120px_160px_160px] gap-4 items-start bg-muted/5 p-4 rounded-3xl border border-border/50">
-                                <FormField
-                                    control={form.control}
-                                    name="description"
-                                    render={({ field }) => (
-                                        <FormItem className="space-y-1">
-                                            <span className="md:hidden text-[10px] font-black uppercase tracking-widest text-muted-foreground">Concepto / Descripción</span>
-                                            <FormControl>
-                                                <Input 
-                                                    placeholder="Descripción del gasto..." 
-                                                    className="h-12 rounded-2xl bg-white dark:bg-slate-900 border-2 border-border/40 focus:border-destructive/20 focus:bg-white transition-all font-semibold" 
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage className="text-xs text-destructive" />
-                                        </FormItem>
-                                    )}
-                                />
+                            <div className="space-y-4">
+                                {itemFields.map((field, index) => (
+                                    <div key={field.id} className="grid grid-cols-1 md:grid-cols-[1fr_100px_160px_160px_48px] gap-4 items-start bg-muted/5 p-4 rounded-3xl border border-border/50">
+                                        <FormField
+                                            control={form.control}
+                                            name={`items.${index}.description`}
+                                            render={({ field }) => (
+                                                <FormItem className="space-y-1">
+                                                    <span className="md:hidden text-[10px] font-black uppercase tracking-widest text-muted-foreground">Concepto / Descripción</span>
+                                                    <FormControl>
+                                                        <Input 
+                                                            placeholder="Descripción del gasto..." 
+                                                            className="h-12 rounded-2xl bg-white dark:bg-slate-900 border-2 border-border/40 focus:border-destructive/20 focus:bg-white transition-all font-semibold" 
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage className="text-xs text-destructive" />
+                                                </FormItem>
+                                            )}
+                                        />
 
-                                <FormField
-                                    control={form.control}
-                                    name="quantity"
-                                    render={({ field }) => (
-                                        <FormItem className="space-y-1">
-                                            <span className="md:hidden text-[10px] font-black uppercase tracking-widest text-muted-foreground">Cant.</span>
-                                            <FormControl>
-                                                <Input 
-                                                    type="number" 
-                                                    min="1"
-                                                    className="h-12 rounded-2xl bg-white dark:bg-slate-900 border-2 border-border/40 focus:border-destructive/20 focus:bg-white transition-all font-semibold text-center" 
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage className="text-xs text-destructive" />
-                                        </FormItem>
-                                    )}
-                                />
+                                        <FormField
+                                            control={form.control}
+                                            name={`items.${index}.quantity`}
+                                            render={({ field }) => (
+                                                <FormItem className="space-y-1">
+                                                    <span className="md:hidden text-[10px] font-black uppercase tracking-widest text-muted-foreground">Cant.</span>
+                                                    <FormControl>
+                                                        <Input 
+                                                            type="number" 
+                                                            min="1"
+                                                            className="h-12 rounded-2xl bg-white dark:bg-slate-900 border-2 border-border/40 focus:border-destructive/20 focus:bg-white transition-all font-semibold text-center" 
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage className="text-xs text-destructive" />
+                                                </FormItem>
+                                            )}
+                                        />
 
-                                <FormField
-                                    control={form.control}
-                                    name="amount"
-                                    render={({ field }) => (
-                                        <FormItem className="space-y-1">
-                                            <span className="md:hidden text-[10px] font-black uppercase tracking-widest text-muted-foreground">Precio Unit.</span>
-                                            <FormControl>
-                                                <div className="relative">
-                                                    <Input 
-                                                        type="number" 
-                                                        step="0.01" 
-                                                        placeholder="0.00" 
-                                                        className="h-12 rounded-2xl bg-white dark:bg-slate-900 border-2 border-border/40 focus:border-destructive/20 focus:bg-white transition-all font-semibold text-right pr-8" 
-                                                        {...field}
-                                                    />
-                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">€</span>
-                                                </div>
-                                            </FormControl>
-                                            <FormMessage className="text-xs text-destructive" />
-                                        </FormItem>
-                                    )}
-                                />
+                                        <FormField
+                                            control={form.control}
+                                            name={`items.${index}.price`}
+                                            render={({ field }) => (
+                                                <FormItem className="space-y-1">
+                                                    <span className="md:hidden text-[10px] font-black uppercase tracking-widest text-muted-foreground">Precio Unit.</span>
+                                                    <FormControl>
+                                                        <div className="relative">
+                                                            <Input 
+                                                                type="number" 
+                                                                step="0.01" 
+                                                                placeholder="0.00" 
+                                                                className="h-12 rounded-2xl bg-white dark:bg-slate-900 border-2 border-border/40 focus:border-destructive/20 focus:bg-white transition-all font-semibold text-right pr-8" 
+                                                                {...field}
+                                                            />
+                                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">€</span>
+                                                        </div>
+                                                    </FormControl>
+                                                    <FormMessage className="text-xs text-destructive" />
+                                                </FormItem>
+                                            )}
+                                        />
 
-                                <div className="space-y-1 text-right">
-                                    <span className="md:hidden text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Total</span>
-                                    <div className="h-12 flex items-center justify-end font-black text-xl text-destructive px-2">
-                                        {formatCurrency(totalCalculated)}
+                                        <div className="space-y-1 text-right">
+                                            <span className="md:hidden text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Total</span>
+                                            <div className="h-12 flex items-center justify-end font-black text-xl text-destructive px-2">
+                                                {formatCurrency((form.getValues(`items.${index}.quantity`) || 0) * (form.getValues(`items.${index}.price`) || 0))}
+                                            </div>
+                                        </div>
+
+                                        <div className="h-12 flex items-center justify-center">
+                                            <Button 
+                                                type="button" 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                onClick={() => removeItem(index)}
+                                                disabled={itemFields.length === 1}
+                                                className="h-10 w-10 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </div>
-                                </div>
+                                ))}
                             </div>
+
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => appendItem({ description: "", quantity: 1, price: 0 })}
+                                className="h-10 rounded-xl font-bold text-xs border-destructive/20 text-destructive hover:bg-destructive/5"
+                            >
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Añadir Concepto
+                            </Button>
                         </div>
 
                         {/* Bottom Grid for Receipt and Totals summary */}
