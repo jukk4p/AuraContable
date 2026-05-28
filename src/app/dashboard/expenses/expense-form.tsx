@@ -22,6 +22,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { 
+    DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
+    DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator 
+} from '@/components/ui/dropdown-menu';
 
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { addExpense, updateExpense } from '@/actions/expenses';
@@ -38,6 +42,11 @@ const expenseFormSchema = z.object({
         quantity: z.coerce.number().min(1, "La cantidad debe ser al menos 1"),
         price: z.coerce.number().min(0.01, "El precio debe ser mayor a 0"),
     })).min(1, "Se requiere al menos un concepto"),
+    taxes: z.array(z.object({
+        id: z.string(),
+        name: z.string(),
+        percentage: z.coerce.number(),
+    })).optional(),
     receiptUrl: z.string().optional(),
 }).refine(data => data.category !== 'Otros' || (data.customCategory && data.customCategory.trim().length > 0), {
     message: "Debes ingresar una categoría personalizada",
@@ -49,6 +58,24 @@ type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 const STANDARD_CATEGORIES = ['Suministros', 'Software', 'Marketing', 'Viajes'];
 const localeMap = {
     es: es,
+};
+
+const PRESET_TAXES = {
+  es: [
+    { id: 'es-iva-21', name: 'IVA', percentage: 21 },
+    { id: 'es-iva-10', name: 'IVA Reducido', percentage: 10 },
+    { id: 'es-irpf-15', name: 'IRPF', percentage: -15 },
+    { id: 'es-irpf-7', name: 'IRPF (Nuevos autónomos)', percentage: -7 },
+  ],
+  it: [
+    { id: 'it-iva-22', name: 'IVA', percentage: 22 },
+  ],
+  fr: [
+    { id: 'fr-tva-20', name: 'TVA', percentage: 20 },
+  ],
+  gb: [
+    { id: 'gb-vat-20', name: 'VAT', percentage: 20 },
+  ]
 };
 
 interface ExpenseFormProps {
@@ -65,15 +92,20 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
     const initialCustomCategory = expense?.category && !STANDARD_CATEGORIES.includes(expense.category) ? expense.category : '';
 
     let parsedItems = [{ description: '', quantity: 1, price: 0 }];
+    let parsedTaxes: any[] = [];
+    
     if (expense?.description) {
         try {
             const parsed = JSON.parse(expense.description);
-            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].description !== undefined) {
-                parsedItems = parsed.map(item => ({
-                    description: item.description || '',
-                    quantity: item.quantity || 1,
-                    price: item.price || 0
-                }));
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                if (Array.isArray(parsed.items)) {
+                    parsedItems = parsed.items;
+                }
+                if (Array.isArray(parsed.taxes)) {
+                    parsedTaxes = parsed.taxes;
+                }
+            } else if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].description !== undefined) {
+                parsedItems = parsed;
             } else {
                 parsedItems = [{
                     description: expense.description,
@@ -104,6 +136,7 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
             customCategory: initialCustomCategory,
             date: expense?.date ? new Date(expense.date) : new Date(),
             items: parsedItems,
+            taxes: parsedTaxes,
             receiptUrl: expense?.receiptUrl || '',
         }
     });
@@ -113,17 +146,38 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
         name: "items"
     });
 
-    const watchedCategory = form.watch("category");
-    const watchedItems = form.watch("items");
-    const watchedReceiptUrl = form.watch("receiptUrl");
+    const { fields: taxFields, append: appendTax, remove: removeTax } = useFieldArray({
+        control: form.control,
+        name: "taxes"
+    });
+
+    // Watch entire form to ensure deep updates are reactive
+    const formValues = form.watch();
+    const watchedCategory = formValues.category;
+    const watchedItems = formValues.items || [];
+    const watchedTaxes = formValues.taxes || [];
+    const watchedReceiptUrl = formValues.receiptUrl;
 
     const totalCalculated = useMemo(() => {
-        return (watchedItems || []).reduce((acc, item) => {
+        const subtotal = (watchedItems || []).reduce((acc, item) => {
             const price = parseFloat(String(item?.price)) || 0;
             const qty = parseInt(String(item?.quantity)) || 1;
             return acc + (price * qty);
         }, 0);
-    }, [watchedItems]);
+
+        const taxAmounts = (watchedTaxes || []).map(tax => {
+            const pct = parseFloat(String(tax.percentage)) || 0;
+            return {
+                ...tax,
+                amount: subtotal * (pct / 100)
+            };
+        });
+
+        const totalTaxAmount = taxAmounts.reduce((acc, tax) => acc + tax.amount, 0);
+        const total = subtotal + totalTaxAmount;
+
+        return { subtotal, taxAmounts, total };
+    }, [watchedItems, watchedTaxes]);
 
     const handleReceiptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -150,14 +204,17 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
             let finalQuantity = 1;
             let finalAmount = 0;
 
-            if (data.items.length === 1) {
+            if (data.items.length === 1 && (!data.taxes || data.taxes.length === 0)) {
                 finalDescription = data.items[0].description;
                 finalQuantity = data.items[0].quantity;
                 finalAmount = data.items[0].price;
             } else {
-                finalDescription = JSON.stringify(data.items);
+                finalDescription = JSON.stringify({
+                    items: data.items,
+                    taxes: data.taxes || []
+                });
                 finalQuantity = 1;
-                finalAmount = totalCalculated;
+                finalAmount = totalCalculated.total;
             }
 
             const payload = {
@@ -502,12 +559,75 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
                                 <div className="space-y-4 p-6 rounded-3xl border bg-muted/5 border-border/50">
                                     <div className="flex justify-between items-center text-sm font-semibold">
                                         <span className="text-muted-foreground">Subtotal</span>
-                                        <span>{formatCurrency(totalCalculated)}</span>
+                                        <span>{formatCurrency(totalCalculated.subtotal)}</span>
                                     </div>
+
+                                    {taxFields.map((field, index) => (
+                                        <div key={field.id} className="grid grid-cols-[1fr_80px_auto] gap-2 items-center">
+                                            <FormField
+                                                control={form.control}
+                                                name={`taxes.${index}.name`}
+                                                render={({ field }) => (
+                                                    <FormItem className="space-y-0">
+                                                        <FormControl>
+                                                            <Input placeholder="Impuesto" className="h-9 rounded-xl font-semibold text-xs" {...field} />
+                                                        </FormControl>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name={`taxes.${index}.percentage`}
+                                                render={({ field }) => (
+                                                    <FormItem className="space-y-0">
+                                                        <FormControl>
+                                                            <div className="relative">
+                                                                <Input type="number" placeholder="%" className="h-9 rounded-xl font-semibold text-xs pr-5 text-right" {...field} />
+                                                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground">%</span>
+                                                            </div>
+                                                        </FormControl>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <Button type="button" variant="ghost" size="icon" onClick={() => removeTax(index)} className="h-8 w-8 rounded-lg hover:bg-destructive/5 text-muted-foreground hover:text-destructive">
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                        </div>
+                                    ))}
+
+                                    {totalCalculated.taxAmounts.map((tax: any) => (
+                                        <div key={tax.id} className="flex justify-between items-center text-xs text-muted-foreground">
+                                            <span>{tax.name} ({tax.percentage}%)</span>
+                                            <span>{formatCurrency(tax.amount)}</span>
+                                        </div>
+                                    ))}
+
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button type="button" variant="outline" size="sm" className="mt-2 h-9 rounded-xl font-bold text-[10px] uppercase tracking-widest border-destructive/20 text-destructive hover:bg-destructive/5">
+                                                <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
+                                                Añadir Impuesto
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="glass border-white/10 rounded-2xl p-1 font-semibold text-xs w-56">
+                                            <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest px-3 py-2 opacity-50">España</DropdownMenuLabel>
+                                            {PRESET_TAXES.es.map(tax => (
+                                                <DropdownMenuItem key={tax.id} onSelect={() => appendTax(tax)} className="rounded-xl p-2.5 focus:bg-destructive/5 cursor-pointer">
+                                                    {tax.name} ({tax.percentage}%)
+                                                </DropdownMenuItem>
+                                            ))}
+                                            <DropdownMenuSeparator className="bg-border/50" />
+                                            <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest px-3 py-2 opacity-50">Otros</DropdownMenuLabel>
+                                            <DropdownMenuItem onSelect={() => appendTax({ id: `tax-${Date.now()}`, name: "", percentage: 0 })} className="rounded-xl p-2.5 focus:bg-destructive/5 cursor-pointer font-bold text-destructive">
+                                                Impuesto personalizado
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+
                                     <hr className="border-border/40" />
                                     <div className="flex justify-between items-center text-xl font-black text-destructive">
                                         <span>Total Gasto</span>
-                                        <span>{formatCurrency(totalCalculated)}</span>
+                                        <span>{formatCurrency(totalCalculated.total)}</span>
                                     </div>
                                 </div>
                             </div>
