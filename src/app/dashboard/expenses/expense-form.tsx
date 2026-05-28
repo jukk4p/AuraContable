@@ -151,12 +151,10 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
         name: "taxes"
     });
 
-    // Watch entire form to ensure deep updates are reactive
-    const formValues = form.watch();
-    const watchedCategory = formValues.category;
-    const watchedItems = formValues.items || [];
-    const watchedTaxes = formValues.taxes || [];
-    const watchedReceiptUrl = formValues.receiptUrl;
+    const watchedCategory = form.watch("category");
+    const watchedItems = form.watch("items") || [];
+    const watchedTaxes = form.watch("taxes") || [];
+    const watchedReceiptUrl = form.watch("receiptUrl");
 
     const totalCalculated = useMemo(() => {
         const subtotal = (watchedItems || []).reduce((acc, item) => {
@@ -470,7 +468,7 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
                                         <div className="space-y-1 text-right">
                                             <span className="md:hidden text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Total</span>
                                             <div className="h-12 flex items-center justify-end font-black text-xl text-destructive px-2">
-                                                {formatCurrency((form.getValues(`items.${index}.quantity`) || 0) * (form.getValues(`items.${index}.price`) || 0))}
+                                                {formatCurrency((parseFloat(String(watchedItems[index]?.quantity)) || 0) * (parseFloat(String(watchedItems[index]?.price)) || 0))}
                                             </div>
                                         </div>
 
