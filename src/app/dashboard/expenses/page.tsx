@@ -13,6 +13,9 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -28,6 +31,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { getExpenses, addExpense, updateExpense, deleteExpense } from '@/actions/expenses';
@@ -35,21 +42,49 @@ import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { Expense } from '@/lib/types';
 
-function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: any | null, onSave: (data: any) => void, onCancel: () => void, isSaving: boolean }) {
-    const { t } = useLocale();
-    const [amount, setAmount] = useState(expense?.amount?.toString() || '');
-    const [provider, setProvider] = useState(expense?.provider || '');
-    const [description, setDescription] = useState(expense?.description || '');
-    const [date, setDate] = useState(expense?.date ? format(new Date(expense.date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
-    const [receiptUrl, setReceiptUrl] = useState(expense?.receiptUrl || '');
-    const [quantity, setQuantity] = useState(expense?.quantity?.toString() || '1');
+const expenseFormSchema = z.object({
+    provider: z.string().min(1, "El proveedor es obligatorio"),
+    amount: z.coerce.number().min(0.01, "El importe debe ser mayor a 0"),
+    quantity: z.coerce.number().min(1, "La cantidad debe ser al menos 1"),
+    category: z.string().min(1, "La categoría es obligatoria"),
+    customCategory: z.string().optional(),
+    date: z.date({required_error: "La fecha es obligatoria"}),
+    description: z.string().optional(),
+    receiptUrl: z.string().optional(),
+}).refine(data => data.category !== 'Otros' || (data.customCategory && data.customCategory.trim().length > 0), {
+    message: "Debes ingresar una categoría personalizada",
+    path: ["customCategory"]
+});
 
-    const standardCategories = ['Suministros', 'Software', 'Marketing', 'Viajes'];
-    const initialCategory = expense?.category ? (standardCategories.includes(expense.category) ? expense.category : 'Otros') : 'Suministros';
-    const initialCustomCategory = expense?.category && !standardCategories.includes(expense.category) ? expense.category : '';
+type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
+
+const STANDARD_CATEGORIES = ['Suministros', 'Software', 'Marketing', 'Viajes'];
+const localeMap = {
+    es: es,
+};
+
+function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: any | null, onSave: (data: any) => void, onCancel: () => void, isSaving: boolean }) {
+    const { t, locale: currentLocale } = useLocale();
     
-    const [category, setCategory] = useState(initialCategory);
-    const [customCategory, setCustomCategory] = useState(initialCustomCategory);
+    const initialCategory = expense?.category ? (STANDARD_CATEGORIES.includes(expense.category) ? expense.category : 'Otros') : 'Suministros';
+    const initialCustomCategory = expense?.category && !STANDARD_CATEGORIES.includes(expense.category) ? expense.category : '';
+
+    const form = useForm<ExpenseFormValues>({
+        resolver: zodResolver(expenseFormSchema),
+        defaultValues: {
+            provider: expense?.provider || '',
+            amount: expense?.amount || '',
+            quantity: expense?.quantity || 1,
+            category: initialCategory,
+            customCategory: initialCustomCategory,
+            date: expense?.date ? new Date(expense.date) : new Date(),
+            description: expense?.description || '',
+            receiptUrl: expense?.receiptUrl || '',
+        }
+    });
+
+    const watchedCategory = form.watch("category");
+    const watchedReceiptUrl = form.watch("receiptUrl");
 
     const handleReceiptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -64,239 +99,307 @@ function ExpenseForm({ expense, onSave, onCancel, isSaving }: { expense?: any | 
             }
             const reader = new FileReader();
             reader.onloadend = () => {
-                setReceiptUrl(reader.result as string);
+                form.setValue('receiptUrl', reader.result as string);
             };
             reader.readAsDataURL(file);
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
+    const onSubmit = (data: ExpenseFormValues) => {
         onSave({ 
             id: expense?.id, 
-            amount: parseFloat(amount), 
-            category: category === 'Otros' ? customCategory : category, 
-            provider, 
-            description, 
-            date: new Date(date),
-            receiptUrl,
-            quantity: parseInt(quantity) || 1
+            amount: data.amount, 
+            category: data.category === 'Otros' ? data.customCategory : data.category, 
+            provider: data.provider, 
+            description: data.description, 
+            date: data.date,
+            receiptUrl: data.receiptUrl,
+            quantity: data.quantity
         });
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-8">
-            <DialogHeader className="space-y-3">
-                <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-2xl bg-destructive/10 text-destructive">
-                        {expense ? <Edit className="h-6 w-6 stroke-[2.5]" /> : <Receipt className="h-6 w-6 stroke-[2.5]" />}
-                    </div>
-                    <div>
-                        <DialogTitle className="text-3xl font-black font-headline tracking-tighter">
-                            {expense ? "Editar Gasto" : "Registrar Nuevo Gasto"}
-                        </DialogTitle>
-                        <DialogDescription className="font-medium italic opacity-70">
-                            Introduce los detalles de tu compra o suministro para deducir el gasto.
-                        </DialogDescription>
-                    </div>
-                </div>
-            </DialogHeader>
-
-            <div className="grid gap-6 py-2">
-                <div className="space-y-3">
-                    <Label htmlFor="provider" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                        <ShoppingCart className="h-3.5 w-3.5 text-destructive" /> Proveedor
-                    </Label>
-                    <Input 
-                        id="provider" 
-                        value={provider} 
-                        onChange={(e) => setProvider(e.target.value)} 
-                        placeholder="Amazon, Movistar..." 
-                        required 
-                        disabled={isSaving} 
-                        className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-6 focus:ring-4 focus:ring-destructive/5" 
-                    />
-                </div>
-
-                <div className="grid grid-cols-3 gap-6">
-                    <div className="space-y-3 col-span-2">
-                        <Label htmlFor="amount" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                            <CreditCard className="h-3.5 w-3.5 text-destructive" /> Importe (Base Imponible)
-                        </Label>
-                        <div className="relative">
-                            <Input 
-                                id="amount" 
-                                type="number" 
-                                step="0.01" 
-                                value={amount} 
-                                onChange={(e) => setAmount(e.target.value)} 
-                                placeholder="0.00" 
-                                required 
-                                disabled={isSaving} 
-                                className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-6 focus:ring-4 focus:ring-destructive/5" 
-                            />
-                            <span className="absolute right-6 top-1/2 -translate-y-1/2 text-sm font-black text-muted-foreground">€</span>
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <DialogHeader className="space-y-3">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 rounded-2xl bg-destructive/10 text-destructive animate-pulse">
+                            {expense ? <Edit className="h-6 w-6 stroke-[2.5]" /> : <Receipt className="h-6 w-6 stroke-[2.5]" />}
+                        </div>
+                        <div>
+                            <DialogTitle className="text-3xl font-black font-headline tracking-tighter">
+                                {expense ? "Editar Gasto" : "Registrar Nuevo Gasto"}
+                            </DialogTitle>
+                            <DialogDescription className="font-medium italic opacity-70">
+                                Introduce los detalles de tu compra o suministro para deducir el gasto.
+                            </DialogDescription>
                         </div>
                     </div>
-                    <div className="space-y-3 col-span-1">
-                        <Label htmlFor="quantity" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                            <PlusCircle className="h-3.5 w-3.5 text-destructive" /> Cantidad
-                        </Label>
-                        <Input 
-                            id="quantity" 
-                            type="number" 
-                            min="1"
-                            value={quantity} 
-                            onChange={(e) => setQuantity(e.target.value)} 
-                            required 
-                            disabled={isSaving} 
-                            className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-6 focus:ring-4 focus:ring-destructive/5" 
-                        />
-                    </div>
-                </div>
+                </DialogHeader>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                        <Label htmlFor="category" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                            <PlusCircle className="h-3.5 w-3.5 text-destructive" /> Categoría
-                        </Label>
-                        <div className="relative">
-                            <select 
-                                id="category" 
-                                value={category} 
-                                onChange={(e) => setCategory(e.target.value)} 
-                                className="flex h-14 w-full rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 px-6 py-2 text-sm font-semibold shadow-sm focus:outline-none focus:border-destructive/20 focus:ring-4 focus:ring-destructive/5 transition-all appearance-none cursor-pointer"
-                            >
-                                <option value="Suministros">Suministros</option>
-                                <option value="Software">Software</option>
-                                <option value="Marketing">Marketing</option>
-                                <option value="Viajes">Viajes</option>
-                                <option value="Otros">Otros</option>
-                            </select>
-                            <MoreHorizontal className="absolute right-6 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                        </div>
-                    </div>
-                    <div className="space-y-3">
-                        <Label htmlFor="date" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                            <CalendarIcon className="h-3.5 w-3.5 text-destructive" /> Fecha de Operación
-                        </Label>
-                        <Input 
-                            id="date" 
-                            type="date" 
-                            value={date} 
-                            onChange={(e) => setDate(e.target.value)} 
-                            required 
-                            disabled={isSaving} 
-                            className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-6 focus:ring-4 focus:ring-destructive/5" 
-                        />
-                    </div>
-                </div>
-
-                {category === 'Otros' && (
-                    <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
-                        <Label htmlFor="customCategory" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                            <PlusCircle className="h-3.5 w-3.5 text-destructive" /> Categoría Personalizada
-                        </Label>
-                        <Input 
-                            id="customCategory" 
-                            value={customCategory} 
-                            onChange={(e) => setCustomCategory(e.target.value)} 
-                            placeholder="Escribe el nombre de la categoría..." 
-                            required 
-                            disabled={isSaving} 
-                            className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-6 focus:ring-4 focus:ring-destructive/5" 
-                        />
-                    </div>
-                )}
-
-                <div className="space-y-3">
-                    <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                        <Smartphone className="h-3.5 w-3.5 text-destructive" /> Descripción Adicional
-                    </Label>
-                    <Textarea 
-                        id="description" 
-                        value={description} 
-                        onChange={(e) => setDescription(e.target.value)} 
-                        placeholder="Compra de servidores, suscripción mensual..." 
-                        disabled={isSaving} 
-                        className="min-h-[100px] rounded-[1.5rem] bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base p-6 resize-none focus:ring-4 focus:ring-destructive/5" 
+                <div className="grid gap-5 py-2">
+                    <FormField
+                        control={form.control}
+                        name="provider"
+                        render={({ field }) => (
+                            <FormItem className="space-y-2">
+                                <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
+                                    <ShoppingCart className="h-3.5 w-3.5 text-destructive" /> Proveedor
+                                </FormLabel>
+                                <FormControl>
+                                    <Input 
+                                        placeholder="Amazon, Movistar..." 
+                                        disabled={isSaving} 
+                                        className="h-12 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-5 focus:ring-4 focus:ring-destructive/5" 
+                                        {...field}
+                                    />
+                                </FormControl>
+                                <FormMessage className="ml-1 text-xs font-semibold text-destructive animate-in fade-in-50" />
+                            </FormItem>
+                        )}
                     />
-                </div>
 
-                <div className="space-y-3">
-                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
-                        <Receipt className="h-3.5 w-3.5 text-destructive" /> Justificante / Recibo (Opcional)
-                    </Label>
-                    <div className="flex flex-col sm:flex-row items-center gap-6 p-5 rounded-2xl border-2 border-dashed border-destructive/20 bg-muted/20">
-                        <div className="h-20 w-28 rounded-xl border border-border/50 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden relative shadow-inner">
-                            {receiptUrl ? (
-                                <img src={receiptUrl} alt="Justificante" className="h-full w-full object-contain p-2" />
-                            ) : (
-                                <div className="text-center p-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-55">
-                                    Sin Archivo
-                                </div>
+                    <div className="grid grid-cols-3 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="amount"
+                            render={({ field }) => (
+                                <FormItem className="space-y-2 col-span-2">
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
+                                        <CreditCard className="h-3.5 w-3.5 text-destructive" /> Importe (Base Imponible)
+                                    </FormLabel>
+                                    <FormControl>
+                                        <div className="relative">
+                                            <Input 
+                                                type="number" 
+                                                step="0.01" 
+                                                placeholder="0.00" 
+                                                disabled={isSaving} 
+                                                className="h-12 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-5 focus:ring-4 focus:ring-destructive/5 w-full" 
+                                                {...field}
+                                            />
+                                            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-sm font-black text-muted-foreground">€</span>
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage className="ml-1 text-xs font-semibold text-destructive" />
+                                </FormItem>
                             )}
-                        </div>
-                        <div className="flex-1 text-center sm:text-left space-y-2">
-                            <input 
-                                type="file" 
-                                id="expense-receipt-input" 
-                                accept="image/*" 
-                                onChange={handleReceiptChange}
-                                className="hidden" 
-                            />
-                            <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => document.getElementById('expense-receipt-input')?.click()}
-                                    className="h-9 rounded-xl font-bold text-xs border-destructive/20 text-destructive hover:bg-destructive/5"
-                                >
-                                    <Camera className="mr-1.5 h-3.5 w-3.5" /> {receiptUrl ? "Cambiar Ticket" : "Subir Ticket / Factura"}
-                                </Button>
-                                {receiptUrl && (
-                                    <Button 
-                                        type="button" 
-                                        variant="destructive" 
-                                        size="sm"
-                                        onClick={() => setReceiptUrl('')}
-                                        className="h-9 rounded-xl font-bold text-xs px-3"
-                                    >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                    </Button>
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="quantity"
+                            render={({ field }) => (
+                                <FormItem className="space-y-2 col-span-1">
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
+                                        <PlusCircle className="h-3.5 w-3.5 text-destructive" /> Cantidad
+                                    </FormLabel>
+                                    <FormControl>
+                                        <Input 
+                                            type="number" 
+                                            min="1"
+                                            disabled={isSaving} 
+                                            className="h-12 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-5 focus:ring-4 focus:ring-destructive/5 text-center" 
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormMessage className="ml-1 text-xs font-semibold text-destructive" />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="category"
+                            render={({ field }) => (
+                                <FormItem className="space-y-2">
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
+                                        <PlusCircle className="h-3.5 w-3.5 text-destructive" /> Categoría
+                                    </FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger className="h-12 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white focus:ring-4 focus:ring-destructive/5 transition-all text-sm font-semibold px-5">
+                                                <SelectValue placeholder="Selecciona una categoría" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent className="glass border-white/10 rounded-2xl p-1 font-semibold text-sm">
+                                            <SelectItem value="Suministros" className="rounded-xl p-3 focus:bg-destructive/5 cursor-pointer">Suministros</SelectItem>
+                                            <SelectItem value="Software" className="rounded-xl p-3 focus:bg-destructive/5 cursor-pointer">Software</SelectItem>
+                                            <SelectItem value="Marketing" className="rounded-xl p-3 focus:bg-destructive/5 cursor-pointer">Marketing</SelectItem>
+                                            <SelectItem value="Viajes" className="rounded-xl p-3 focus:bg-destructive/5 cursor-pointer">Viajes</SelectItem>
+                                            <SelectItem value="Otros" className="rounded-xl p-3 focus:bg-destructive/5 cursor-pointer">Otros</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage className="ml-1 text-xs font-semibold text-destructive" />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="date"
+                            render={({ field }) => (
+                                <FormItem className="space-y-2 flex flex-col justify-end">
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
+                                        <CalendarIcon className="h-3.5 w-3.5 text-destructive" /> Fecha de Operación
+                                    </FormLabel>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <FormControl>
+                                                <Button
+                                                    variant={"outline"}
+                                                    className={cn(
+                                                        "h-12 w-full rounded-2xl border-2 border-destructive/5 bg-white dark:bg-slate-900 px-5 text-left font-semibold text-sm focus:border-destructive/20 focus:ring-4 focus:ring-destructive/5 transition-all hover:bg-white",
+                                                        !field.value && "text-muted-foreground"
+                                                    )}
+                                                >
+                                                    {field.value ? (
+                                                        format(field.value, "PPP", { locale: localeMap[currentLocale as keyof typeof localeMap] || es })
+                                                    ) : (
+                                                        <span>Selecciona una fecha</span>
+                                                    )}
+                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0 rounded-2xl border-white/10 shadow-2xl glass" align="start">
+                                            <Calendar 
+                                                mode="single" 
+                                                selected={field.value} 
+                                                onSelect={field.onChange} 
+                                                initialFocus 
+                                                locale={localeMap[currentLocale as keyof typeof localeMap] || es} 
+                                                className="rounded-2xl"
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                    <FormMessage className="ml-1 text-xs font-semibold text-destructive" />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+
+                    {watchedCategory === 'Otros' && (
+                        <FormField
+                            control={form.control}
+                            name="customCategory"
+                            render={({ field }) => (
+                                <FormItem className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
+                                        <PlusCircle className="h-3.5 w-3.5 text-destructive" /> Categoría Personalizada
+                                    </FormLabel>
+                                    <FormControl>
+                                        <Input 
+                                            placeholder="Escribe el nombre de la categoría..." 
+                                            disabled={isSaving} 
+                                            className="h-12 rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base px-5 focus:ring-4 focus:ring-destructive/5" 
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormMessage className="ml-1 text-xs font-semibold text-destructive" />
+                                </FormItem>
+                            )}
+                        />
+                    )}
+
+                    <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                            <FormItem className="space-y-2">
+                                <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
+                                    <Smartphone className="h-3.5 w-3.5 text-destructive" /> Descripción Adicional
+                                </FormLabel>
+                                <FormControl>
+                                    <Textarea 
+                                        placeholder="Compra de servidores, suscripción mensual..." 
+                                        disabled={isSaving} 
+                                        className="min-h-[90px] rounded-2xl bg-white dark:bg-slate-900 border-2 border-destructive/5 focus:border-destructive/20 focus:bg-white transition-all shadow-sm font-semibold text-base p-5 resize-none focus:ring-4 focus:ring-destructive/5" 
+                                        {...field}
+                                    />
+                                </FormControl>
+                                <FormMessage className="ml-1 text-xs font-semibold text-destructive" />
+                            </FormItem>
+                        )}
+                    />
+
+                    <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 ml-1">
+                            <Receipt className="h-3.5 w-3.5 text-destructive" /> Justificante / Recibo (Opcional)
+                        </Label>
+                        <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-2xl border-2 border-dashed border-destructive/25 bg-muted/10 transition-colors hover:border-destructive/40">
+                            <div className="h-20 w-28 rounded-xl border border-border bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden relative shadow-inner">
+                                {watchedReceiptUrl ? (
+                                    <img src={watchedReceiptUrl} alt="Justificante" className="h-full w-full object-contain p-2" />
+                                ) : (
+                                    <div className="text-center p-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-55">
+                                        Sin Archivo
+                                    </div>
                                 )}
                             </div>
-                            <p className="text-[10px] text-muted-foreground italic font-medium">Sube una imagen de tu recibo para justificar el gasto. Tamaño máx. 1MB.</p>
+                            <div className="flex-1 text-center sm:text-left space-y-2">
+                                <input 
+                                    type="file" 
+                                    id="expense-receipt-input" 
+                                    accept="image/*" 
+                                    onChange={handleReceiptChange}
+                                    className="hidden" 
+                                />
+                                <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                                    <Button 
+                                        type="button" 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => document.getElementById('expense-receipt-input')?.click()}
+                                        className="h-9 rounded-xl font-bold text-xs border-destructive/20 text-destructive hover:bg-destructive/5 transition-all"
+                                    >
+                                        <Camera className="mr-1.5 h-3.5 w-3.5" /> {watchedReceiptUrl ? "Cambiar Ticket" : "Subir Ticket / Factura"}
+                                    </Button>
+                                    {watchedReceiptUrl && (
+                                        <Button 
+                                            type="button" 
+                                            variant="destructive" 
+                                            size="sm"
+                                            onClick={() => form.setValue('receiptUrl', '')}
+                                            className="h-9 rounded-xl font-bold text-xs px-3 transition-all"
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    )}
+                                </div>
+                                <p className="text-[10px] text-muted-foreground italic font-medium">Sube una imagen de tu recibo para justificar el gasto. Tamaño máx. 1MB.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <DialogFooter className="pt-6 border-t border-destructive/5 gap-4 flex flex-col sm:flex-row">
-                <Button 
-                    type="button" 
-                    variant="ghost" 
-                    onClick={onCancel} 
-                    disabled={isSaving} 
-                    className="h-14 rounded-2xl font-black uppercase tracking-widest text-xs px-8 hover:bg-muted"
-                >
-                    Cancelar
-                </Button>
-                <Button 
-                    type="submit" 
-                    disabled={isSaving} 
-                    className="h-14 rounded-2xl px-10 font-black shadow-2xl shadow-destructive/20 bg-destructive hover:bg-destructive/90 text-white transition-all hover:scale-[1.02] active:scale-95"
-                >
-                    {isSaving ? (
-                        <div className="flex items-center gap-2">
-                            <div className="h-4 w-4 border-2 border-white/30 border-t-white animate-spin rounded-full" />
-                            Guardando...
-                        </div>
-                    ) : (expense ? "Sincronizar Gasto" : "Registrar Gasto")}
-                </Button>
-            </DialogFooter>
-        </form>
+                <DialogFooter className="pt-5 border-t border-destructive/5 gap-4 flex flex-col sm:flex-row">
+                    <Button 
+                        type="button" 
+                        variant="ghost" 
+                        onClick={onCancel} 
+                        disabled={isSaving} 
+                        className="h-12 rounded-2xl font-black uppercase tracking-widest text-xs px-6 hover:bg-muted"
+                    >
+                        Cancelar
+                    </Button>
+                    <Button 
+                        type="submit" 
+                        disabled={isSaving} 
+                        className="h-12 rounded-2xl px-8 font-black shadow-xl shadow-destructive/20 bg-destructive hover:bg-destructive/90 text-white transition-all hover:scale-[1.02] active:scale-95"
+                    >
+                        {isSaving ? (
+                            <div className="flex items-center gap-2">
+                                <div className="h-4 w-4 border-2 border-white/30 border-t-white animate-spin rounded-full" />
+                                Guardando...
+                            </div>
+                        ) : (expense ? "Sincronizar Gasto" : "Registrar Gasto")}
+                    </Button>
+                </DialogFooter>
+            </form>
+        </Form>
     );
 }
 
