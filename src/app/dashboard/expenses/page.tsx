@@ -3,21 +3,22 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
     MoreHorizontal, Plus, Search,
-    Calendar as CalendarIcon, FileDown,
-    Receipt, Trash2, Edit, View, AlertCircle
+    FileDown, Receipt, Trash2, Edit, View, AlertCircle, RefreshCw, Calculator,
+    FileText, Image as ImageIcon
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { 
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
-    DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator 
+    DropdownMenuTrigger, DropdownMenuSeparator 
 } from '@/components/ui/dropdown-menu';
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -25,6 +26,19 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { getExpenses, deleteExpense } from '@/actions/expenses';
 import { toast } from '@/hooks/use-toast';
+import { getReceiptMeta } from '@/lib/receipt-utils';
+
+function StatCard({ title, value, trend }: { title: string, value: string, trend: string }) {
+    return (
+        <Card className="p-4 rounded-xl border border-border shadow-sm flex flex-col gap-2 bg-card hover:border-border/80 transition-colors">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{title}</p>
+            <div className="flex justify-between items-end">
+                <h3 className="text-2xl font-semibold tracking-tight">{value}</h3>
+                <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-md text-muted-foreground">{trend}</span>
+            </div>
+        </Card>
+    );
+}
 
 export default function ExpensesPage() {
     const { formatCurrency } = useLocale();
@@ -34,7 +48,7 @@ export default function ExpensesPage() {
     
     const [expenses, setExpenses] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [categoryFilter, setCategoryFilter] = useState<'All' | string>('All');
+    const [categoryFilter, setCategoryFilter] = useState<string>('All');
     const [dbLoading, setDbLoading] = useState(true);
     const [dbError, setDbError] = useState<string | null>(null);
 
@@ -58,6 +72,11 @@ export default function ExpensesPage() {
         fetchExpenses();
     }, [user, status]);
 
+    const categories = useMemo(() => {
+        const cats = Array.from(new Set(expenses.map(e => e.category).filter(Boolean))) as string[];
+        return ['All', ...cats.slice(0, 4)];
+    }, [expenses]);
+
     const filteredExpenses = useMemo(() => {
         return expenses.filter(expense => {
             const matchesSearch = 
@@ -77,18 +96,6 @@ export default function ExpensesPage() {
             toast({ title: "Error", description: "No se pudo eliminar el gasto.", variant: "destructive" });
         }
     };
-
-    if (status === 'loading') return <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
-
-    if (!user) {
-        return (
-           <Alert variant="destructive" className="rounded-3xl border-none shadow-2xl">
-               <AlertCircle className="h-4 w-4" />
-               <AlertTitle className="font-black uppercase tracking-widest text-xs">Acceso Denegado</AlertTitle>
-               <AlertDescription className="font-bold">Debes iniciar sesión para ver esta página.</AlertDescription>
-           </Alert>
-       )
-   }
 
     const handleExportCsv = () => {
         if (!filteredExpenses.length) {
@@ -116,192 +123,207 @@ export default function ExpensesPage() {
         toast({ title: "CSV Exportado", description: `Se han exportado ${filteredExpenses.length} gastos.` });
     };
 
+    if (status === 'loading') return <div className="p-10 text-center text-sm text-muted-foreground">Cargando...</div>;
+
+    if (!user) {
+        return (
+           <Alert variant="destructive" className="rounded-md border-danger text-danger">
+               <AlertCircle className="h-4 w-4" />
+               <AlertTitle className="font-medium text-xs">Acceso Denegado</AlertTitle>
+               <AlertDescription className="text-sm">Debes iniciar sesión para ver esta página.</AlertDescription>
+           </Alert>
+       )
+   }
+
     return (
-        <div className="space-y-8 animate-in fade-in duration-700 pb-20">
+        <div className="space-y-6 pb-10">
             {/* Header & Actions */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="space-y-1">
-                    <h2 className="text-4xl font-black font-headline tracking-tighter capitalize">Gestión de Gastos</h2>
-                    <p className="text-muted-foreground font-medium italic">Controla tus compras, suministros y gastos operativos.</p>
+                    <h2 className="text-2xl font-semibold tracking-tight">Gestión de Gastos</h2>
+                    <p className="text-sm text-muted-foreground">Controla tus compras, suministros y gastos operativos.</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Button onClick={handleExportCsv} variant="outline" className="h-12 rounded-2xl px-6 font-bold border-2 border-dashed border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 hover:border-solid hover:text-primary transition-all active:scale-95 shadow-sm group/export">
-                        <FileDown className="mr-2 h-4 w-4 transition-transform group-hover/export:-translate-y-0.5" /> Exportar
+                <div className="flex items-center gap-2">
+                    <Button onClick={handleExportCsv} variant="outline" size="sm" className="h-9">
+                        <FileDown className="mr-2 h-4 w-4" /> Exportar CSV
                     </Button>
                     
                     <Button 
                         onClick={() => router.push('/dashboard/expenses/new')}
-                        className="h-12 rounded-2xl px-6 font-black shadow-xl shadow-destructive/20 bg-destructive hover:bg-destructive/90 text-destructive-foreground transition-all hover:scale-[1.02] active:scale-95"
+                        size="sm" className="h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
                     >
-                        <Plus className="mr-2 h-5 w-5 stroke-[2.5]" />
-                        Nuevo Gasto
+                        <Plus className="mr-2 h-4 w-4" /> Nuevo Gasto
                     </Button>
                 </div>
             </div>
 
             {/* Stats Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <StatCard title="Gasto Acumulado" value={formatCurrency(expenses.reduce((s, e) => s + ((e.amount || 0) * (e.quantity || 1)), 0))} trend="Total Bruto" />
                 <StatCard title="Categoría Principal" value={expenses.length > 0 ? (expenses[0].category) : "N/A"} trend="Reciente" />
                 <StatCard title="Nº Registros" value={expenses.length.toString()} trend="Últimos 30 días" />
             </div>
 
-            {/* Filters */}
-            <Card className="glass-card border-none shadow-xl shadow-black/5 p-2 rounded-[2rem]">
-                <CardContent className="p-2 flex flex-col lg:flex-row items-center gap-4">
-                    <div className="relative flex-1 w-full group">
-                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-destructive transition-colors" />
-                        <Input 
-                            placeholder="Buscar por proveedor o descripción..." 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="h-14 pl-14 rounded-2xl bg-muted/30 border-none group-focus-within:ring-2 ring-destructive/10 transition-all font-bold text-lg"
-                        />
+            {/* Filters Row */}
+            <Card className="rounded-xl border border-border shadow-sm p-4 flex flex-col md:flex-row gap-4 items-center justify-between bg-card">
+                <div className="relative flex-1 w-full max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="Buscar proveedor o concepto..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="h-9 pl-9 rounded-md text-sm transition-all"
+                    />
+                </div>
+                {categories.length > 1 && (
+                    <div className="flex items-center gap-2 w-full md:w-auto">
+                        <Tabs value={categoryFilter} onValueChange={setCategoryFilter} className="h-9">
+                            <TabsList className="h-full rounded-md px-1 py-1 bg-muted">
+                                {categories.map(cat => (
+                                    <TabsTrigger key={cat} value={cat} className="rounded text-xs px-3 h-7 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                                        {cat === 'All' ? 'Todas' : cat}
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
+                        </Tabs>
                     </div>
-                </CardContent>
+                )}
             </Card>
 
-            {/* Expenses Grid/Table */}
-            <div className="grid gap-4">
-                <AnimatePresence>
-                    {dbLoading ? (
-                         <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>
-                    ) : (
-                        filteredExpenses.map((expense, idx) => (
-                            <motion.div 
-                                key={expense.id}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: idx * 0.05 }}
-                                onClick={() => router.push(`/dashboard/expenses/${expense.id}/edit`)}
-                                className="group relative bg-white dark:bg-slate-900 border border-border/40 hover:border-destructive/40 rounded-[2rem] p-6 shadow-xl shadow-black/[0.02] hover:shadow-destructive/5 transition-all cursor-pointer"
-                            >
-                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                                    <div className="flex items-center gap-5">
-                                        <div className="h-16 w-16 rounded-2xl bg-muted/30 flex items-center justify-center group-hover:bg-destructive/10 transition-colors shadow-inner">
-                                            <Receipt className="h-7 w-7 text-muted-foreground group-hover:text-destructive transition-colors" />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <h3 className="text-xl font-black font-headline tracking-tighter group-hover:text-destructive transition-colors">{expense.provider}</h3>
-                                            <div className="flex items-center gap-3">
-                                                <Badge variant="outline" className="bg-muted/40 text-[10px] font-black uppercase tracking-widest border-none px-3 py-1 rounded-lg">
-                                                    {expense.category}
-                                                </Badge>
-                                                <span className="text-muted-foreground font-medium text-xs italic">
-                                                    {format(new Date(expense.date), 'dd MMM yyyy', { locale: es })}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex items-center justify-between md:justify-end gap-10 w-full md:w-auto border-t md:border-t-0 pt-4 md:pt-0">
-                                        <div className="text-right">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Importe Total</p>
-                                            <p className="text-2xl font-black tracking-tighter text-destructive">
-                                                {formatCurrency((expense.amount || 0) * (expense.quantity || 1))}
-                                            </p>
-                                            {(expense.quantity && expense.quantity > 1) && (
-                                                <p className="text-[10px] font-medium text-muted-foreground">
-                                                    {expense.quantity} x {formatCurrency(expense.amount)}
-                                                </p>
-                                            )}
-                                        </div>
-                                        
-                                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl hover:bg-destructive/10 group/dots transition-all">
-                                                        <MoreHorizontal className="h-5 w-5 text-muted-foreground group-hover/dots:text-destructive transition-colors" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="glass rounded-2xl border-white/10 shadow-2xl p-1 w-48 font-bold">
-                                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest px-3 py-2 opacity-50">Acciones de Gasto</DropdownMenuLabel>
-                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/expenses/${expense.id}/edit`)} className="rounded-xl p-3 gap-3 text-xs focus:bg-primary/5 cursor-pointer">
-                                                        <Edit className="h-4 w-4" /> Editar Gasto
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem 
-                                                        onClick={() => {
-                                                            if (expense.receiptUrl) {
-                                                                const url = expense.receiptUrl;
-                                                                if (url.startsWith('data:')) {
-                                                                    try {
-                                                                        const parts = url.split(',');
-                                                                        const mime = parts[0].match(/:(.*?);/)?.[1] || '';
-                                                                        const bstr = atob(parts[1]);
-                                                                        let n = bstr.length;
-                                                                        const u8arr = new Uint8Array(n);
-                                                                        while (n--) {
-                                                                            u8arr[n] = bstr.charCodeAt(n);
-                                                                        }
-                                                                        const file = new Blob([u8arr], { type: mime });
-                                                                        const fileURL = URL.createObjectURL(file);
-                                                                        window.open(fileURL, '_blank');
-                                                                    } catch (err) {
-                                                                        console.error(err);
-                                                                        window.open(url, '_blank');
-                                                                    }
-                                                                } else {
-                                                                    window.open(url, '_blank');
-                                                                }
-                                                            } else {
-                                                                toast({ title: "Sin justificante", description: "Este gasto no tiene un recibo o ticket asociado.", variant: "destructive" });
-                                                            }
-                                                        }} 
-                                                        className="rounded-xl p-3 gap-3 text-xs focus:bg-primary/5 cursor-pointer"
-                                                    >
-                                                        <View className="h-4 w-4" /> Ver Recibo
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator className="bg-border/50" />
-                                                    <DropdownMenuItem onClick={() => handleDeleteExpense(expense.id)} className="rounded-xl p-3 gap-3 text-xs text-destructive focus:bg-destructive/5 cursor-pointer">
-                                                        <Trash2 className="h-4 w-4" /> Eliminar Registro
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </div>
-                                </div>
-                                 {expense.description && (() => {
-                                     let displayDescription = expense.description;
-                                     try {
-                                         const parsed = JSON.parse(expense.description);
-                                         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Array.isArray(parsed.items)) {
-                                             displayDescription = parsed.items.map((it: any) => `${it.description} (x${it.quantity})`).join(', ');
-                                         } else if (Array.isArray(parsed)) {
-                                             displayDescription = parsed.map((it: any) => `${it.description} (x${it.quantity})`).join(', ');
-                                         }
-                                     } catch (e) {
-                                         // Keep original plain text
-                                     }
-                                     return (
-                                         <div className="mt-4 pt-4 border-t border-dashed border-border/40">
-                                             <p className="text-xs text-muted-foreground italic font-medium">"{displayDescription}"</p>
-                                         </div>
-                                     );
-                                 })()}
-                            </motion.div>
-                        ))
-                     )}
-                </AnimatePresence>
-            </div>
-            
-            {!dbLoading && filteredExpenses.length === 0 && (
-                <div className="text-center py-20 bg-muted/20 rounded-[3rem] border-2 border-dashed border-muted">
-                    <Receipt className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-                    <p className="text-muted-foreground font-black uppercase tracking-widest text-xs">No hay gastos registrados todavía</p>
-                </div>
+            {dbError && (
+                <Alert variant="destructive" className="rounded-md border-danger text-danger">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle className="font-medium text-xs">Error</AlertTitle>
+                    <AlertDescription className="text-sm">{dbError}</AlertDescription>
+                </Alert>
             )}
-        </div>
-    );
-}
 
-function StatCard({ title, value, trend }: { title: string, value: string, trend: string }) {
-    return (
-        <Card className="glass-card border-none shadow-xl shadow-black/5 p-6 rounded-[2rem] space-y-2 group hover:shadow-destructive/5 transition-all">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-60 group-hover:text-destructive transition-colors">{title}</p>
-            <div className="flex justify-between items-end">
-                <h3 className="text-3xl font-black font-headline tracking-tighter">{value}</h3>
-                <span className="text-[10px] font-black uppercase tracking-widest text-destructive bg-destructive/10 px-3 py-1 rounded-full">{trend}</span>
+            {/* Expenses Table */}
+            <div className="border border-border rounded-xl bg-card overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-muted/50 text-muted-foreground text-xs uppercase font-medium border-b border-border">
+                            <tr>
+                                <th className="px-4 py-3 font-medium">Proveedor</th>
+                                <th className="px-4 py-3 font-medium">Concepto</th>
+                                <th className="px-4 py-3 font-medium">Categoría</th>
+                                <th className="px-4 py-3 font-medium">Fecha</th>
+                                <th className="px-4 py-3 font-medium text-center">Deducible</th>
+                                <th className="px-4 py-3 font-medium text-right">Importe</th>
+                                <th className="px-4 py-3 font-medium text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                            {dbLoading ? (
+                                <tr>
+                                    <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground text-sm">Cargando gastos...</td>
+                                </tr>
+                            ) : filteredExpenses.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground text-sm">No se encontraron gastos.</td>
+                                </tr>
+                            ) : (
+                                filteredExpenses.map((expense) => {
+                                    // Mock % deducible & Recurrencia for UI purposes based on category/provider to be deterministic
+                                    const isRecurring = expense.provider.toLowerCase().includes('suscripcion') || expense.provider.toLowerCase().includes('software');
+                                    const deductibility = expense.category === 'Transporte' ? '50%' : expense.category === 'Comidas' ? '0%' : '100%';
+                                    const receiptMeta = getReceiptMeta(expense.receiptUrl);
+                                    const hasReceipt = !!receiptMeta;
+
+                                    return (
+                                    <tr key={expense.id} className="hover:bg-muted/30 transition-colors group">
+                                        <td className="px-4 py-3 font-medium text-foreground">
+                                            <div className="flex items-center gap-2">
+                                                {expense.provider}
+                                                {isRecurring && <span title="Gasto recurrente"><RefreshCw className="h-3 w-3 text-primary opacity-70" /></span>}
+                                                {hasReceipt && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => window.open(expense.receiptUrl, '_blank')}
+                                                        title={`Ver factura${receiptMeta?.kind === 'image' ? ' (imagen)' : receiptMeta?.kind === 'pdf' ? ' (PDF)' : ''}`}
+                                                        aria-label="Ver factura adjunta"
+                                                        className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
+                                                    >
+                                                        {receiptMeta?.kind === 'image' ? (
+                                                            <ImageIcon className="h-3.5 w-3.5" />
+                                                        ) : (
+                                                            <FileText className="h-3.5 w-3.5" />
+                                                        )}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-muted-foreground text-xs truncate max-w-[200px]" title={(() => {
+                                            try {
+                                                const parsed = JSON.parse(expense.description);
+                                                if (parsed && Array.isArray(parsed.items)) {
+                                                    return parsed.items.map((item: any) => item.description).join(', ');
+                                                }
+                                            } catch (e) {}
+                                            return expense.description || 'Sin concepto';
+                                        })()}>
+                                            {(() => {
+                                                try {
+                                                    const parsed = JSON.parse(expense.description);
+                                                    if (parsed && Array.isArray(parsed.items)) {
+                                                        return parsed.items.map((item: any) => item.description).join(', ');
+                                                    }
+                                                } catch (e) {}
+                                                return expense.description || 'Sin concepto';
+                                            })()}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <Badge variant="outline" className="text-[10px] uppercase font-medium border-border/50 rounded-md">
+                                                {expense.category}
+                                            </Badge>
+                                        </td>
+                                        <td className="px-4 py-3 text-muted-foreground text-xs">
+                                            {format(new Date(expense.date), 'dd MMM yyyy', { locale: es })}
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <Badge variant="secondary" className="bg-primary/5 text-primary text-[10px] font-medium border-transparent shadow-none px-1.5 flex items-center justify-center gap-1 w-fit mx-auto">
+                                                <Calculator className="h-3 w-3" /> {deductibility}
+                                            </Badge>
+                                        </td>
+                                        <td className="px-4 py-3 text-right font-medium text-foreground">
+                                            {formatCurrency((expense.amount || 0) * (expense.quantity || 1))}
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => router.push(`/dashboard/expenses/${expense.id}/edit`)}>
+                                                    <View className="h-4 w-4" />
+                                                </Button>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-40 rounded-md p-1">
+                                                        <DropdownMenuItem onClick={() => router.push(`/dashboard/expenses/${expense.id}/edit`)} className="text-xs cursor-pointer rounded-sm">
+                                                            <Edit className="h-4 w-4 mr-2" /> Editar
+                                                        </DropdownMenuItem>
+                                                        {expense.receiptUrl && (
+                                                            <DropdownMenuItem onClick={() => window.open(expense.receiptUrl, '_blank')} className="text-xs cursor-pointer rounded-sm">
+                                                                <View className="h-4 w-4 mr-2" /> Ver Recibo
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        <DropdownMenuSeparator className="bg-border/50 mx-1" />
+                                                        <DropdownMenuItem onClick={() => handleDeleteExpense(expense.id)} className="text-xs text-danger focus:bg-danger/10 focus:text-danger cursor-pointer rounded-sm">
+                                                            <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </Card>
+        </div>
     );
 }
