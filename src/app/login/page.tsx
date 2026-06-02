@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { FileText, AlertCircle, MailCheck, MoveRight } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { signIn } from "next-auth/react";
@@ -16,29 +15,6 @@ import { registerUser } from "@/actions/auth";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { motion, AnimatePresence } from "framer-motion";
 import { TiltCard } from "@/components/tilt-card";
-
-function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
-    return (
-      <svg
-        {...props}
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-        <path d="M12 22c-2.39 0-4.63-.82-6.4-2.2" />
-        <path d="M20.2 13.8c.12-.6.2-1.2.2-1.8 0-5.523-4.477-10-10-10-2.39 0-4.63.82-6.4 2.2" />
-        <path d="M3.8 10.2c-.12.6-.2 1.2-.2 1.8 0 5.523 4.477 10 10 10 2.39 0 4.63-.82 6.4-2.2" />
-        <path d="M12 12h.01" />
-      </svg>
-    )
-}
 
 export default function LoginPage() {
   const { t } = useLocale();
@@ -248,28 +224,6 @@ export default function LoginPage() {
                                     </Button>
                                 </div>
                             </form>
-                        </div>
-                        
-                        <div className="relative">
-                            <div className="absolute inset-0 flex items-center">
-                                <Separator className="bg-border/50" />
-                            </div>
-                            <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-background px-4 text-muted-foreground font-black tracking-[0.2em]">{t('login.or')}</span>
-                            </div>
-                        </div>
-
-                        <div className="grid gap-4">
-                            <Button 
-                                variant="ghost" 
-                                type="button"
-                                className="h-12 border border-border/50 bg-muted/20 hover:bg-primary/5 hover:text-primary transition-all font-bold text-foreground rounded-xl" 
-                                disabled={isLoading} 
-                                onClick={() => signIn("google")}
-                            >
-                                <GoogleIcon className="mr-3 h-5 w-5" />
-                                Continuar con Google
-                            </Button>
                         </div>
                         
                         <p className="px-8 text-center text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">
