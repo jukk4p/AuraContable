@@ -4,25 +4,22 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { 
     MoreHorizontal, View, Edit, Trash2, 
-    Download, CheckCircle, Send, Plus, 
-    Search, Filter, Calendar as CalendarIcon,
-    ChevronDown, FileText, Mail, FileDown
+    Download, Plus, Search, Calendar as CalendarIcon,
+    FileText, Mail, FileDown, AlertCircle,
+    ChevronDown, ChevronUp, LayoutGrid, Layers, ArrowUpDown, Filter
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent } from '@/components/ui/card';
 import { 
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
     DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator 
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -31,10 +28,20 @@ import { useLocale } from '@/lib/i18n/locale-provider';
 import { getInvoices, deleteInvoice } from '@/actions/invoices';
 import { getCompanyProfile } from '@/actions/company';
 import { generateInvoicePdf } from '@/lib/pdf-generator';
-import type { Invoice, InvoiceStatus, CompanyProfile } from '@/lib/types';
+import type { InvoiceStatus, CompanyProfile } from '@/lib/types';
 import InvoiceStatusBadge from '@/components/invoice-status-badge';
-import { cn } from '@/lib/utils';
-import { AlertCircle } from 'lucide-react';
+
+function StatCard({ title, value, trend }: { title: string, value: string, trend: string }) {
+    return (
+        <Card className="p-4 rounded-xl border border-border shadow-sm flex flex-col gap-2 bg-card hover:border-border/80 transition-colors">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{title}</p>
+            <div className="flex justify-between items-end">
+                <h3 className="text-2xl font-semibold tracking-tight">{value}</h3>
+                <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-md text-muted-foreground">{trend}</span>
+            </div>
+        </Card>
+    );
+}
 
 export default function InvoiceList() {
     const { t, formatCurrency, locale } = useLocale();
@@ -46,7 +53,17 @@ export default function InvoiceList() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
     const [dbLoading, setDbLoading] = useState(true);
-    const [dbError, setDbError] = useState<string | null>(null);
+    const [sortBy, setSortBy] = useState<'name' | 'issueDate' | 'dueDate'>('issueDate');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [isStacked, setIsStacked] = useState(true);
+    const [expandedClients, setExpandedClients] = useState<Record<string, boolean>>({});
+
+    const toggleClient = (clientName: string) => {
+        setExpandedClients(prev => ({
+            ...prev,
+            [clientName]: !prev[clientName]
+        }));
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -61,7 +78,6 @@ export default function InvoiceList() {
                     setCompanyProfile(companyData);
                 } catch (e) {
                     console.error(e);
-                    setDbError("No se pudieron cargar las facturas.");
                 } finally {
                     setDbLoading(false);
                 }
@@ -72,6 +88,13 @@ export default function InvoiceList() {
         fetchData();
     }, [user, status]);
 
+    const stats = useMemo(() => {
+        const total = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+        const cobrado = invoices.filter(inv => inv.status === 'Paid').reduce((sum, inv) => sum + (inv.total || 0), 0);
+        const pendiente = invoices.filter(inv => inv.status === 'Pending' || inv.status === 'Overdue').reduce((sum, inv) => sum + (inv.total || 0), 0);
+        return { total, cobrado, pendiente };
+    }, [invoices]);
+
     const filteredInvoices = useMemo(() => {
         return invoices.filter(invoice => {
             const matchesSearch = 
@@ -79,8 +102,43 @@ export default function InvoiceList() {
                 invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesStatus = statusFilter === 'All' || invoice.status === statusFilter;
             return matchesSearch && matchesStatus;
+        }).sort((a, b) => {
+            if (sortBy === 'name') {
+                const nameA = a.client.name.toLowerCase();
+                const nameB = b.client.name.toLowerCase();
+                return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+            }
+            if (sortBy === 'issueDate') {
+                const dateA = new Date(a.issueDate).getTime();
+                const dateB = new Date(b.issueDate).getTime();
+                return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+            }
+            if (sortBy === 'dueDate') {
+                const dateA = new Date(a.dueDate).getTime();
+                const dateB = new Date(b.dueDate).getTime();
+                return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+            }
+            return 0;
         });
-    }, [searchTerm, statusFilter, invoices]);
+    }, [searchTerm, statusFilter, invoices, sortBy, sortOrder]);
+
+    const groupedInvoices = useMemo(() => {
+        const groups: Record<string, { client: any, invoices: any[], total: number }> = {};
+        filteredInvoices.forEach(inv => {
+            const clientKey = inv.client.name;
+            if (!groups[clientKey]) {
+                groups[clientKey] = {
+                    client: inv.client,
+                    invoices: [],
+                    total: 0
+                };
+            }
+            groups[clientKey].invoices.push(inv);
+            groups[clientKey].total += inv.total || 0;
+        });
+        return Object.values(groups);
+    }, [filteredInvoices]);
+
 
     const handleDownloadPdf = async (invoice: any) => {
         try {
@@ -106,192 +164,336 @@ export default function InvoiceList() {
         }
     };
 
-    const handleExportCsv = () => {
-        if (!filteredInvoices.length) {
-            toast({ title: "Sin datos", description: "No hay facturas para exportar.", variant: "destructive" });
-            return;
-        }
-        const headers = ['Nº Factura', 'Cliente', 'Email Cliente', 'Fecha Emisión', 'Fecha Vencimiento', 'Subtotal', 'Total', 'Estado'];
-        const rows = filteredInvoices.map(inv => [
-            inv.invoiceNumber,
-            inv.client.name,
-            inv.client.email || '',
-            format(new Date(inv.issueDate), 'dd/MM/yyyy'),
-            format(new Date(inv.dueDate), 'dd/MM/yyyy'),
-            inv.subtotal?.toFixed(2) ?? '0.00',
-            inv.total?.toFixed(2) ?? '0.00',
-            inv.status,
-        ]);
-        const statusMap: Record<string, string> = { Paid: 'Pagada', Pending: 'Pendiente', Overdue: 'Vencida', Draft: 'Borrador' };
-        const translatedRows = rows.map(r => [...r.slice(0, -1), statusMap[r[r.length - 1] as string] || r[r.length - 1]]);
-        const csvContent = '\uFEFF' + [headers, ...translatedRows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Facturas-${format(new Date(), 'yyyy-MM-dd')}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        toast({ title: "CSV Exportado", description: `Se han exportado ${filteredInvoices.length} facturas.` });
-    };
-
-    if (status === 'loading') return <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+    if (status === 'loading') return <div className="p-10 text-center text-sm text-muted-foreground">Cargando...</div>;
 
     if (!user) {
         return (
-           <Alert variant="destructive" className="rounded-3xl border-none shadow-2xl">
+           <Alert variant="destructive" className="rounded-md border-danger text-danger">
                <AlertCircle className="h-4 w-4" />
-               <AlertTitle className="font-black uppercase tracking-widest text-xs">Acceso Denegado</AlertTitle>
-               <AlertDescription className="font-bold">Debes iniciar sesión para ver esta página.</AlertDescription>
+               <AlertTitle className="font-medium text-xs">Acceso Denegado</AlertTitle>
+               <AlertDescription className="text-sm">Debes iniciar sesión para ver esta página.</AlertDescription>
            </Alert>
        )
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700 pb-20">
+        <div className="space-y-6 pb-10">
             {/* Header & Actions */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="space-y-1">
-                    <h2 className="text-4xl font-black font-headline tracking-tighter capitalize">Listado de Facturas</h2>
-                    <p className="text-muted-foreground font-medium italic">Gestiona tus ventas y cobros del trimestre de forma profesional.</p>
+                    <h2 className="text-2xl font-semibold tracking-tight">Facturas</h2>
+                    <p className="text-sm text-muted-foreground">Gestiona tus facturas y cobros emitidos.</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Button onClick={handleExportCsv} variant="outline" className="h-12 rounded-2xl px-6 font-bold border-2 border-dashed border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 hover:border-solid hover:text-primary transition-all active:scale-95 shadow-sm group/export">
-                        <FileDown className="mr-2 h-4 w-4 transition-transform group-hover/export:-translate-y-0.5" /> Exportar CSV
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="h-9">
+                        <FileDown className="mr-2 h-4 w-4" /> Exportar CSV
                     </Button>
-                    <Link href="/dashboard/invoices/new">
-                        <Button className="h-12 rounded-2xl px-6 font-black shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all hover:scale-[1.02] active:scale-95">
-                            <Plus className="mr-2 h-5 w-5 stroke-[2.5]" />
-                            Crear Factura
-                        </Button>
-                    </Link>
+                    <Button size="sm" className="h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-medium" asChild>
+                        <Link href="/dashboard/invoices/new">
+                            <Plus className="mr-2 h-4 w-4" /> Nueva Factura
+                        </Link>
+                    </Button>
                 </div>
+            </div>
+
+            {/* Stats Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <StatCard title="Total Facturado" value={formatCurrency(stats.total)} trend="Histórico" />
+                <StatCard title="Cobrado" value={formatCurrency(stats.cobrado)} trend="Ingresos confirmados" />
+                <StatCard title="Pendiente" value={formatCurrency(stats.pendiente)} trend="A la espera de cobro" />
             </div>
 
             {/* Filters Rack */}
-            <Card className="glass-card border-none shadow-xl shadow-black/5 p-2 rounded-[2rem]">
-                <CardContent className="p-2 flex flex-col lg:flex-row items-center gap-4">
-                    <div className="relative flex-1 w-full group">
-                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                        <Input 
-                            placeholder="Buscar por cliente o número de factura..." 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="h-14 pl-14 rounded-2xl bg-muted/30 border-none group-focus-within:ring-2 ring-primary/10 transition-all font-bold text-lg"
-                        />
-                    </div>
-                    <div className="flex items-center gap-2 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0 h-12 scrollbar-hide">
-                        <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)} className="h-10">
-                            <TabsList className="bg-muted/40 p-1 rounded-xl h-full font-bold">
-                                <TabsTrigger value="All" className="rounded-lg text-xs px-4">Todas</TabsTrigger>
-                                <TabsTrigger value="Paid" className="rounded-lg text-xs px-4 text-emerald-500 data-[state=active]:bg-emerald-500/10">Pagadas</TabsTrigger>
-                                <TabsTrigger value="Pending" className="rounded-lg text-xs px-4 text-amber-500 data-[state=active]:bg-amber-500/10">Pendientes</TabsTrigger>
-                                <TabsTrigger value="Overdue" className="rounded-lg text-xs px-4 text-destructive data-[state=active]:bg-destructive/10">Vencidas</TabsTrigger>
-                            </TabsList>
-                        </Tabs>
-                    </div>
-                </CardContent>
+            <Card className="rounded-xl border border-border shadow-sm p-4 flex flex-col md:flex-row gap-4 items-center justify-between bg-card">
+                <div className="relative flex-1 w-full max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="Buscar por cliente o número..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="h-9 pl-9 rounded-md text-sm transition-all"
+                    />
+                </div>
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                    <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)} className="h-9">
+                        <TabsList className="h-full rounded-md px-1 py-1 bg-muted">
+                            <TabsTrigger value="All" className="rounded text-xs px-3 h-7">Todas</TabsTrigger>
+                            <TabsTrigger value="Paid" className="rounded text-xs px-3 h-7">Pagadas</TabsTrigger>
+                            <TabsTrigger value="Pending" className="rounded text-xs px-3 h-7">Pendientes</TabsTrigger>
+                            <TabsTrigger value="Overdue" className="rounded text-xs px-3 h-7 text-danger data-[state=active]:bg-danger/10 data-[state=active]:text-danger">Vencidas</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-9 rounded-md text-muted-foreground font-normal">
+                                <ArrowUpDown className="h-4 w-4 mr-2" /> Ordenar
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 rounded-md p-1">
+                            <DropdownMenuItem onClick={() => { setSortBy('name'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className="text-xs cursor-pointer rounded-sm">Cliente</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setSortBy('issueDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className="text-xs cursor-pointer rounded-sm">Fecha de emisión</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setSortBy('dueDate'); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className="text-xs cursor-pointer rounded-sm">Vencimiento</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className={`h-9 rounded-md text-muted-foreground font-normal transition-colors ${isStacked ? 'bg-primary/5 text-primary border-primary/20 hover:bg-primary/10 hover:text-primary' : ''}`}
+                        onClick={() => setIsStacked(!isStacked)}
+                    >
+                        <Layers className="h-4 w-4 mr-2" />
+                        {isStacked ? 'Desagrupar' : 'Agrupar'}
+                    </Button>
+                </div>
             </Card>
 
-            {/* Invoices List */}
-            <div className="grid gap-4">
-                <AnimatePresence>
-                    {dbLoading ? (
-                        <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>
-                    ) : (
-                        filteredInvoices.map((invoice, idx) => (
-                            <motion.div 
-                                key={invoice.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: idx * 0.05 }}
-                                whileHover={{ y: -4, scale: 1.005 }}
-                                className="group relative glass-card p-6 shadow-xl shadow-black/[0.02] hover:shadow-primary/10 transition-all cursor-pointer overflow-hidden rounded-[2.5rem]"
-                            >
-                                <div className="absolute top-0 left-0 w-2 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                                
-                                {/* Full-card click overlay */}
-                                <Link href={`/dashboard/invoices/${invoice.id}`} className="absolute inset-0 z-0" />
-
-                                <div className="relative z-[1] flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pointer-events-none">
-                                    <div className="flex items-center gap-5">
-                                        <div className="h-16 w-16 rounded-2xl bg-primary/5 flex items-center justify-center group-hover:bg-primary/20 transition-colors shadow-inner group-hover:rotate-3 duration-500">
-                                            <FileText className="h-7 w-7 text-primary/60 group-hover:text-primary transition-colors" />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-3">
-                                                <h3 className="text-xl font-black font-headline tracking-tighter group-hover:text-primary transition-colors">{invoice.client.name}</h3>
-                                                <Badge variant="outline" className="font-mono text-[10px] py-0.5 px-2 border-primary/20 text-primary bg-primary/5 uppercase font-black rounded-lg">#{invoice.invoiceNumber.split('-').pop()}</Badge>
-                                            </div>
-                                            <div className="flex items-center gap-4 text-muted-foreground font-medium text-xs italic opacity-70">
-                                                <span className="flex items-center gap-1.5"><CalendarIcon className="h-3 w-3" /> {format(new Date(invoice.issueDate), 'dd MMM yyyy', { locale: es })}</span>
-                                                <span className="h-1 w-1 rounded-full bg-border" />
-                                                <span className="flex items-center gap-1.5 text-destructive/70"><AlertCircle className="h-3 w-3" /> {format(new Date(invoice.dueDate), 'dd MMM yyyy', { locale: es })}</span>
-                                            </div>
-                                        </div>
-                                    </div>
+            {/* Invoices Table */}
+            <div className="border border-border rounded-xl bg-card overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-muted/50 text-muted-foreground text-xs uppercase font-medium border-b border-border">
+                            <tr>
+                                <th className="px-4 py-3 font-medium">Factura</th>
+                                <th className="px-4 py-3 font-medium">Cliente</th>
+                                <th className="px-4 py-3 font-medium">Emisión</th>
+                                <th className="px-4 py-3 font-medium">Vencimiento</th>
+                                <th className="px-4 py-3 font-medium text-right">Importe</th>
+                                <th className="px-4 py-3 font-medium text-center">Estado</th>
+                                <th className="px-4 py-3 font-medium text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                            {dbLoading ? (
+                                <tr>
+                                    <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground text-sm">Cargando facturas...</td>
+                                </tr>
+                            ) : filteredInvoices.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground text-sm">No se encontraron facturas.</td>
+                                </tr>
+                            ) : isStacked ? (
+                                groupedInvoices.map((group) => {
+                                    const hasMultiple = group.invoices.length > 1;
+                                    const isExpanded = !!expandedClients[group.client.name];
                                     
-                                    <div className="flex items-center justify-between md:justify-end gap-10 w-full md:w-auto border-t md:border-t-0 pt-4 md:pt-0">
-                                        <div className="text-right">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Total Factura</p>
-                                            <p className="text-2xl font-black tracking-tighter text-gradient">{formatCurrency(invoice.total)}</p>
-                                        </div>
-                                        
-                                        <div className="flex items-center gap-4 pointer-events-auto">
-                                            <InvoiceStatusBadge status={invoice.status} />
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl hover:bg-primary/10 group/dots transition-all">
-                                                        <MoreHorizontal className="h-5 w-5 text-muted-foreground group-hover/dots:text-primary transition-colors" />
+                                    if (!hasMultiple) {
+                                        const invoice = group.invoices[0];
+                                        return (
+                                            <tr key={invoice.id} className="hover:bg-muted/30 transition-colors group">
+                                                <td className="px-4 py-3 font-medium text-foreground">
+                                                    {invoice.invoiceNumber}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium text-foreground">{invoice.client.name}</span>
+                                                        <span className="text-xs text-muted-foreground truncate max-w-[150px]">{invoice.client.email}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground text-xs">
+                                                    {format(new Date(invoice.issueDate), 'dd MMM yyyy', { locale: es })}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-muted-foreground text-xs">{format(new Date(invoice.dueDate), 'dd MMM yyyy', { locale: es })}</span>
+                                                        {invoice.status === 'Overdue' && (
+                                                            <span className="text-[10px] text-danger font-medium flex items-center gap-1 mt-0.5">
+                                                                <AlertCircle className="h-3 w-3" /> Vencida
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-medium text-foreground">
+                                                    {formatCurrency(invoice.total)}
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <InvoiceStatusBadge status={invoice.status} />
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" asChild>
+                                                            <Link href={`/dashboard/invoices/${invoice.id}`}><View className="h-4 w-4" /></Link>
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => handleDownloadPdf(invoice)}>
+                                                            <Download className="h-4 w-4" />
+                                                        </Button>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end" className="w-40 rounded-md p-1">
+                                                                <DropdownMenuItem asChild className="text-xs cursor-pointer rounded-sm">
+                                                                    <Link href={`/dashboard/invoices/edit/${invoice.id}`}><Edit className="h-4 w-4 mr-2" /> Editar</Link>
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleDelete(invoice.id)} className="text-xs text-danger focus:bg-danger/10 focus:text-danger cursor-pointer rounded-sm">
+                                                                    <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    }
+                                    
+                                    return (
+                                        <React.Fragment key={group.client.name}>
+                                            <tr 
+                                                className="bg-muted/10 hover:bg-muted/20 transition-colors cursor-pointer group/row"
+                                                onClick={() => toggleClient(group.client.name)}
+                                            >
+                                                <td className="px-4 py-3 font-medium text-muted-foreground text-xs">
+                                                    <div className="flex items-center gap-1.5">
+                                                        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                                        <Layers className="h-3.5 w-3.5" />
+                                                        <span>{group.invoices.length} facturas</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 font-medium text-foreground">
+                                                    {group.client.name}
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground text-xs">
+                                                    -
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground text-xs">
+                                                    -
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-semibold text-foreground">
+                                                    {formatCurrency(group.total)}
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <Badge variant="secondary" className="text-[10px] uppercase font-medium px-2 py-0.5 border-transparent shadow-none bg-muted text-muted-foreground">
+                                                        Agrupadas
+                                                    </Badge>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase tracking-wider font-semibold">
+                                                        {isExpanded ? 'Contraer' : 'Expandir'}
                                                     </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="glass rounded-3xl border-white/10 shadow-2xl p-1 w-64 font-bold animate-in fade-in zoom-in-95 duration-200">
-                                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest px-4 py-3 opacity-50 flex items-center justify-between">
-                                                        <span>Gestión de Factura</span>
-                                                        <FileText className="h-3 w-3" />
-                                                    </DropdownMenuLabel>
-                                                    <DropdownMenuItem onClick={() => handleDownloadPdf(invoice)} className="rounded-2xl p-3.5 gap-3 text-sm focus:bg-primary/5 cursor-pointer">
-                                                        <div className="p-2 bg-muted/30 rounded-lg group-hover:bg-primary/20"><Download className="h-4 w-4" /></div> Descargar PDF
-                                                    </DropdownMenuItem>
-                                                    <Link href={`/dashboard/invoices/${invoice.id}`}>
-                                                        <DropdownMenuItem className="rounded-2xl p-3.5 gap-3 text-sm focus:bg-primary/5 cursor-pointer">
-                                                            <div className="p-2 bg-muted/30 rounded-lg"><View className="h-4 w-4" /></div> Ver Detalles
+                                                </td>
+                                            </tr>
+                                            {isExpanded && group.invoices.map((invoice) => (
+                                                <tr key={invoice.id} className="bg-card hover:bg-muted/10 transition-colors group border-l-2 border-primary/40">
+                                                    <td className="px-4 py-3 pl-8 font-medium text-foreground text-xs">
+                                                        {invoice.invoiceNumber}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-muted-foreground text-xs">
+                                                        Sub-factura
+                                                    </td>
+                                                    <td className="px-4 py-3 text-muted-foreground text-xs">
+                                                        {format(new Date(invoice.issueDate), 'dd MMM yyyy', { locale: es })}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-muted-foreground text-xs">{format(new Date(invoice.dueDate), 'dd MMM yyyy', { locale: es })}</span>
+                                                            {invoice.status === 'Overdue' && (
+                                                                <span className="text-[10px] text-danger font-medium flex items-center gap-1 mt-0.5">
+                                                                    <AlertCircle className="h-3 w-3" /> Vencida
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right font-medium text-foreground text-xs">
+                                                        {formatCurrency(invoice.total)}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <InvoiceStatusBadge status={invoice.status} />
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" asChild>
+                                                                <Link href={`/dashboard/invoices/${invoice.id}`}><View className="h-4 w-4" /></Link>
+                                                            </Button>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => handleDownloadPdf(invoice)}>
+                                                                <Download className="h-4 w-4" />
+                                                            </Button>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                                                                        <MoreHorizontal className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end" className="w-40 rounded-md p-1">
+                                                                    <DropdownMenuItem asChild className="text-xs cursor-pointer rounded-sm">
+                                                                        <Link href={`/dashboard/invoices/edit/${invoice.id}`}><Edit className="h-4 w-4 mr-2" /> Editar</Link>
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleDelete(invoice.id)} className="text-xs text-danger focus:bg-danger/10 focus:text-danger cursor-pointer rounded-sm">
+                                                                        <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </React.Fragment>
+                                    );
+                                })
+                            ) : (
+                                filteredInvoices.map((invoice) => (
+                                    <tr key={invoice.id} className="hover:bg-muted/30 transition-colors group">
+                                        <td className="px-4 py-3 font-medium text-foreground">
+                                            {invoice.invoiceNumber}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex flex-col">
+                                                <span className="font-medium text-foreground">{invoice.client.name}</span>
+                                                <span className="text-xs text-muted-foreground truncate max-w-[150px]">{invoice.client.email}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-muted-foreground text-xs">
+                                            {format(new Date(invoice.issueDate), 'dd MMM yyyy', { locale: es })}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex flex-col">
+                                                <span className="text-muted-foreground text-xs">{format(new Date(invoice.dueDate), 'dd MMM yyyy', { locale: es })}</span>
+                                                {invoice.status === 'Overdue' && (
+                                                    <span className="text-[10px] text-danger font-medium flex items-center gap-1 mt-0.5">
+                                                        <AlertCircle className="h-3 w-3" /> Vencida
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-right font-medium text-foreground">
+                                            {formatCurrency(invoice.total)}
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <InvoiceStatusBadge status={invoice.status} />
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" asChild>
+                                                    <Link href={`/dashboard/invoices/${invoice.id}`}><View className="h-4 w-4" /></Link>
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => handleDownloadPdf(invoice)}>
+                                                    <Download className="h-4 w-4" />
+                                                </Button>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-40 rounded-md p-1">
+                                                        <DropdownMenuItem asChild className="text-xs cursor-pointer rounded-sm">
+                                                            <Link href={`/dashboard/invoices/edit/${invoice.id}`}><Edit className="h-4 w-4 mr-2" /> Editar</Link>
                                                         </DropdownMenuItem>
-                                                    </Link>
-                                                    <Link href={`/dashboard/invoices/edit/${invoice.id}`}>
-                                                        <DropdownMenuItem className="rounded-2xl p-3.5 gap-3 text-sm focus:bg-primary/5 cursor-pointer">
-                                                            <div className="p-2 bg-muted/30 rounded-lg"><Edit className="h-4 w-4" /></div> Editar Factura
+                                                        <DropdownMenuItem onClick={() => handleDelete(invoice.id)} className="text-xs text-danger focus:bg-danger/10 focus:text-danger cursor-pointer rounded-sm">
+                                                            <Trash2 className="h-4 w-4 mr-2" /> Eliminar
                                                         </DropdownMenuItem>
-                                                    </Link>
-                                                    <DropdownMenuItem className="rounded-2xl p-3.5 gap-3 text-sm focus:bg-primary/5 cursor-pointer">
-                                                        <div className="p-2 bg-muted/30 rounded-lg"><Mail className="h-4 w-4" /></div> Enviar por Email
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator className="bg-border/50 mx-2" />
-                                                    <DropdownMenuItem onClick={() => handleDelete(invoice.id)} className="rounded-2xl p-3.5 gap-3 text-sm text-destructive focus:bg-destructive/5 cursor-pointer">
-                                                        <div className="p-2 bg-destructive/10 rounded-lg"><Trash2 className="h-4 w-4" /></div> Eliminar Factura
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))
-                    )}
-                </AnimatePresence>
-            </div>
-            
-            {!dbLoading && filteredInvoices.length === 0 && (
-                <div className="text-center py-20 bg-muted/20 rounded-[3rem] border-2 border-dashed border-muted">
-                    <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-                    <p className="text-muted-foreground font-black uppercase tracking-widest text-xs">No hay facturas emitidas todavía</p>
-                    <Link href="/dashboard/invoices/new" className="mt-4 inline-block">
-                        <Button variant="link" className="font-bold text-primary">Crea tu primera factura ahora</Button>
-                    </Link>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
                 </div>
-            )}
+            </div>
         </div>
     );
 }

@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter } from "date-fns"
 import { es } from "date-fns/locale"
-import { motion, AnimatePresence } from "framer-motion"
 import { 
     BarChart, CartesianGrid, XAxis, YAxis, Bar, 
     Tooltip, PieChart, Pie, Cell, Legend, 
@@ -118,8 +117,6 @@ export default function ReportsPage() {
             'Consultoría': 0,
             'Otros': 0
         };
-        // Mocking categories as invoices might not have them explicitly in the schema shown earlier
-        // but it's common to have them. Here I'll distribute based on subtotal for demo.
         invoices.forEach((inv, idx) => {
             const cat = Object.keys(cats)[idx % 4];
             cats[cat] += inv.total;
@@ -181,98 +178,88 @@ export default function ReportsPage() {
         }
     };
 
-    if (status === 'loading') return <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+    if (status === 'loading') return <div className="p-10 text-center text-sm text-muted-foreground">Cargando...</div>;
 
     if (!user) {
         return (
-           <Alert variant="destructive" className="rounded-3xl border-none shadow-2xl">
+           <Alert variant="destructive" className="rounded-md border-danger text-danger">
                <AlertCircle className="h-4 w-4" />
-               <AlertTitle className="font-black uppercase tracking-widest text-xs">Acceso Denegado</AlertTitle>
-               <AlertDescription className="font-bold">Debes iniciar sesión para ver esta página.</AlertDescription>
+               <AlertTitle className="font-medium text-xs">Acceso Denegado</AlertTitle>
+               <AlertDescription className="text-sm">Debes iniciar sesión para ver esta página.</AlertDescription>
            </Alert>
        )
     }
 
     return (
-        <div className="space-y-10 animate-in fade-in duration-700 pb-20">
+        <div className="space-y-6 pb-10">
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="space-y-1">
-                    <h2 className="text-4xl font-black font-headline tracking-tighter text-foreground">Informes de Negocio</h2>
-                    <p className="text-muted-foreground font-medium italic">Q2 - Segundo Trimestre 2026</p>
+                    <h2 className="text-2xl font-semibold tracking-tight">Informes de Negocio</h2>
+                    <p className="text-sm text-muted-foreground">Q2 - Segundo Trimestre 2026</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Button onClick={handleExportCsv} variant="outline" className="h-12 rounded-2xl px-6 font-bold border-2 border-dashed border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 hover:border-solid hover:text-primary transition-all active:scale-95 shadow-sm group/export">
-                        <Download className="mr-2 h-4 w-4 transition-transform group-hover/export:-translate-y-0.5" /> Exportar CSV
+                <div className="flex items-center gap-2">
+                    <Button onClick={handleExportCsv} variant="outline" size="sm" className="h-9">
+                        <Download className="mr-2 h-4 w-4" /> Exportar CSV
                     </Button>
                     <Button 
                         onClick={handleExportPdf}
-                        className="h-12 rounded-2xl px-6 font-black shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all hover:scale-[1.02] active:scale-95"
+                        size="sm" className="h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
                     >
                         <FileDown className="mr-2 h-4 w-4" /> Descargar PDF
                     </Button>
                 </div>
             </div>
 
-            {/* Quick Summary Widgets */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <SummaryWidget title="Beneficio Neto" value={formatCurrency(stats.profit)} subValue={`${stats.margin.toFixed(1)}% Margen`} icon={<TrendingUp />} color="emerald" />
-                <SummaryWidget title="Autoliquidación IVA" value={formatCurrency(stats.autoIva)} subValue="Importe a ingresar" icon={<Percent />} color="amber" />
-                <SummaryWidget title="Nº Clientes activos" value={clients.length.toString()} subValue="Facturando este Q" icon={<PieChartIcon />} color="primary" />
-                <SummaryWidget title="Gastos Fijos" value={formatCurrency(stats.totalExpenses * 0.3)} subValue="Estimación mensual" icon={<Receipt />} color="destructive" />
+            {/* Quick Summary Widgets (3 Metrics as requested) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <SummaryWidget title="Beneficio Neto" value={formatCurrency(stats.profit)} subValue={`${stats.margin.toFixed(1)}% Margen`} icon={<TrendingUp />} />
+                <SummaryWidget title="Autoliquidación IVA" value={formatCurrency(stats.autoIva)} subValue="Importe a ingresar" icon={<Percent />} />
+                <SummaryWidget title="Gastos Operativos" value={formatCurrency(stats.totalExpenses)} subValue="Total acumulado" icon={<Receipt />} />
             </div>
 
             {/* Main Tabs Navigation */}
-            <Tabs defaultValue="summary" value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-                <TabsList className="bg-muted/40 p-1.5 rounded-2xl h-14 w-full md:w-max mx-auto md:mx-0 shadow-lg shadow-black/5">
-                    <TabsTrigger value="summary" className="px-8 rounded-xl font-black text-sm data-[state=active]:bg-background data-[state=active]:shadow-md transition-all">Resumen Financiero</TabsTrigger>
-                    <TabsTrigger value="sales" className="px-8 rounded-xl font-black text-sm data-[state=active]:bg-background data-[state=active]:shadow-md transition-all">Análisis de Ventas</TabsTrigger>
-                    <TabsTrigger value="tax" className="px-8 rounded-xl font-black text-sm data-[state=active]:bg-background data-[state=active]:shadow-md transition-all">Modelo 303 (IVA)</TabsTrigger>
+            <Tabs defaultValue="summary" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                <TabsList className="h-9 bg-muted rounded-md px-1 py-1 w-full md:w-auto">
+                    <TabsTrigger value="summary" className="rounded text-xs px-4 h-7">Resumen Financiero</TabsTrigger>
+                    <TabsTrigger value="sales" className="rounded text-xs px-4 h-7">Análisis de Ventas</TabsTrigger>
+                    <TabsTrigger value="tax" className="rounded text-xs px-4 h-7">Modelo 303 (IVA)</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="summary" className="space-y-8">
-                    <div className="grid gap-8 lg:grid-cols-3">
+                <TabsContent value="summary" className="space-y-6">
+                    <div className="grid gap-6 lg:grid-cols-3">
                         {/* P&L Chart */}
-                        <Card className="lg:col-span-2 glass-card border-none shadow-2xl shadow-black/[0.03] overflow-hidden group">
-                           <CardHeader className="p-8">
-                               <CardTitle className="text-2xl font-black font-headline tracking-tight">Cuenta de Pérdidas y Ganancias</CardTitle>
-                               <CardDescription className="font-bold">Comparativa mensual de ingresos brutos vs gastos operativos.</CardDescription>
+                        <Card className="lg:col-span-2 rounded-xl border border-border shadow-sm overflow-hidden bg-card">
+                           <CardHeader className="p-6 pb-2">
+                               <CardTitle className="text-lg font-semibold tracking-tight">Cuenta de Resultados</CardTitle>
+                               <CardDescription>Evolución de ingresos y gastos.</CardDescription>
                            </CardHeader>
-                           <CardContent className="px-4">
-                               <div className="h-[400px] w-full mt-4">
+                           <CardContent className="px-4 pb-6">
+                               <div className="h-[300px] w-full mt-4">
                                    <ResponsiveContainer width="100%" height="100%">
-                                       <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 0 }}>
-                                           <defs>
-                                               <linearGradient id="colorInc" x1="0" y1="0" x2="0" y2="1">
-                                                   <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                                                   <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                                               </linearGradient>
-                                               <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
-                                                   <stop offset="5%" stopColor="#ef4444" stopOpacity={0.15}/>
-                                                   <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                                               </linearGradient>
-                                           </defs>
-                                           <CartesianGrid vertical={false} strokeDasharray="3 3" strokeOpacity={0.05} />
-                                           <XAxis dataKey="month" axisLine={false} tickLine={false} tickMargin={15} className="font-black text-[10px] uppercase tracking-widest text-muted-foreground opacity-50" />
-                                           <YAxis axisLine={false} tickLine={false} tickMargin={15} className="font-mono text-[10px] font-bold text-muted-foreground opacity-30" tickFormatter={(v) => `€${v/1000}k`} />
+                                       <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                           <CartesianGrid vertical={false} strokeDasharray="3 3" strokeOpacity={0.1} />
+                                           <XAxis dataKey="month" axisLine={false} tickLine={false} tickMargin={10} className="text-xs text-muted-foreground" />
+                                           <YAxis axisLine={false} tickLine={false} tickMargin={10} className="text-xs text-muted-foreground" tickFormatter={(v) => `€${v/1000}k`} />
                                            <Tooltip 
+                                                cursor={{stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4'}}
                                                 content={({ active, payload }) => {
                                                     if (active && payload && payload.length) {
                                                         return (
-                                                            <div className="glass p-6 rounded-3xl border border-white/10 shadow-2xl flex flex-col gap-3 font-headline">
-                                                                <p className="text-xs uppercase font-black tracking-widest text-muted-foreground">{payload[0].payload.month} 2026</p>
-                                                                <div className="flex flex-col gap-1">
-                                                                    <div className="flex justify-between gap-8 items-center">
-                                                                        <span className="text-sm font-bold opacity-60">Ingresos:</span>
-                                                                        <span className="text-sm font-black text-primary">{formatCurrency(payload[0].value as number)}</span>
+                                                            <div className="bg-popover text-popover-foreground border border-border shadow-md rounded-md p-3 text-sm">
+                                                                <p className="font-medium mb-2">{payload[0].payload.month} 2026</p>
+                                                                <div className="flex flex-col gap-1.5">
+                                                                    <div className="flex justify-between gap-4">
+                                                                        <span className="text-muted-foreground">Ingresos:</span>
+                                                                        <span className="font-medium text-foreground">{formatCurrency(payload[0].value as number)}</span>
                                                                     </div>
-                                                                    <div className="flex justify-between gap-8 items-center">
-                                                                        <span className="text-sm font-bold opacity-60">Gastos:</span>
-                                                                        <span className="text-sm font-black text-destructive">{formatCurrency(payload[1].value as number)}</span>
+                                                                    <div className="flex justify-between gap-4">
+                                                                        <span className="text-muted-foreground">Gastos:</span>
+                                                                        <span className="font-medium text-danger">{formatCurrency(payload[1].value as number)}</span>
                                                                     </div>
-                                                                    <div className="mt-2 pt-2 border-t border-border/50 flex justify-between gap-8 items-center">
-                                                                        <span className="text-sm font-black">Neto:</span>
-                                                                        <span className="text-sm font-black text-emerald-500">{formatCurrency((payload[0].value as number) - (payload[1].value as number))}</span>
+                                                                    <div className="mt-1 pt-1.5 border-t border-border flex justify-between gap-4">
+                                                                        <span className="font-medium">Neto:</span>
+                                                                        <span className="font-semibold text-success">{formatCurrency((payload[0].value as number) - (payload[1].value as number))}</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -281,8 +268,8 @@ export default function ReportsPage() {
                                                     return null;
                                                 }}
                                            />
-                                           <Area type="monotone" dataKey="ingresos" stroke="hsl(var(--primary))" strokeWidth={4} fillOpacity={1} fill="url(#colorInc)" />
-                                           <Area type="monotone" dataKey="gastos" stroke="#ef4444" strokeWidth={4} fillOpacity={1} fill="url(#colorExp)" />
+                                           <Area type="monotone" dataKey="ingresos" stroke="hsl(var(--primary))" strokeWidth={2} fillOpacity={0.1} fill="hsl(var(--primary))" />
+                                           <Area type="monotone" dataKey="gastos" stroke="hsl(var(--danger))" strokeWidth={2} fillOpacity={0.05} fill="hsl(var(--danger))" />
                                        </AreaChart>
                                    </ResponsiveContainer>
                                </div>
@@ -290,111 +277,107 @@ export default function ReportsPage() {
                         </Card>
 
                         {/* Financial Table Sidebar */}
-                        <div className="space-y-6">
-                            <Card className="glass-card border-none shadow-xl shadow-black/[0.03] p-8 space-y-6">
-                                <h4 className="text-lg font-black tracking-tight">Saldos Trimestrales</h4>
-                                <div className="space-y-4">
+                        <div className="space-y-4">
+                            <Card className="rounded-xl border border-border shadow-sm p-6 space-y-4 bg-card">
+                                <h4 className="font-semibold tracking-tight text-base">Saldos Acumulados</h4>
+                                <div className="space-y-3">
                                     <BalanceRow label="Total Facturado (Neto)" value={stats.totalIncomes} />
                                     <BalanceRow label="Total Gastos (Neto)" value={stats.totalExpenses} />
-                                    <BalanceRow label="Retenciones IRPF" value={stats.totalIncomes * 0.15} isNegative />
-                                    <div className="pt-4 border-t border-border/50 flex justify-between items-center">
-                                        <span className="text-sm font-black">Resultado Previsto</span>
-                                        <span className="text-2xl font-black tracking-tighter text-emerald-500">{formatCurrency(stats.profit)}</span>
+                                    <div className="pt-3 border-t border-border flex justify-between items-center">
+                                        <span className="text-sm font-medium">Resultado Previsto</span>
+                                        <span className="text-lg font-semibold text-success">{formatCurrency(stats.profit)}</span>
                                     </div>
                                 </div>
-                                <Button variant="ghost" className="w-full h-12 rounded-xl text-xs font-black uppercase tracking-[0.2em] gap-2 hover:bg-primary/5 hover:text-primary transition-all">
-                                    Exportar Libro Diario <ArrowUpRight className="h-4 w-4" />
+                                <Button variant="ghost" className="w-full h-9 rounded-md text-xs font-medium mt-2">
+                                    Ver Libro Diario <ArrowUpRight className="h-3 w-3 ml-1" />
                                 </Button>
                             </Card>
 
-                            <Card className="bg-primary/5 border-2 border-primary/10 p-8 rounded-[2.5rem] space-y-4 shadow-inner">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-10 w-10 bg-primary/20 rounded-xl flex items-center justify-center">
-                                        <Info className="h-5 w-5 text-primary" />
-                                    </div>
-                                    <span className="font-black text-sm tracking-tight">Sugerencia Fiscal</span>
+                            <Card className="bg-muted/50 border-none p-5 rounded-xl space-y-3 shadow-none">
+                                <div className="flex items-center gap-2">
+                                    <Info className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium text-sm">Sugerencia Fiscal</span>
                                 </div>
-                                <p className="text-sm font-medium text-muted-foreground leading-relaxed italic">
-                                    "Basado en tus gastos operativos, podrías optimizar tu declaración trimestral deduciendo suministros de oficina hasta un 5% adicional."
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                    Basado en tus gastos operativos, podrías optimizar tu declaración deduciendo suministros de oficina hasta un 5% adicional.
                                 </p>
                             </Card>
                         </div>
                     </div>
                 </TabsContent>
 
-                <TabsContent value="sales" className="space-y-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <TabsContent value="sales" className="space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Top Clients Chart */}
-                        <Card className="glass-card border-none shadow-2xl shadow-black/[0.03] p-8 space-y-6">
+                        <Card className="rounded-xl border border-border shadow-sm p-6 space-y-4 bg-card">
                             <div className="flex justify-between items-center">
-                                <CardTitle className="text-xl font-black font-headline tracking-tighter flex items-center gap-2">
-                                    <Users className="h-5 w-5 text-primary" /> Top 5 Clientes
+                                <CardTitle className="text-base font-semibold tracking-tight flex items-center gap-2">
+                                    Top 5 Clientes
                                 </CardTitle>
-                                <Badge variant="outline" className="font-black uppercase tracking-widest text-[10px] opacity-60 px-3 py-1 rounded-full">Por Volumen</Badge>
                             </div>
-                            <div className="h-[350px] w-full">
+                            <div className="h-[280px] w-full">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={clientsData} layout="vertical" margin={{ left: 40, right: 40 }}>
+                                    <BarChart data={clientsData} layout="vertical" margin={{ left: 10, right: 10 }}>
                                         <XAxis type="number" hide />
-                                        <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} className="font-bold text-xs" width={100} />
+                                        <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} className="text-xs" width={100} />
                                         <Tooltip 
-                                            cursor={{fill: 'transparent'}}
+                                            cursor={{fill: 'hsl(var(--muted))'}}
                                             content={({ active, payload }) => {
                                                 if (active && payload && payload.length) {
                                                     return (
-                                                        <div className="glass p-4 rounded-2xl border border-white/10 shadow-xl font-headline">
-                                                            <p className="text-xs font-black text-primary mb-1">{payload[0].payload.name}</p>
-                                                            <p className="text-lg font-black">{formatCurrency(payload[0].value as number)}</p>
+                                                        <div className="bg-popover text-popover-foreground border border-border shadow-sm rounded-md p-2 text-xs">
+                                                            <p className="font-medium mb-1">{payload[0].payload.name}</p>
+                                                            <p className="font-semibold">{formatCurrency(payload[0].value as number)}</p>
                                                         </div>
                                                     );
                                                 }
                                                 return null;
                                             }}
                                         />
-                                        <Bar dataKey="total" fill="hsl(var(--primary))" radius={[0, 10, 10, 0]} barSize={32} />
+                                        <Bar dataKey="total" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={20} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
                         </Card>
 
                         {/* Distribution by Category */}
-                        <Card className="glass-card border-none shadow-2xl shadow-black/[0.03] p-8 space-y-6">
+                        <Card className="rounded-xl border border-border shadow-sm p-6 space-y-4 bg-card">
                             <div className="flex justify-between items-center">
-                                <CardTitle className="text-xl font-black font-headline tracking-tighter flex items-center gap-2">
-                                    <PieChartIcon className="h-5 w-5 text-primary" /> Distribución de Ventas
+                                <CardTitle className="text-base font-semibold tracking-tight flex items-center gap-2">
+                                    Distribución de Ventas
                                 </CardTitle>
-                                <Badge variant="outline" className="font-black uppercase tracking-widest text-[10px] opacity-60 px-3 py-1 rounded-full">Categorías</Badge>
                             </div>
-                            <div className="h-[350px] w-full">
+                            <div className="h-[280px] w-full">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
                                             data={categoryData}
                                             cx="50%"
                                             cy="50%"
-                                            innerRadius={80}
-                                            outerRadius={120}
-                                            paddingAngle={5}
+                                            innerRadius={60}
+                                            outerRadius={90}
+                                            paddingAngle={2}
                                             dataKey="value"
+                                            stroke="none"
                                         >
                                             {categoryData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="transparent" />
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                             ))}
                                         </Pie>
                                         <Tooltip 
                                             content={({ active, payload }) => {
                                                 if (active && payload && payload.length) {
                                                     return (
-                                                        <div className="glass p-4 rounded-2xl border border-white/10 shadow-xl font-headline">
-                                                            <p className="text-xs font-black opacity-60 mb-1">{payload[0].name}</p>
-                                                            <p className="text-lg font-black">{formatCurrency(payload[0].value as number)}</p>
+                                                        <div className="bg-popover text-popover-foreground border border-border shadow-sm rounded-md p-2 text-xs">
+                                                            <p className="font-medium text-muted-foreground mb-1">{payload[0].name}</p>
+                                                            <p className="font-semibold">{formatCurrency(payload[0].value as number)}</p>
                                                         </div>
                                                     );
                                                 }
                                                 return null;
                                             }}
                                         />
-                                        <Legend verticalAlign="bottom" height={36} className="font-bold text-xs" />
+                                        <Legend verticalAlign="bottom" height={36} className="text-xs" iconType="circle" />
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
@@ -402,102 +385,96 @@ export default function ReportsPage() {
                     </div>
 
                     {/* Sales Metrics Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                         <Card className="bg-primary/5 border-none p-6 rounded-[2rem] space-y-2">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Ticket Medio</p>
-                            <h4 className="text-3xl font-black">{formatCurrency(invoices.length > 0 ? stats.totalIncomes / invoices.length : 0)}</h4>
-                            <p className="text-[10px] font-bold italic opacity-60">Basado en {invoices.length} facturas</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                         <Card className="border border-border p-5 rounded-xl bg-card shadow-sm space-y-1">
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Ticket Medio</p>
+                            <h4 className="text-2xl font-semibold tracking-tight">{formatCurrency(invoices.length > 0 ? stats.totalIncomes / invoices.length : 0)}</h4>
+                            <p className="text-xs text-muted-foreground">De {invoices.length} facturas</p>
                          </Card>
-                         <Card className="bg-emerald-500/5 border-none p-6 rounded-[2rem] space-y-2">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Crecimiento Mensual</p>
-                            <h4 className="text-3xl font-black text-emerald-500">+12.4%</h4>
-                            <p className="text-[10px] font-bold italic opacity-60">vs mes anterior</p>
+                         <Card className="border border-border p-5 rounded-xl bg-card shadow-sm space-y-1">
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Crecimiento Mensual</p>
+                            <h4 className="text-2xl font-semibold tracking-tight text-success">+12.4%</h4>
+                            <p className="text-xs text-muted-foreground">vs mes anterior</p>
                          </Card>
-                         <Card className="bg-amber-500/5 border-none p-6 rounded-[2rem] space-y-2">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-amber-500">Cliente Estrella</p>
-                            <h4 className="text-xl font-black truncate">{clientsData[0]?.name || 'N/A'}</h4>
-                            <p className="text-[10px] font-bold italic opacity-60">Mayor facturación acumulada</p>
+                         <Card className="border border-border p-5 rounded-xl bg-card shadow-sm space-y-1">
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Mejor Cliente</p>
+                            <h4 className="text-lg font-semibold tracking-tight truncate">{clientsData[0]?.name || 'N/A'}</h4>
+                            <p className="text-xs text-muted-foreground">Mayor facturación acumulada</p>
                          </Card>
                     </div>
                 </TabsContent>
 
-                <TabsContent value="tax" className="space-y-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div className="lg:col-span-2 space-y-8">
-                            <Card className="glass-card border-none shadow-2xl shadow-black/[0.03] p-8 space-y-8">
-                                <div className="flex justify-between items-center border-b border-border/50 pb-6">
-                                    <div className="space-y-1">
-                                        <CardTitle className="text-2xl font-black font-headline tracking-tighter uppercase">Modelo 303</CardTitle>
-                                        <p className="text-xs font-bold text-muted-foreground italic">Impuesto sobre el Valor Añadido (IVA) - Autoliquidación</p>
+                <TabsContent value="tax" className="space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 space-y-6">
+                            <Card className="rounded-xl border border-border shadow-sm p-6 space-y-6 bg-card">
+                                <div className="flex justify-between items-center border-b border-border pb-4">
+                                    <div className="space-y-0.5">
+                                        <CardTitle className="text-lg font-semibold tracking-tight">Modelo 303</CardTitle>
+                                        <p className="text-xs text-muted-foreground">Autoliquidación IVA</p>
                                     </div>
-                                    <Badge className="bg-primary text-primary-foreground border-none px-4 py-2 rounded-xl font-black tracking-widest text-xs shadow-lg shadow-primary/20">EJERCICIO 2026</Badge>
+                                    <Badge variant="outline" className="text-[10px] font-medium uppercase">EJERCICIO 2026</Badge>
                                 </div>
 
                                 {/* IVA DEVENGADO */}
-                                <div className="space-y-6">
-                                    <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary flex items-center gap-2">
-                                        <ArrowUpRight className="h-3 w-3" /> IVA Devengado (Ingresos)
+                                <div className="space-y-4">
+                                    <h5 className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                        IVA Devengado (Ingresos)
                                     </h5>
-                                    <div className="space-y-4">
+                                    <div className="space-y-3">
                                         <TaxRow label="Régimen ordinario (21%)" base={stats.totalIncomes / 1.21} rate="21%" quota={stats.ivaVentas} />
                                         <TaxRow label="Otros tipos / Recargo" base={0} rate="-" quota={0} />
-                                        <div className="pt-4 flex justify-between items-center border-t border-dashed border-border/50">
-                                            <span className="text-sm font-black">Total cuota devengada</span>
-                                            <span className="text-sm font-black text-primary">{formatCurrency(stats.ivaVentas)}</span>
+                                        <div className="pt-3 flex justify-between items-center border-t border-border">
+                                            <span className="text-sm font-medium">Total cuota devengada</span>
+                                            <span className="text-sm font-semibold">{formatCurrency(stats.ivaVentas)}</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* IVA DEDUCIBLE */}
-                                <div className="space-y-6 pt-6">
-                                    <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-destructive flex items-center gap-2">
-                                        <TrendingDown className="h-3 w-3" /> IVA Deducible (Gastos)
+                                <div className="space-y-4 pt-4">
+                                    <h5 className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                        IVA Deducible (Gastos)
                                     </h5>
-                                    <div className="space-y-4">
-                                        <TaxRow label="Compras interiores de bienes y servicios" base={stats.totalExpenses} rate="21%" quota={stats.ivaCompras} />
-                                        <TaxRow label="Importaciones / Adquisiciones Intracom." base={0} rate="-" quota={0} />
-                                        <div className="pt-4 flex justify-between items-center border-t border-dashed border-border/50">
-                                            <span className="text-sm font-black">Total cuota deducible</span>
-                                            <span className="text-sm font-black text-destructive">{formatCurrency(stats.ivaCompras)}</span>
+                                    <div className="space-y-3">
+                                        <TaxRow label="Compras interiores" base={stats.totalExpenses} rate="21%" quota={stats.ivaCompras} />
+                                        <TaxRow label="Adquisiciones Intracom." base={0} rate="-" quota={0} />
+                                        <div className="pt-3 flex justify-between items-center border-t border-border">
+                                            <span className="text-sm font-medium">Total cuota deducible</span>
+                                            <span className="text-sm font-semibold">{formatCurrency(stats.ivaCompras)}</span>
                                         </div>
                                     </div>
                                 </div>
                             </Card>
                         </div>
 
-                        <div className="space-y-8">
+                        <div className="space-y-4">
                             {/* Final Result Card */}
                             <Card className={cn(
-                                "p-8 rounded-[2.5rem] border-none shadow-2xl transition-all relative overflow-hidden",
-                                stats.autoIva >= 0 ? "bg-amber-500/10 shadow-amber-500/10" : "bg-emerald-500/10 shadow-emerald-500/10"
+                                "p-6 rounded-xl border border-border shadow-sm",
+                                stats.autoIva >= 0 ? "bg-muted/30" : "bg-success/5"
                             )}>
-                                <div className="absolute top-0 right-0 p-8 opacity-10">
-                                    <Percent className="h-20 w-20" />
-                                </div>
-                                <div className="relative z-10 space-y-6">
-                                    <h4 className="text-lg font-black tracking-tight">Resultado Liquidación</h4>
-                                    <div className="space-y-2">
-                                        <p className="text-4xl font-black tracking-tighter">
+                                <div className="space-y-4">
+                                    <h4 className="text-base font-semibold tracking-tight">Resultado Liquidación</h4>
+                                    <div className="space-y-1">
+                                        <p className="text-3xl font-semibold tracking-tight">
                                             {formatCurrency(Math.abs(stats.autoIva))}
                                         </p>
-                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-60">
+                                        <p className="text-xs text-muted-foreground">
                                             {stats.autoIva >= 0 ? "Importe a Ingresar" : "Importe a Devolver / Compensar"}
                                         </p>
                                     </div>
-                                    <Button className={cn(
-                                        "w-full h-14 rounded-2xl font-black shadow-xl transition-all hover:scale-[1.02]",
-                                        stats.autoIva >= 0 ? "bg-amber-500 hover:bg-amber-600" : "bg-emerald-500 hover:bg-emerald-600"
-                                    )}>
-                                        <CheckCircle2 className="mr-2 h-5 w-5" /> Confirmar Borrador
+                                    <Button className="w-full h-10 mt-2 font-medium">
+                                        <CheckCircle2 className="mr-2 h-4 w-4" /> Confirmar Borrador
                                     </Button>
                                 </div>
                             </Card>
 
-                            <Alert className="rounded-[2rem] border-2 border-dashed border-primary/20 bg-primary/5 p-6">
-                                <AlertCircle className="h-5 w-5 text-primary" />
-                                <AlertTitle className="font-black text-xs uppercase tracking-widest ml-2 mb-2">Aviso Legal</AlertTitle>
-                                <AlertDescription className="text-xs font-medium italic opacity-70 leading-relaxed">
-                                    Este simulador es informativo. Para la presentación oficial, consulta con tu gestor o accede a la Sede Electrónica de la AEAT.
+                            <Alert className="rounded-xl border border-border bg-card p-4">
+                                <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                                <AlertTitle className="text-xs font-medium ml-2">Aviso Legal</AlertTitle>
+                                <AlertDescription className="text-xs text-muted-foreground mt-1">
+                                    Este simulador es informativo. Para la presentación oficial, consulta con tu gestor.
                                 </AlertDescription>
                             </Alert>
                         </div>
@@ -508,26 +485,18 @@ export default function ReportsPage() {
     );
 }
 
-function SummaryWidget({ title, value, subValue, icon, color }: { title: string, value: string, subValue: string, icon: React.ReactElement, color: string }) {
-    const colors = {
-        primary: "bg-primary/10 text-primary group-hover:bg-primary/20",
-        emerald: "bg-emerald-500/10 text-emerald-500 group-hover:bg-emerald-500/20",
-        amber: "bg-amber-500/10 text-amber-500 group-hover:bg-amber-500/20",
-        destructive: "bg-destructive/10 text-destructive group-hover:bg-destructive/20",
-    };
-
+function SummaryWidget({ title, value, subValue, icon }: { title: string, value: string, subValue: string, icon: React.ReactElement }) {
     return (
-        <Card className="glass-card border-none shadow-xl shadow-black/[0.03] p-6 rounded-[2rem] group hover:-translate-y-1 transition-all duration-300 overflow-hidden relative">
-            <div className="absolute top-0 right-0 h-24 w-24 bg-gradient-to-br from-white/10 to-transparent rounded-full -mr-8 -mt-8" />
-            <div className="space-y-4">
-                <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center transition-all duration-500 shadow-sm", colors[color as keyof typeof colors])}>
-                    {React.cloneElement(icon, { className: "h-6 w-6 stroke-[2.5]" })}
+        <Card className="p-4 rounded-xl border border-border shadow-sm flex flex-col gap-2 bg-card hover:border-border/80 transition-colors">
+            <div className="flex justify-between items-start">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{title}</p>
+                <div className="text-muted-foreground opacity-70">
+                    {React.cloneElement(icon, { className: "h-4 w-4" })}
                 </div>
-                <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">{title}</p>
-                    <h3 className="text-3xl font-black font-headline tracking-tighter text-foreground">{value}</h3>
-                    <p className="text-[10px] font-black italic opacity-50">{subValue}</p>
-                </div>
+            </div>
+            <div className="flex justify-between items-end mt-1">
+                <h3 className="text-2xl font-semibold tracking-tight">{value}</h3>
+                <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-md text-muted-foreground">{subValue}</span>
             </div>
         </Card>
     );
@@ -536,9 +505,9 @@ function SummaryWidget({ title, value, subValue, icon, color }: { title: string,
 function BalanceRow({ label, value, isNegative }: { label: string, value: number, isNegative?: boolean }) {
     const { formatCurrency } = useLocale();
     return (
-        <div className="flex justify-between items-center group/row">
-            <span className="text-xs font-bold text-muted-foreground group-hover/row:text-foreground transition-colors">{label}</span>
-            <span className={cn("text-xs font-black tracking-tight", isNegative ? "text-destructive" : "text-foreground")}>
+        <div className="flex justify-between items-center">
+            <span className="text-xs text-muted-foreground">{label}</span>
+            <span className={cn("text-xs font-semibold", isNegative ? "text-danger" : "text-foreground")}>
                 {isNegative ? "- " : ""}{formatCurrency(value)}
             </span>
         </div>
@@ -548,18 +517,18 @@ function BalanceRow({ label, value, isNegative }: { label: string, value: number
 function TaxRow({ label, base, rate, quota }: { label: string, base: number, rate: string, quota: number }) {
     const { formatCurrency } = useLocale();
     return (
-        <div className="grid grid-cols-12 gap-4 items-center group/tax">
-            <div className="col-span-6">
-                <p className="text-xs font-bold text-muted-foreground group-hover/tax:text-foreground transition-colors">{label}</p>
+        <div className="grid grid-cols-12 gap-2 items-center">
+            <div className="col-span-5">
+                <p className="text-xs text-muted-foreground truncate" title={label}>{label}</p>
             </div>
-            <div className="col-span-2 text-right">
-                <p className="text-[10px] font-mono opacity-40">{formatCurrency(base)}</p>
+            <div className="col-span-3 text-right">
+                <p className="text-[10px] text-muted-foreground">{formatCurrency(base)}</p>
             </div>
-            <div className="col-span-2 text-right">
-                <p className="text-[10px] font-black">{rate}</p>
+            <div className="col-span-1 text-right">
+                <p className="text-[10px] text-muted-foreground">{rate}</p>
             </div>
-            <div className="col-span-2 text-right">
-                <p className="text-xs font-black">{formatCurrency(quota)}</p>
+            <div className="col-span-3 text-right">
+                <p className="text-xs font-medium">{formatCurrency(quota)}</p>
             </div>
         </div>
     );

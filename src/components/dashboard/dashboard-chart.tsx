@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 
 interface DashboardChartProps {
@@ -11,43 +11,52 @@ interface DashboardChartProps {
 
 export default function DashboardChart({ data, config }: DashboardChartProps) {
     return (
-        <ChartContainer config={config} className="h-[350px] w-full">
+        <ChartContainer config={config} className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data} margin={{ top: 20, right: 20, left: 10 }}>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" strokeOpacity={0.05} />
+                <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                        <linearGradient id="fillIngresos" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.08}/>
+                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="fillGastos" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(var(--danger))" stopOpacity={0.08}/>
+                            <stop offset="95%" stopColor="hsl(var(--danger))" stopOpacity={0}/>
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" strokeOpacity={0.5} stroke="hsl(var(--border))" />
                     <XAxis
                         dataKey="name"
                         tickLine={false}
-                        tickMargin={15}
+                        tickMargin={10}
                         axisLine={false}
-                        className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground"
+                        className="text-xs text-muted-foreground font-medium"
                     />
                     <YAxis
                         tickLine={false}
                         axisLine={false}
-                        tickMargin={15}
-                        className="font-mono text-[10px] font-bold text-muted-foreground opacity-50"
+                        tickMargin={10}
+                        className="text-[10px] text-muted-foreground"
+                        tickFormatter={(value) => `${value / 1000}k`}
                     />
-                    <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                    <Line 
+                    <ChartTooltip cursor={{ stroke: 'hsl(var(--border))', strokeWidth: 1 }} content={<ChartTooltipContent indicator="line" />} />
+                    <Area 
                         type="monotone" 
                         dataKey="ingresos" 
                         stroke="hsl(var(--primary))" 
-                        strokeWidth={4} 
-                        dot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "white" }} 
-                        activeDot={{ r: 8, strokeWidth: 0 }}
-                        animationDuration={2000}
+                        fill="url(#fillIngresos)"
+                        strokeWidth={2} 
+                        activeDot={{ r: 4, strokeWidth: 0, fill: "hsl(var(--primary))" }}
                     />
-                    <Line 
+                    <Area 
                         type="monotone" 
                         dataKey="gastos" 
-                        stroke="hsl(var(--destructive))" 
-                        strokeWidth={4} 
-                        dot={{ r: 6, fill: "hsl(var(--destructive))", strokeWidth: 2, stroke: "white" }}
-                        activeDot={{ r: 8, strokeWidth: 0 }}
-                        animationDuration={2000}
+                        stroke="hsl(var(--danger))" 
+                        fill="url(#fillGastos)"
+                        strokeWidth={2} 
+                        activeDot={{ r: 4, strokeWidth: 0, fill: "hsl(var(--danger))" }}
                     />
-                </LineChart>
+                </AreaChart>
             </ResponsiveContainer>
         </ChartContainer>
     );

@@ -107,377 +107,309 @@ export default function SettingsPage() {
         { id: "billing", label: "Suscripción SaaS", icon: Zap },
     ];
 
-    if (loading && user) return <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+    if (loading && user) return <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border border-primary border-t-transparent rounded-full" /></div>;
 
     return (
-        <div className="space-y-10 animate-in fade-in duration-700 pb-20">
+        <div className="space-y-6 pb-20">
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="space-y-1">
-                    <h2 className="text-3xl font-black font-headline tracking-tighter text-foreground">Configuración</h2>
-                    <p className="text-muted-foreground font-medium italic">Personaliza tu experiencia y configura AuraContable.</p>
+                    <h2 className="text-2xl font-semibold tracking-tight text-foreground">Configuración</h2>
+                    <p className="text-sm text-muted-foreground">Personaliza tu experiencia y configura AuraContable.</p>
                 </div>
                 <Button 
                     onClick={handleSave} 
                     disabled={saving}
-                    className="h-12 rounded-2xl px-8 font-black shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all hover:scale-[1.02] active:scale-95"
+                    className="h-9 px-4 font-medium"
                 >
                     <Save className="mr-2 h-4 w-4" /> 
-                    {saving ? "Guardando..." : "Guardar Todos los Cambios"}
+                    {saving ? "Guardando..." : "Guardar Cambios"}
                 </Button>
             </div>
 
-            <div className="grid gap-8 md:grid-cols-[280px_1fr] items-start">
+            <div className="grid md:grid-cols-[240px_1fr] gap-6 items-start">
                 {/* Lateral Navigation */}
-                <Card className="glass-card border-none shadow-2xl shadow-black/[0.03] p-2 rounded-[2rem] md:sticky md:top-28">
-                    <div className="flex flex-col gap-1">
-                        {tabs.map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={cn(
-                                    "flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-sm tracking-tight transition-all text-left group",
-                                    activeTab === tab.id 
-                                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
-                                        : "hover:bg-primary/5 text-muted-foreground hover:text-primary"
-                                )}
-                            >
-                                <tab.icon className={cn("h-5 w-5", activeTab === tab.id ? "stroke-[2.5]" : "stroke-2")} />
-                                {tab.label}
-                                {tab.id === 'payments' && (
-                                    <span className="ml-auto h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                                )}
-                            </button>
-                        ))}
-                    </div>
-                </Card>
+                <div className="flex flex-col gap-1 sticky top-20">
+                    {tabs.map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={cn(
+                                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-left group",
+                                activeTab === tab.id 
+                                    ? "bg-muted text-foreground" 
+                                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                            )}
+                        >
+                            <tab.icon className="h-4 w-4" />
+                            {tab.label}
+                            {tab.id === 'payments' && (
+                                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            )}
+                        </button>
+                    ))}
+                </div>
 
                 {/* Main Content Area */}
-                <div className="space-y-8 animate-in slide-in-from-bottom-5 duration-500">
-                    <AnimatePresence mode="wait">
-                        {activeTab === 'profile' && (
-                            <motion.div 
-                                key="profile"
-                                initial={{ opacity: 0, x: 10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -10 }}
-                                className="space-y-8"
-                            >
-                                <Card className="glass-card border-none shadow-xl shadow-black/[0.02] rounded-[2.5rem] p-8">
-                                    <div className="flex flex-col md:flex-row items-center gap-8 mb-10">
-                                        <div className="relative group">
-                                            <Avatar className="h-32 w-32 border-4 border-white shadow-2xl ring-1 ring-black/5 overflow-hidden">
-                                                <AvatarImage src={user?.image || undefined} />
-                                                <AvatarFallback className="bg-primary/10 text-primary text-3xl font-black">
-                                                    {user?.name?.charAt(0) || "U"}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <button className="absolute bottom-0 right-0 h-10 w-10 bg-primary text-primary-foreground rounded-full border-4 border-white shadow-lg flex items-center justify-center hover:scale-110 transition-transform active:scale-90">
-                                                <Camera className="h-5 w-5" />
-                                            </button>
-                                        </div>
-                                        <div className="space-y-1 text-center md:text-left">
-                                            <h3 className="text-2xl font-black font-headline tracking-tight">{user?.name || "Usuario"}</h3>
-                                            <p className="text-muted-foreground font-medium italic">{user?.email}</p>
-                                            <div className="flex gap-3 mt-4 justify-center md:justify-start">
-                                                <Badge className="bg-emerald-500/10 text-emerald-500 border-none font-black text-[10px] uppercase py-1 px-4 rounded-full transition-all duration-300 hover:bg-emerald-500 hover:text-white cursor-default shadow-sm hover:shadow-emerald-500/20 active:scale-95">Cuenta Verificada</Badge>
-                                                <Badge className="bg-primary/10 text-primary border-none font-black text-[10px] uppercase py-1 px-4 rounded-full transition-all duration-300 hover:bg-primary hover:text-white cursor-default shadow-sm hover:shadow-primary/20 active:scale-95">Plan Enterprise</Badge>
-                                            </div>
-                                        </div>
+                <div className="space-y-6">
+                    {activeTab === 'profile' && (
+                        <Card className="border border-border shadow-sm rounded-xl p-6 bg-card">
+                            <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-8 pb-8 border-b border-border">
+                                <div className="relative group">
+                                    <Avatar className="h-24 w-24 border border-border">
+                                        <AvatarImage src={user?.image || undefined} />
+                                        <AvatarFallback className="bg-muted text-muted-foreground text-xl font-medium">
+                                            {user?.name?.charAt(0) || "U"}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <button className="absolute bottom-0 right-0 h-8 w-8 bg-background border border-border text-foreground rounded-full flex items-center justify-center hover:bg-muted transition-colors">
+                                        <Camera className="h-4 w-4" />
+                                    </button>
+                                </div>
+                                <div className="space-y-1 text-center md:text-left">
+                                    <h3 className="text-xl font-medium tracking-tight">{user?.name || "Usuario"}</h3>
+                                    <p className="text-sm text-muted-foreground">{user?.email}</p>
+                                    <div className="flex gap-2 mt-3 justify-center md:justify-start">
+                                        <Badge variant="outline" className="text-[10px] font-medium uppercase text-emerald-500 border-emerald-500/30 bg-emerald-500/10">Verificado</Badge>
+                                        <Badge variant="outline" className="text-[10px] font-medium uppercase">Enterprise</Badge>
                                     </div>
+                                </div>
+                            </div>
 
-                                    <div className="grid md:grid-cols-2 gap-8">
-                                        <SettingField label="Nombre Completo" placeholder="Ej. Juan Pérez" value={user?.name || ""} disabled />
-                                        <SettingField label="Correo Electrónico" placeholder="tu@email.com" value={user?.email || ""} disabled />
-                                    </div>
-                                </Card>
-                            </motion.div>
-                        )}
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <SettingField label="Nombre Completo" placeholder="Ej. Juan Pérez" value={user?.name || ""} disabled />
+                                <SettingField label="Correo Electrónico" placeholder="tu@email.com" value={user?.email || ""} disabled />
+                            </div>
+                        </Card>
+                    )}
 
-                        {activeTab === 'appearance' && (
-                            <motion.div 
-                                key="appearance"
-                                initial={{ opacity: 0, x: 10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -10 }}
-                                className="space-y-8"
-                            >
-                                <Card className="glass-card border-none shadow-xl shadow-black/[0.02] rounded-[2.5rem] p-10 space-y-10">
-                                    <div className="space-y-6">
-                                        <div className="space-y-2">
-                                            <h4 className="text-2xl font-black font-headline tracking-tighter flex items-center gap-3">
-                                                <Sparkles className="h-6 w-6 text-primary" /> Personalización Visual
-                                            </h4>
-                                            <p className="text-sm font-medium text-muted-foreground italic leading-relaxed">Configura la atmósfera de AuraContable para que se adapte perfectamente a tu entorno de trabajo.</p>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                            <ThemeCard 
-                                                active={theme === 'light'} 
-                                                onClick={() => setTheme('light')}
-                                                icon={<Sun />} 
-                                                label="Modo Claro" 
-                                                desc="Claridad cristalina para el día."
-                                            />
-                                            <ThemeCard 
-                                                active={theme === 'dark'} 
-                                                onClick={() => setTheme('dark')}
-                                                icon={<Moon />} 
-                                                label="Modo Oscuro" 
-                                                desc="Elegancia profunda para la noche."
-                                            />
-                                            <ThemeCard 
-                                                active={theme === 'system'} 
-                                                onClick={() => setTheme('system')}
-                                                icon={<Monitor />} 
-                                                label="Modo Sistema" 
-                                                desc="Armonía absoluta con tu equipo."
-                                            />
-                                        </div>
-                                    </div>
-                                </Card>
-                            </motion.div>
-                        )}
+                    {activeTab === 'appearance' && (
+                        <Card className="border border-border shadow-sm rounded-xl p-6 bg-card space-y-6">
+                            <div className="space-y-1">
+                                <h4 className="text-lg font-medium tracking-tight flex items-center gap-2">
+                                    Personalización Visual
+                                </h4>
+                                <p className="text-sm text-muted-foreground">Configura el tema de la aplicación.</p>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <ThemeCard 
+                                    active={theme === 'light'} 
+                                    onClick={() => setTheme('light')}
+                                    icon={<Sun />} 
+                                    label="Modo Claro" 
+                                />
+                                <ThemeCard 
+                                    active={theme === 'dark'} 
+                                    onClick={() => setTheme('dark')}
+                                    icon={<Moon />} 
+                                    label="Modo Oscuro" 
+                                />
+                                <ThemeCard 
+                                    active={theme === 'system'} 
+                                    onClick={() => setTheme('system')}
+                                    icon={<Monitor />} 
+                                    label="Sistema" 
+                                />
+                            </div>
+                        </Card>
+                    )}
 
-                        {activeTab === 'company' && (
-                            <motion.div 
-                                key="company"
-                                initial={{ opacity: 0, x: 10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -10 }}
-                                className="space-y-8"
-                            >
-                                <Card className="glass-card border-none shadow-xl shadow-black/[0.02] rounded-[2.5rem] p-8">
-                                    <div className="flex flex-col md:flex-row items-center gap-8 mb-8 border-b border-border/40 pb-8">
-                                        <div className="relative group">
-                                            <div className="h-32 w-48 rounded-2xl border-2 border-dashed border-primary/20 bg-muted/20 flex flex-col items-center justify-center overflow-hidden relative shadow-inner">
-                                                {companyData.logoUrl ? (
-                                                    <img src={companyData.logoUrl} alt="Logo" className="h-full w-full object-contain p-4" />
-                                                ) : (
-                                                    <div className="text-center space-y-2 p-4">
-                                                        <Building className="h-10 w-10 text-muted-foreground/40 mx-auto" />
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sin Logotipo</p>
-                                                    </div>
-                                                )}
+                    {activeTab === 'company' && (
+                        <Card className="border border-border shadow-sm rounded-xl p-6 bg-card">
+                            <div className="flex flex-col md:flex-row items-start gap-6 mb-8 pb-8 border-b border-border">
+                                <div className="relative group w-full md:w-auto">
+                                    <div className="h-32 w-48 rounded-md border border-dashed border-border bg-muted/20 flex flex-col items-center justify-center overflow-hidden relative">
+                                        {companyData.logoUrl ? (
+                                            <img src={companyData.logoUrl} alt="Logo" className="h-full w-full object-contain p-2" />
+                                        ) : (
+                                            <div className="text-center space-y-2 p-4 text-muted-foreground">
+                                                <Building className="h-8 w-8 mx-auto opacity-50" />
+                                                <p className="text-[10px] font-medium uppercase tracking-wider">Sin Logo</p>
                                             </div>
-                                            <input 
-                                                type="file" 
-                                                id="company-logo-input" 
-                                                accept="image/*" 
-                                                onChange={handleLogoChange}
-                                                className="hidden" 
-                                            />
-                                            <div className="flex gap-2 mt-3 justify-center">
-                                                <Button 
-                                                    type="button" 
-                                                    variant="outline" 
-                                                    size="sm"
-                                                    onClick={() => document.getElementById('company-logo-input')?.click()}
-                                                    className="h-9 rounded-xl font-bold text-xs"
-                                                >
-                                                    <Camera className="mr-1.5 h-3.5 w-3.5" /> Subir Logo
-                                                </Button>
-                                                {companyData.logoUrl && (
-                                                    <Button 
-                                                        type="button" 
-                                                        variant="destructive" 
-                                                        size="sm"
-                                                        onClick={() => setCompanyData({...companyData, logoUrl: ''})}
-                                                        className="h-9 rounded-xl font-bold text-xs px-3"
-                                                    >
-                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2 text-center md:text-left flex-1">
-                                            <h3 className="text-xl font-black tracking-tight">Logotipo de la Empresa</h3>
-                                            <p className="text-muted-foreground font-medium text-xs italic max-w-sm">Este logo aparecerá en la cabecera de tus facturas generadas en PDF. Se recomienda un archivo PNG con fondo transparente e inferior a 1MB.</p>
-                                        </div>
+                                        )}
                                     </div>
-                                    <div className="grid md:grid-cols-2 gap-8">
-                                        <div className="space-y-3">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Nombre Comercial</Label>
-                                            <Input 
-                                                value={companyData.companyName || ''} 
-                                                onChange={(e) => setCompanyData({...companyData, companyName: e.target.value})}
-                                                placeholder="Ej. Aura Contable SL" 
-                                                className="h-14 rounded-2xl bg-muted/30 border-none font-bold text-base focus:ring-2 ring-primary/20 transition-all px-6 text-foreground"
-                                            />
-                                        </div>
-                                        <div className="space-y-3">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">CIF / NIF / Tax ID</Label>
-                                            <Input 
-                                                value={companyData.taxId || ''} 
-                                                onChange={(e) => setCompanyData({...companyData, taxId: e.target.value})}
-                                                placeholder="Ej. B12345678" 
-                                                className="h-14 rounded-2xl bg-muted/30 border-none font-bold text-base focus:ring-2 ring-primary/20 transition-all px-6 text-foreground"
-                                            />
-                                        </div>
-                                        <div className="space-y-3 md:col-span-2">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Dirección Fiscal</Label>
-                                            <Input 
-                                                value={companyData.address || ''} 
-                                                onChange={(e) => setCompanyData({...companyData, address: e.target.value})}
-                                                placeholder="Calle Falsa 123, Madrid" 
-                                                className="h-14 rounded-2xl bg-muted/30 border-none font-bold text-base focus:ring-2 ring-primary/20 transition-all px-6 text-foreground"
-                                            />
-                                        </div>
-                                        <div className="space-y-3">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Moneda Predeterminada</Label>
-                                            <Select 
-                                                value={companyData.currency || 'EUR'} 
-                                                onValueChange={(v) => setCompanyData({...companyData, currency: v})}
+                                    <input 
+                                        type="file" 
+                                        id="company-logo-input" 
+                                        accept="image/*" 
+                                        onChange={handleLogoChange}
+                                        className="hidden" 
+                                    />
+                                    <div className="flex gap-2 mt-3 justify-center md:justify-start">
+                                        <Button 
+                                            type="button" 
+                                            variant="outline" 
+                                            size="sm"
+                                            onClick={() => document.getElementById('company-logo-input')?.click()}
+                                            className="h-8 text-xs font-normal"
+                                        >
+                                            <Camera className="mr-2 h-3.5 w-3.5" /> Subir Logo
+                                        </Button>
+                                        {companyData.logoUrl && (
+                                            <Button 
+                                                type="button" 
+                                                variant="ghost" 
+                                                size="sm"
+                                                onClick={() => setCompanyData({...companyData, logoUrl: ''})}
+                                                className="h-8 w-8 p-0 text-danger hover:text-danger hover:bg-danger/10"
                                             >
-                                                <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none font-bold text-base focus:ring-2 ring-primary/20 transition-all text-foreground">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent className="rounded-2xl border-white/10 glass shadow-2xl">
-                                                    <SelectItem value="EUR" className="font-bold">Euro (€)</SelectItem>
-                                                    <SelectItem value="USD" className="font-bold">US Dollar ($)</SelectItem>
-                                                    <SelectItem value="GBP" className="font-bold">British Pound (£)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-3">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email de Facturación</Label>
-                                            <Input 
-                                                value={companyData.email || ''} 
-                                                onChange={(e) => setCompanyData({...companyData, email: e.target.value})}
-                                                placeholder="facturas@empresa.com" 
-                                                className="h-14 rounded-2xl bg-muted/30 border-none font-bold text-base focus:ring-2 ring-primary/20 transition-all px-6 text-foreground"
-                                            />
-                                        </div>
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                        )}
                                     </div>
-                                </Card>
-                            </motion.div>
-                        )}
-
-                        {activeTab === 'payments' && (
-                            <motion.div 
-                                key="payments"
-                                initial={{ opacity: 0, x: 10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -10 }}
-                                className="space-y-8"
-                            >
-                                <div className="grid gap-6">
-                                    <IntegrationCard 
-                                        name="Stripe" 
-                                        desc="Acepta pagos con tarjeta y Apple Pay directamente en tus facturas." 
-                                        icon="/images/stripe.svg" 
-                                        connected={true} 
-                                    />
-                                    <IntegrationCard 
-                                        name="PayPal" 
-                                        desc="Ofrece PayPal como método de pago global para tus clientes." 
-                                        icon="/images/PP_logo_h_200x51.png" 
-                                        connected={true}
+                                </div>
+                                <div className="space-y-1 flex-1">
+                                    <h3 className="text-base font-medium tracking-tight">Logotipo de la Empresa</h3>
+                                    <p className="text-muted-foreground text-xs leading-relaxed max-w-sm">Aparecerá en la cabecera de tus facturas y presupuestos. Recomendado: PNG con fondo transparente, max 1MB.</p>
+                                </div>
+                            </div>
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <SettingField 
+                                    label="Nombre Comercial" 
+                                    value={companyData.companyName || ''} 
+                                    onChange={(v) => setCompanyData({...companyData, companyName: v})}
+                                    placeholder="Ej. Aura Contable SL" 
+                                />
+                                <SettingField 
+                                    label="CIF / NIF / Tax ID" 
+                                    value={companyData.taxId || ''} 
+                                    onChange={(v) => setCompanyData({...companyData, taxId: v})}
+                                    placeholder="Ej. B12345678" 
+                                />
+                                <div className="md:col-span-2">
+                                    <SettingField 
+                                        label="Dirección Fiscal" 
+                                        value={companyData.address || ''} 
+                                        onChange={(v) => setCompanyData({...companyData, address: v})}
+                                        placeholder="Calle Principal 123, Ciudad" 
                                     />
                                 </div>
-                            </motion.div>
-                        )}
-
-                        {activeTab === 'notifs' && (
-                            <motion.div 
-                                key="notifs"
-                                initial={{ opacity: 0, x: 10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -10 }}
-                                className="space-y-8"
-                            >
-                                <Card className="glass-card border-none shadow-xl shadow-black/[0.02] rounded-[2.5rem] p-8 space-y-10">
-                                    <div className="space-y-6">
-                                        <h4 className="text-xl font-black font-headline tracking-tight flex items-center gap-3">
-                                            <Mail className="h-5 w-5 text-primary" /> Alertas por Email
-                                        </h4>
-                                        <div className="space-y-4">
-                                            <NotificationSwitch label="Facturas Vencidas" desc="Avisame cuando una factura supere su fecha de vencimiento." defaultChecked />
-                                            <NotificationSwitch label="Nuevos Pagos" desc="Recibe un email cuando un cliente complete un pago." defaultChecked />
-                                            <NotificationSwitch label="Resumen Semanal" desc="Un reporte con el estado de tu tesorería cada lunes." />
-                                        </div>
-                                    </div>
-
-                                    <div className="pt-10 border-t border-border/50 space-y-6">
-                                        <h4 className="text-xl font-black font-headline tracking-tight flex items-center gap-3">
-                                            <Smartphone className="h-5 w-5 text-primary" /> Notificaciones Directas
-                                        </h4>
-                                        <div className="space-y-4">
-                                            <NotificationSwitch label="Alertas de Sistema" desc="Mantenimiento, actualizaciones y avisos críticos de AuraContable." defaultChecked />
-                                            <NotificationSwitch label="Actividad de Seguridad" desc="Avisos de nuevos inicios de sesión desde otros dispositivos." defaultChecked />
-                                        </div>
-                                    </div>
-                                </Card>
-                            </motion.div>
-                        )}
-
-                        {activeTab === 'billing' && (
-                            <motion.div 
-                                key="billing"
-                                initial={{ opacity: 0, x: 10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -10 }}
-                                className="space-y-8"
-                            >
-                                <div className="grid md:grid-cols-3 gap-8">
-                                    <Card className="md:col-span-2 glass-card border-none shadow-xl shadow-black/[0.02] rounded-[2.5rem] p-10 space-y-8 overflow-hidden relative">
-                                        <div className="absolute top-0 right-0 p-10 opacity-[0.03] -rotate-12">
-                                            <Zap className="h-40 w-40" />
-                                        </div>
-                                        <div className="space-y-2 relative z-10">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Tu Plan Actual</p>
-                                            <h3 className="text-4xl font-black font-headline tracking-tighter">Aura Enterprise</h3>
-                                            <p className="text-sm font-medium text-muted-foreground italic">Renueva el 15 de Abril, 2026</p>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-2 gap-8 pt-4">
-                                            <div className="space-y-1">
-                                                <p className="text-xs font-black opacity-40">Facturación anual</p>
-                                                <p className="text-2xl font-black">490,00€ <span className="text-sm opacity-30">/ año</span></p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="text-xs font-black opacity-40">Método de pago</p>
-                                                <p className="text-lg font-black flex items-center gap-2 italic">Visa **** 4242</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="pt-6 flex gap-4">
-                                            <Button variant="outline" className="h-12 flex-1 rounded-2xl font-black border-2 border-dashed border-primary/20">Cambiar Método</Button>
-                                            <Button className="h-12 flex-1 rounded-2xl font-black shadow-lg shadow-primary/20">Gestionar Plan</Button>
-                                        </div>
-                                    </Card>
-
-                                    <Card className="bg-primary border-none p-8 rounded-[2.5rem] text-primary-foreground space-y-6 shadow-2xl shadow-primary/40 flex flex-col justify-between">
-                                        <div className="space-y-4">
-                                            <Zap className="h-10 w-10 stroke-[3]" />
-                                            <h4 className="text-xl font-black font-headline leading-tight">Potencia tu Negocio con Aura Plus</h4>
-                                            <ul className="space-y-3">
-                                               <li className="flex items-center gap-3 text-xs font-bold opacity-80"><Check className="h-4 w-4" /> Multi-empresa Ilimitado</li>
-                                               <li className="flex items-center gap-3 text-xs font-bold opacity-80"><Check className="h-4 w-4" /> Conciliación Bancaria IA</li>
-                                               <li className="flex items-center gap-3 text-xs font-bold opacity-80"><Check className="h-4 w-4" /> API de Desarrollador</li>
-                                            </ul>
-                                        </div>
-                                        <Button className="w-full bg-white text-primary hover:bg-white/90 font-black h-12 rounded-2xl">Descubre Aura Plus</Button>
-                                    </Card>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-medium text-muted-foreground">Moneda Predeterminada</Label>
+                                    <Select 
+                                        value={companyData.currency || 'EUR'} 
+                                        onValueChange={(v) => setCompanyData({...companyData, currency: v})}
+                                    >
+                                        <SelectTrigger className="h-9 rounded-md border-border bg-background text-sm">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="EUR">Euro (€)</SelectItem>
+                                            <SelectItem value="USD">US Dollar ($)</SelectItem>
+                                            <SelectItem value="GBP">British Pound (£)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                                <SettingField 
+                                    label="Email de Facturación" 
+                                    value={companyData.email || ''} 
+                                    onChange={(v) => setCompanyData({...companyData, email: v})}
+                                    placeholder="facturación@empresa.com" 
+                                />
+                            </div>
+                        </Card>
+                    )}
+
+                    {activeTab === 'payments' && (
+                        <div className="grid gap-4">
+                            <IntegrationCard 
+                                name="Stripe" 
+                                desc="Acepta pagos con tarjeta y Apple Pay en tus facturas." 
+                                icon="/images/stripe.svg" 
+                                connected={true} 
+                            />
+                            <IntegrationCard 
+                                name="PayPal" 
+                                desc="Recibe pagos mediante PayPal de forma sencilla." 
+                                icon="/images/PP_logo_h_200x51.png" 
+                                connected={true}
+                            />
+                        </div>
+                    )}
+
+                    {activeTab === 'notifs' && (
+                        <Card className="border border-border shadow-sm rounded-xl p-6 bg-card space-y-8">
+                            <div className="space-y-4">
+                                <h4 className="text-sm font-medium tracking-tight flex items-center gap-2 border-b border-border pb-2">
+                                    <Mail className="h-4 w-4 text-muted-foreground" /> Alertas por Email
+                                </h4>
+                                <div className="space-y-4">
+                                    <NotificationSwitch label="Facturas Vencidas" desc="Avisame cuando una factura supere su fecha de vencimiento." defaultChecked />
+                                    <NotificationSwitch label="Nuevos Pagos" desc="Recibe un email cuando un cliente complete un pago." defaultChecked />
+                                    <NotificationSwitch label="Resumen Semanal" desc="Un reporte con el estado de tu tesorería cada lunes." />
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <h4 className="text-sm font-medium tracking-tight flex items-center gap-2 border-b border-border pb-2">
+                                    <Smartphone className="h-4 w-4 text-muted-foreground" /> Notificaciones Directas
+                                </h4>
+                                <div className="space-y-4">
+                                    <NotificationSwitch label="Alertas de Sistema" desc="Mantenimiento y avisos críticos de AuraContable." defaultChecked />
+                                    <NotificationSwitch label="Actividad de Seguridad" desc="Avisos de nuevos inicios de sesión desde otros dispositivos." defaultChecked />
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+
+                    {activeTab === 'billing' && (
+                        <div className="grid md:grid-cols-3 gap-6">
+                            <Card className="md:col-span-2 border border-border shadow-sm rounded-xl p-6 bg-card space-y-6">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Tu Plan Actual</p>
+                                    <h3 className="text-2xl font-medium tracking-tight">Aura Enterprise</h3>
+                                    <p className="text-sm text-muted-foreground">Renueva el 15 de Abril, 2026</p>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+                                    <div className="space-y-1">
+                                        <p className="text-xs text-muted-foreground">Facturación anual</p>
+                                        <p className="text-lg font-medium">490,00€ <span className="text-sm text-muted-foreground font-normal">/ año</span></p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-xs text-muted-foreground">Método de pago</p>
+                                        <p className="text-sm font-medium flex items-center gap-2">Visa **** 4242</p>
+                                    </div>
+                                </div>
+
+                                <div className="pt-2 flex gap-3">
+                                    <Button variant="outline" className="h-9 font-normal">Cambiar Método</Button>
+                                    <Button className="h-9 font-normal">Gestionar Plan</Button>
+                                </div>
+                            </Card>
+
+                            <Card className="border border-primary/20 bg-primary/5 p-6 rounded-xl space-y-4">
+                                <div className="space-y-2">
+                                    <Zap className="h-6 w-6 text-primary" />
+                                    <h4 className="text-base font-medium">Aura Plus</h4>
+                                    <p className="text-xs text-muted-foreground">Desbloquea funciones avanzadas para tu negocio.</p>
+                                </div>
+                                <ul className="space-y-2 pt-2">
+                                    <li className="flex items-center gap-2 text-xs text-foreground"><Check className="h-3 w-3 text-primary" /> Multi-empresa Ilimitado</li>
+                                    <li className="flex items-center gap-2 text-xs text-foreground"><Check className="h-3 w-3 text-primary" /> Conciliación Bancaria IA</li>
+                                    <li className="flex items-center gap-2 text-xs text-foreground"><Check className="h-3 w-3 text-primary" /> API de Desarrollador</li>
+                                </ul>
+                                <Button className="w-full h-9 font-medium mt-4">Actualizar Plan</Button>
+                            </Card>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
     );
 }
 
-function SettingField({ label, placeholder, value, disabled }: { label: string, placeholder: string, value?: string, disabled?: boolean }) {
+function SettingField({ label, placeholder, value, disabled, onChange }: { label: string, placeholder: string, value?: string, disabled?: boolean, onChange?: (val: string) => void }) {
     return (
-        <div className="space-y-3">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">{label}</Label>
+        <div className="space-y-2">
+            <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
             <Input 
-                defaultValue={value} 
+                value={value} 
+                onChange={(e) => onChange?.(e.target.value)}
                 placeholder={placeholder} 
                 disabled={disabled}
-                className="h-14 rounded-2xl bg-muted/30 border-none font-bold text-base focus:ring-2 ring-primary/20 transition-all px-6"
+                className="h-9 rounded-md border-border bg-background text-sm"
             />
         </div>
     );
@@ -485,32 +417,31 @@ function SettingField({ label, placeholder, value, disabled }: { label: string, 
 
 function IntegrationCard({ name, desc, icon, connected }: { name: string, desc: string, icon: string, connected?: boolean }) {
     return (
-        <Card className="glass-card border-none shadow-xl shadow-black/[0.02] rounded-[3rem] p-8 group hover:shadow-primary/5 transition-all duration-500 overflow-hidden relative">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-                <div className="flex items-center gap-8">
-                    <div className="h-20 w-20 rounded-[2rem] bg-white dark:bg-slate-900 border border-border/50 flex items-center justify-center p-3 group-hover:scale-105 transition-transform duration-500 overflow-hidden shadow-sm">
-                        <img src={icon} alt={name} className="h-full w-full object-contain" />
+        <Card className="border border-border shadow-sm rounded-xl p-4 bg-card">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-md border border-border bg-white flex items-center justify-center p-2 shrink-0">
+                        {icon.includes('svg') || icon.includes('png') ? (
+                            <img src={icon} alt={name} className="h-full w-full object-contain opacity-80" />
+                        ) : (
+                            <CreditCard className="h-6 w-6 text-muted-foreground" />
+                        )}
                     </div>
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                            <h4 className="text-2xl font-black font-headline tracking-tighter">{name}</h4>
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-medium">{name}</h4>
                             {connected && (
-                                <Badge className="bg-emerald-500/10 text-emerald-500 border-none font-black text-[10px] uppercase py-1 px-3 flex gap-1 items-center animate-pulse">
-                                    <Check className="h-3 w-3" /> Conectado
+                                <Badge variant="outline" className="text-[10px] font-medium uppercase text-emerald-500 border-emerald-500/30 bg-emerald-500/10 px-2 py-0">
+                                    Conectado
                                 </Badge>
                             )}
                         </div>
-                        <p className="text-sm font-medium text-muted-foreground leading-relaxed max-w-md italic">{desc}</p>
+                        <p className="text-xs text-muted-foreground">{desc}</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                    <Button variant={connected ? "outline" : "default"} className={cn(
-                        "h-12 flex-1 md:flex-none rounded-2xl px-8 font-black transition-all",
-                        connected ? "border-2 hover:bg-destructive/5 hover:text-destructive hover:border-destructive/30" : "shadow-lg shadow-primary/20"
-                    )}>
-                        {connected ? "Desconectar" : "Configurar Pasarela"}
-                    </Button>
-                </div>
+                <Button variant={connected ? "outline" : "default"} size="sm" className="h-8 font-normal shrink-0">
+                    {connected ? "Desconectar" : "Configurar"}
+                </Button>
             </div>
         </Card>
     );
@@ -518,42 +449,29 @@ function IntegrationCard({ name, desc, icon, connected }: { name: string, desc: 
 
 function NotificationSwitch({ label, desc, defaultChecked }: { label: string, desc: string, defaultChecked?: boolean }) {
     return (
-        <div className="flex items-center justify-between gap-6 group/notif transition-all">
-            <div className="space-y-1">
-                <p className="text-sm font-black group-hover/notif:text-primary transition-colors">{label}</p>
-                <p className="text-xs font-medium text-muted-foreground italic">{desc}</p>
+        <div className="flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+                <p className="text-sm font-medium">{label}</p>
+                <p className="text-xs text-muted-foreground">{desc}</p>
             </div>
-            <Switch defaultChecked={defaultChecked} className="data-[state=checked]:bg-primary shadow-lg shadow-black/5" />
+            <Switch defaultChecked={defaultChecked} />
         </div>
     );
 }
 
-function ThemeCard({ active, onClick, icon, label, desc }: { active: boolean, onClick: () => void, icon: React.ReactElement, label: string, desc: string }) {
+function ThemeCard({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactElement, label: string }) {
     return (
         <button 
             onClick={onClick}
             className={cn(
-                "flex flex-col items-center gap-6 p-10 rounded-[2.5rem] transition-all duration-700 border-4 relative overflow-hidden group",
+                "flex flex-col items-center gap-3 p-4 rounded-xl border transition-all text-sm",
                 active 
-                    ? "bg-primary/10 border-primary shadow-[0_20px_40px_rgba(var(--primary-rgb),0.15)] scale-[1.02]" 
-                    : "bg-muted/10 border-transparent hover:bg-muted/20 hover:border-muted/30 hover:scale-[1.01]"
+                    ? "bg-muted border-foreground/20 text-foreground font-medium" 
+                    : "bg-card border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
             )}
         >
-            <div className={cn(
-                "h-20 w-20 rounded-[1.8rem] flex items-center justify-center transition-all duration-700",
-                active ? "bg-primary text-primary-foreground shadow-xl shadow-primary/30 rotate-3" : "bg-muted/40 text-muted-foreground group-hover:bg-muted/60"
-            )}>
-                {React.cloneElement(icon, { className: "h-10 w-10 stroke-[2.5]" })}
-            </div>
-            <div className="text-center space-y-2">
-                <p className={cn("text-lg font-black tracking-tight transition-colors", active ? "text-foreground" : "text-muted-foreground")}>{label}</p>
-                <p className="text-[10px] font-bold opacity-50 italic uppercase tracking-widest">{desc}</p>
-            </div>
-            {active && (
-                <div className="absolute top-5 right-5 h-8 w-8 bg-primary text-white rounded-full flex items-center justify-center shadow-lg animate-in zoom-in-50 duration-500">
-                    <Check className="h-4 w-4 stroke-[4]" />
-                </div>
-            )}
+            {React.cloneElement(icon, { className: "h-5 w-5" })}
+            <span>{label}</span>
         </button>
     );
 }

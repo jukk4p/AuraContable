@@ -264,7 +264,7 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
                     </div>
                 </div>
 
-                <Card className="glass-card border-none shadow-2xl rounded-[2.5rem] p-4 sm:p-8">
+                <Card className="border border-border p-4 sm:p-8">
                     <CardHeader className="pb-6 border-b border-border/50">
                         <CardTitle className="text-lg font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                             <Receipt className="h-5 w-5 text-destructive" /> Información General

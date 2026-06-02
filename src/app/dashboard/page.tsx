@@ -3,21 +3,19 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Link from 'next/link';
-import { motion } from "framer-motion";
 import { 
-    ArrowUpRight, Banknote, Users, FileWarning, 
-    CheckCircle2, Plus, TrendingUp, TrendingDown, 
-    FileText, Wallet, Receipt, Info, ChevronRight,
-    Search, BarChart3, AlertCircle
+    FileText, Users, Receipt, CheckCircle2,
+    TrendingUp, TrendingDown, Wallet, FileWarning,
+    Calendar, AlertTriangle, AlertCircle
 } from "lucide-react";
-import { format, isSameMonth } from "date-fns";
-import { es } from "date-fns/locale";
+import { format } from "date-fns";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { type ChartConfig } from "@/components/ui/chart";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { getInvoices } from "@/actions/invoices";
@@ -26,10 +24,9 @@ import { getClients } from "@/actions/clients";
 import { cn } from "@/lib/utils";
 import dynamic from 'next/dynamic';
 
-// Dynamic import for the Chart component to optimize bundle size and avoid SSR issues
 const DashboardChart = dynamic(() => import('@/components/dashboard/dashboard-chart'), { 
     ssr: false,
-    loading: () => <div className="h-[350px] w-full flex items-center justify-center bg-muted/5 rounded-2xl animate-pulse"><BarChart3 className="h-8 w-8 text-primary opacity-20 animate-bounce" /></div>
+    loading: () => <div className="h-[300px] w-full flex items-center justify-center bg-muted/20 rounded-md animate-pulse">Cargando gráfico...</div>
 });
 
 export default function DashboardPage() {
@@ -67,7 +64,6 @@ export default function DashboardPage() {
         fetchData();
     }, [user, status]);
 
-    // Financial calculations
     const stats = useMemo(() => {
         const paid = invoices.filter(i => i.status === 'Paid');
         const pending = invoices.filter(i => i.status === 'Pending');
@@ -83,11 +79,9 @@ export default function DashboardPage() {
             cashFlow,
             pendingCount: pending.length,
             overdueCount: overdue.length,
-            paidCount: paid.length
         };
     }, [invoices, expenses]);
 
-    // Monthly Trends Data
     const chartData = useMemo(() => {
         const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun"];
         return months.map((month, idx) => {
@@ -106,12 +100,6 @@ export default function DashboardPage() {
         });
     }, [invoices, expenses]);
 
-    const chartConfig = {
-        ingresos: { label: "Ingresos", color: "hsl(var(--primary))" },
-        gastos: { label: "Gastos", color: "hsl(var(--destructive))" },
-    } satisfies ChartConfig;
-
-    // Top Clients
     const topClients = useMemo(() => {
         return clients
             .map(c => ({
@@ -122,222 +110,216 @@ export default function DashboardPage() {
             .slice(0, 5);
     }, [clients, invoices]);
 
-    if (status === 'loading') return <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+    if (status === 'loading') return <div className="p-10 text-center text-sm text-muted-foreground">Cargando...</div>;
 
     if (!user) {
         return (
-           <Alert variant="destructive" className="rounded-3xl border-none shadow-2xl">
+           <Alert variant="destructive" className="rounded-md border-danger text-danger">
                <AlertCircle className="h-4 w-4" />
-               <AlertTitle className="font-black uppercase tracking-widest text-xs">Acceso Denegado</AlertTitle>
-               <AlertDescription className="font-bold">Debes iniciar sesión para ver esta página.</AlertDescription>
+               <AlertTitle className="font-medium text-xs">Acceso Denegado</AlertTitle>
+               <AlertDescription className="text-sm">Debes iniciar sesión para ver esta página.</AlertDescription>
            </Alert>
        )
     }
 
+    const needsAlert = stats.cashFlow < 0 || stats.overdueCount > 0;
+
     return (
-      <div className="space-y-12 pb-20 selection:bg-primary/20 animate-in fade-in duration-700">
-        {/* Welcome Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-            <div className="space-y-1">
-                <h2 className="text-4xl font-black font-headline tracking-tighter">Resumen General</h2>
-                <p className="text-muted-foreground font-medium italic">Monitoriza el estado real de tu negocio en tiempo real.</p>
-            </div>
-            <div className="flex items-center gap-3">
-                <Link href="/dashboard/reports">
-                    <Button variant="outline" className="h-12 rounded-2xl px-6 font-bold border-2 hover:bg-muted/50 transition-all active:scale-95 shadow-sm">
-                        Informes Detallados
-                    </Button>
+      <div className="space-y-6">
+        {needsAlert && (
+            <Alert className="bg-danger/10 border-danger/20 text-danger rounded-md flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <AlertTriangle className="h-4 w-4" />
+                    <div>
+                        <AlertTitle className="font-medium text-sm">Atención requerida</AlertTitle>
+                        <AlertDescription className="text-xs">
+                            {stats.cashFlow < 0 ? "Tu cash flow actual es negativo. " : ""}
+                            {stats.overdueCount > 0 ? `Tienes ${stats.overdueCount} facturas vencidas pendientes de cobro.` : ""}
+                        </AlertDescription>
+                    </div>
+                </div>
+                <Link href="/dashboard/invoices">
+                    <Button variant="outline" size="sm" className="h-8 text-xs border-danger/20 text-danger hover:bg-danger hover:text-white">Ver facturas</Button>
                 </Link>
-                <Link href="/dashboard/invoices/new">
-                    <Button className="h-12 rounded-2xl px-6 font-black shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all hover:scale-[1.02] active:scale-95">
-                        <Plus className="mr-2 h-5 w-5 stroke-[3]" />
-                        Nueva Factura
-                    </Button>
-                </Link>
-            </div>
-        </div>
+            </Alert>
+        )}
 
         {/* KPI Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <KPICard 
-                title="Ingresos" 
+                title="Ingresos Cobrados" 
                 value={formatCurrency(stats.income)} 
-                trend="Cobrado" 
-                icon={<TrendingUp />} 
-                variant="primary" 
-                description="Total facturado pagado"
+                badge="Al día" 
+                badgeVariant="success"
+                context="Total cobrado en cuenta"
+                icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />} 
             />
             <KPICard 
-                title="Gastos" 
+                title="Gastos Acumulados" 
                 value={formatCurrency(stats.expenses)} 
-                trend="Suministros" 
-                icon={<TrendingDown />} 
-                variant="destructive" 
-                description="Suministros y servicios"
+                badge="Mensual" 
+                badgeVariant="secondary"
+                context="Suministros y servicios"
+                icon={<TrendingDown className="h-4 w-4 text-muted-foreground" />} 
             />
             <KPICard 
-                title="Cash Flow" 
+                title="Cash Flow Neto" 
                 value={formatCurrency(stats.cashFlow)} 
-                trend="Neto" 
-                icon={<Wallet />} 
-                variant="emerald" 
-                description="Flujo de caja neto"
+                badge="Real" 
+                badgeVariant={stats.cashFlow >= 0 ? "success" : "danger"}
+                context="Liquidez actual"
+                icon={<Wallet className="h-4 w-4 text-muted-foreground" />} 
             />
             <KPICard 
                 title="Facturas Pendientes" 
                 value={stats.pendingCount.toString()} 
-                trend={stats.overdueCount > 0 ? `${stats.overdueCount} vencidas` : "Al día"} 
-                icon={<FileWarning />} 
-                variant="amber" 
-                description="Pendientes de cobro"
+                badge={stats.overdueCount > 0 ? `${stats.overdueCount} vencidas` : "0 vencidas"} 
+                badgeVariant={stats.overdueCount > 0 ? "danger" : "secondary"}
+                context="A la espera de cobro"
+                icon={<FileWarning className="h-4 w-4 text-muted-foreground" />} 
             />
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-3 items-start">
-            {/* Main Trend Chart */}
-            <Card className="lg:col-span-2 glass-card border-none shadow-2xl shadow-black/5 overflow-hidden group">
-                <CardHeader className="flex flex-row items-center justify-between pb-8">
-                    <div className="space-y-1">
-                        <CardTitle className="text-2xl font-black font-headline tracking-tight">Evolución Trimestral</CardTitle>
-                        <CardDescription className="font-medium">Comparativa de ingresos vs gastos 2026.</CardDescription>
-                    </div>
-                </CardHeader>
-                <CardContent className="px-2">
-                    <DashboardChart data={chartData} config={chartConfig} />
-                </CardContent>
-            </Card>
-
-            {/* Top Clients Ranking */}
-            <Card className="glass-card border-none shadow-2xl shadow-black/5 overflow-hidden">
-                <CardHeader className="pb-6">
-                    <div className="flex justify-between items-center">
-                        <div className="space-y-1">
-                            <CardTitle className="text-xl font-black font-headline tracking-tight">Top Clientes</CardTitle>
-                            <CardDescription className="font-medium italic">Por volumen de facturación</CardDescription>
-                        </div>
-                        <Users className="h-5 w-5 text-primary opacity-20" />
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                   <div className="space-y-4">
-                        {!dbLoading && topClients.length > 0 ? topClients.map((client, idx) => (
-                            <motion.div 
-                                key={client.id}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: idx * 0.1 }}
-                                className="relative flex items-center justify-between p-4 bg-muted/20 rounded-2xl group overflow-hidden transition-all hover:bg-muted/40 cursor-pointer"
-                            >
-                                <div className="absolute left-0 top-0 h-full w-1 bg-primary scale-y-0 group-hover:scale-y-100 transition-transform origin-top" />
-                                <div className="flex items-center gap-4">
-                                    <Avatar className="h-11 w-11 ring-2 ring-background shadow-md">
-                                        <AvatarFallback className="bg-primary/10 text-primary font-black text-sm">{client.name.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="space-y-0.5">
-                                        <p className="text-sm font-black group-hover:text-primary transition-colors">{client.name}</p>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 truncate max-w-[120px]">{client.email}</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm font-black">{formatCurrency(client.total)}</p>
-                                    <p className="text-[10px] font-bold text-emerald-500 flex items-center justify-end gap-1">
-                                        <TrendingUp className="h-2 w-2" /> Activo
-                                    </p>
-                                </div>
-                            </motion.div>
-                        )) : (
-                            <div className="p-10 text-center opacity-30 italic text-xs font-bold">Sin datos de clientes</div>
-                        )}
-                   </div>
-                   <Link href="/dashboard/clients" className="block">
-                        <Button variant="ghost" className="w-full h-12 rounded-xl font-black text-xs uppercase tracking-[0.2em] gap-2 hover:bg-primary/5 hover:text-primary">
-                            Ver todos los clientes
-                            <ArrowUpRight className="h-4 w-4" />
-                        </Button>
-                   </Link>
-                </CardContent>
-            </Card>
+        {/* Acciones Rápidas */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Button variant="outline" className="h-10 w-full justify-start gap-2 font-medium text-sm bg-card hover:bg-muted" asChild>
+                <Link href="/dashboard/invoices/new"><FileText className="h-4 w-4" /> Nueva factura</Link>
+            </Button>
+            <Button variant="outline" className="h-10 w-full justify-start gap-2 font-medium text-sm bg-card hover:bg-muted" asChild>
+                <Link href="/dashboard/clients/new"><Users className="h-4 w-4" /> Nuevo cliente</Link>
+            </Button>
+            <Button variant="outline" className="h-10 w-full justify-start gap-2 font-medium text-sm bg-card hover:bg-muted" asChild>
+                <Link href="/dashboard/expenses/new"><Receipt className="h-4 w-4" /> Registrar gasto</Link>
+            </Button>
+            <Button variant="outline" className="h-10 w-full justify-start gap-2 font-medium text-sm text-success border-success/30 hover:bg-success/5 hover:text-success bg-card" asChild>
+                <Link href="/dashboard/invoices"><CheckCircle2 className="h-4 w-4" /> Marcar cobrada</Link>
+            </Button>
         </div>
 
-        {/* Quick Actions Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <QuickAction icon={<Receipt />} label="Nuevo Gasto" href="/dashboard/expenses" variant="destructive" />
-            <QuickAction icon={<Users />} label="Gestionar Clientes" href="/dashboard/clients" variant="primary" />
-            <QuickAction icon={<BarChart3 />} label="Ver Informes" href="/dashboard/reports" variant="emerald" />
-            <QuickAction icon={<FileText />} label="Nueva Factura" href="/dashboard/invoices/new" variant="primary" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <div className="lg:col-span-2 space-y-6">
+                {/* Gráfico Trimestral */}
+                <Card className="rounded-xl border border-border shadow-sm bg-card">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <div className="space-y-1">
+                            <CardTitle className="text-base font-medium">Evolución Trimestral</CardTitle>
+                            <CardDescription className="text-xs">Ingresos vs Gastos en el periodo actual</CardDescription>
+                        </div>
+                        <Tabs defaultValue="q1" className="w-auto">
+                            <TabsList className="h-8">
+                                <TabsTrigger value="q1" className="text-[10px] px-3 h-6">Q1</TabsTrigger>
+                                <TabsTrigger value="q2" className="text-[10px] px-3 h-6">Q2</TabsTrigger>
+                                <TabsTrigger value="año" className="text-[10px] px-3 h-6">Año</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+                    </CardHeader>
+                    <CardContent>
+                        <DashboardChart data={chartData} config={{
+                            ingresos: { label: "Ingresos", color: "hsl(var(--primary))" },
+                            gastos: { label: "Gastos", color: "hsl(var(--danger))" },
+                        }} />
+                    </CardContent>
+                </Card>
+
+                {/* Top Clientes */}
+                <Card className="rounded-xl border border-border shadow-sm bg-card">
+                    <CardHeader className="pb-2">
+                        <div className="flex justify-between items-center">
+                            <CardTitle className="text-base font-medium">Top Clientes</CardTitle>
+                            <Button variant="link" size="sm" className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground" asChild><Link href="/dashboard/clients">Ver todos</Link></Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-1">
+                            {!dbLoading && topClients.length > 0 ? topClients.map((client) => (
+                                <div key={client.id} className="flex items-center justify-between p-2 hover:bg-muted/30 rounded-md transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <Avatar className="h-8 w-8 rounded-md">
+                                            <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium rounded-md">{client.name.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium">{client.name}</span>
+                                            <span className="text-xs text-muted-foreground truncate max-w-[150px]">{client.email}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-right">
+                                        <span className="text-sm font-medium">{formatCurrency(client.total)}</span>
+                                        <Badge variant="secondary" className="bg-success/10 text-success text-[10px] uppercase font-medium border-transparent shadow-none px-1.5 h-4 flex items-center">Activo</Badge>
+                                    </div>
+                                </div>
+                            )) : (
+                                <div className="py-4 text-center text-xs text-muted-foreground">Sin datos de clientes</div>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <div className="space-y-6">
+                {/* Agenda Fiscal */}
+                <Card className="rounded-xl border border-border shadow-sm bg-card">
+                    <CardHeader className="pb-4">
+                        <CardTitle className="text-base font-medium flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            Agenda Fiscal
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex gap-3">
+                            <div className="mt-0.5"><AlertCircle className="h-4 w-4 text-danger" /></div>
+                            <div className="space-y-1">
+                                <p className="text-sm font-medium leading-none">Modelo 303 IVA</p>
+                                <p className="text-xs text-muted-foreground">Presentación trimestral del IVA</p>
+                                <p className="text-xs font-medium text-danger">En 5 días (20 Jul)</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <div className="mt-0.5"><AlertCircle className="h-4 w-4 text-warning" /></div>
+                            <div className="space-y-1">
+                                <p className="text-sm font-medium leading-none">Retenciones IRPF</p>
+                                <p className="text-xs text-muted-foreground">Modelo 130 pago fraccionado</p>
+                                <p className="text-xs font-medium text-warning">En 5 días (20 Jul)</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <div className="mt-0.5"><AlertCircle className="h-4 w-4 text-primary" /></div>
+                            <div className="space-y-1">
+                                <p className="text-sm font-medium leading-none">Avisos pendientes</p>
+                                <p className="text-xs text-muted-foreground">3 facturas sin NIF de cliente</p>
+                                <p className="text-xs font-medium text-primary cursor-pointer hover:underline">Revisar ahora</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
       </div>
     );
 }
 
-function KPICard({ title, value, trend, icon, variant, description }: { 
-    title: string, value: string, trend: string, icon: React.ReactElement, 
-    variant: 'primary' | 'destructive' | 'emerald' | 'amber' | 'muted',
-    description?: string
+function KPICard({ title, value, badge, badgeVariant, context, icon }: { 
+    title: string, value: string, badge: string, 
+    badgeVariant: 'success' | 'danger' | 'warning' | 'secondary', 
+    context: string, icon: React.ReactElement 
 }) {
-    const variants = {
-        primary: "text-primary shadow-primary/20 bg-primary/5",
-        destructive: "text-destructive shadow-destructive/20 bg-destructive/5",
-        emerald: "text-emerald-500 shadow-emerald-500/20 bg-emerald-500/5",
-        amber: "text-amber-500 shadow-amber-500/20 bg-amber-500/5",
-        muted: "text-muted-foreground shadow-muted/20 bg-muted/5",
-    };
-
     return (
-        <motion.div
-            whileHover={{ y: -8, scale: 1.02 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        >
-            <Card className="glass-card group border-none overflow-hidden h-[190px] p-6 flex flex-col justify-between shadow-2xl relative">
-                <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
-                    {React.cloneElement(icon, { size: 120, strokeWidth: 1 })}
-                </div>
-                
-                <div className="flex justify-between items-start relative z-10">
-                    <div className="space-y-1">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-60 leading-tight">{title}</p>
-                        <h3 className="text-3xl font-black font-headline tracking-tighter leading-none mt-1">{value}</h3>
-                    </div>
-                    <div className={cn("p-3 rounded-2xl transition-all duration-500 group-hover:rotate-12", variants[variant])}>
-                        {React.cloneElement(icon, { className: "w-5 h-5 stroke-[2.5]" })}
-                    </div>
-                </div>
-                
-                <div className="space-y-2 relative z-10">
-                    <div className="flex items-center gap-2">
-                        <div className={cn("px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest", 
-                            variant === 'primary' || variant === 'emerald' ? "bg-emerald-500/10 text-emerald-500" : 
-                            variant === 'destructive' ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"
-                        )}>
-                            {trend}
-                        </div>
-                    </div>
-                    {description && <p className="text-[11px] font-bold text-muted-foreground italic line-clamp-1 opacity-70">{description}</p>}
-                </div>
-            </Card>
-        </motion.div>
-    );
-}
-
-function QuickAction({ icon, label, href, variant }: { icon: React.ReactElement, label: string, href: string, variant: string }) {
-    return (
-        <Link href={href}>
-            <motion.div
-                whileHover={{ y: -5, scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-            >
-                <Button 
-                    variant="ghost" 
-                    className="w-full h-32 rounded-[2rem] flex flex-col gap-4 items-center justify-center bg-muted/20 hover:bg-primary/5 hover:text-primary transition-all border-2 border-transparent hover:border-primary/10 shadow-sm hover:shadow-xl group"
-                >
-                    <div className={cn("p-4 rounded-2xl bg-white shadow-lg transition-transform duration-500 group-hover:rotate-6", 
-                        variant === 'primary' ? 'text-primary' : variant === 'destructive' ? 'text-destructive' : variant === 'emerald' ? 'text-emerald-500' : 'text-muted-foreground'
-                    )}>
-                        {React.cloneElement(icon, { className: "w-7 h-7 stroke-[2]" })}
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 group-hover:opacity-100 transition-opacity">{label}</span>
-                </Button>
-            </motion.div>
-        </Link>
+        <Card className="rounded-xl border border-border shadow-sm p-4 flex flex-col gap-3 bg-card hover:border-border/80 transition-colors">
+            <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-medium text-muted-foreground tracking-wider">{title}</span>
+                {icon}
+            </div>
+            <div className="flex items-end gap-2">
+                <h3 className="text-[22px] font-medium leading-none tracking-tight">{value}</h3>
+                <Badge variant="secondary" className={cn(
+                    "text-[10px] uppercase font-medium px-1.5 py-0 border-transparent shadow-none h-4 flex items-center",
+                    badgeVariant === 'success' && "bg-success/10 text-success",
+                    badgeVariant === 'danger' && "bg-danger/10 text-danger",
+                    badgeVariant === 'warning' && "bg-warning/10 text-warning",
+                )}>
+                    {badge}
+                </Badge>
+            </div>
+            <p className="text-[11px] text-muted-foreground">{context}</p>
+        </Card>
     );
 }
