@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { 
     MoreHorizontal, View, Edit, Trash2, 
     Download, Plus, Search,
-    FileDown, AlertCircle, FileSignature, ArrowRight
+    FileDown, AlertCircle, FileSignature, ArrowRight,
+    CheckCircle2, Clock, TrendingUp
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -24,10 +25,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from '@/hooks/use-toast';
 import { useLocale } from '@/lib/i18n/locale-provider';
 
-function StatCard({ title, value, trend }: { title: string, value: string, trend: string }) {
+function StatCard({ title, value, trend, icon }: { title: string, value: string, trend: string, icon?: React.ReactNode }) {
     return (
-        <Card className="p-4 rounded-xl border border-border shadow-sm flex flex-col gap-2 bg-card hover:border-border/80 transition-colors">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{title}</p>
+        <Card className="p-4 rounded-xl border border-border shadow-sm flex flex-col gap-3 bg-card hover:border-border/80 transition-colors">
+            <div className="flex items-center justify-between">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{title}</p>
+                {icon}
+            </div>
             <div className="flex justify-between items-end">
                 <h3 className="text-2xl font-semibold tracking-tight">{value}</h3>
                 <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-md text-muted-foreground">{trend}</span>
@@ -94,9 +98,9 @@ export default function QuotesPage() {
 
             {/* Stats Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <StatCard title="Total Aprobado" value={formatCurrency(quotes.filter(q => q.status === 'Accepted').reduce((a,b)=>a+b.total,0))} trend="Confirmado" />
-                <StatCard title="Pendiente de Respuesta" value={formatCurrency(quotes.filter(q => q.status === 'Pending').reduce((a,b)=>a+b.total,0))} trend="Enviado" />
-                <StatCard title="Tasa de Conversión" value="0%" trend="Aceptados vs Emitidos" />
+                <StatCard title="Total Aprobado" value={formatCurrency(quotes.filter(q => q.status === 'Accepted').reduce((a,b)=>a+b.total,0))} trend="Confirmado" icon={<CheckCircle2 className="h-4 w-4 text-muted-foreground" />} />
+                <StatCard title="Pendiente de Respuesta" value={formatCurrency(quotes.filter(q => q.status === 'Pending').reduce((a,b)=>a+b.total,0))} trend="Enviado" icon={<Clock className="h-4 w-4 text-muted-foreground" />} />
+                <StatCard title="Tasa de Conversión" value="0%" trend="Aceptados vs Emitidos" icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />} />
             </div>
 
             {/* Filters */}

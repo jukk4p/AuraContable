@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, UserPlus, Mail, Phone, MapPin, Trash2, Edit, View, MoreHorizontal, FileDown, AlertCircle } from 'lucide-react';
+import { Search, UserPlus, Mail, Phone, MapPin, Trash2, Edit, View, MoreHorizontal, FileDown, AlertCircle, Users, CheckCircle2 } from 'lucide-react';
 import { useLocale } from '@/lib/i18n/locale-provider';
 import type { Client } from '@/lib/types';
 import { getClients, deleteClient } from '@/actions/clients';
@@ -18,10 +18,13 @@ import { useRouter } from "next/navigation";
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 
-function StatCard({ title, value, trend }: { title: string, value: string, trend: string }) {
+function StatCard({ title, value, trend, icon }: { title: string, value: string, trend: string, icon?: React.ReactNode }) {
     return (
-        <Card className="p-4 rounded-xl border border-border shadow-sm flex flex-col gap-2 bg-card hover:border-border/80 transition-colors">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{title}</p>
+        <Card className="p-4 rounded-xl border border-border shadow-sm flex flex-col gap-3 bg-card hover:border-border/80 transition-colors">
+            <div className="flex items-center justify-between">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{title}</p>
+                {icon}
+            </div>
             <div className="flex justify-between items-end">
                 <h3 className="text-2xl font-semibold tracking-tight">{value}</h3>
                 <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-md text-muted-foreground">{trend}</span>
@@ -153,9 +156,9 @@ export default function ClientList() {
 
             {/* Stats Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <StatCard title="Total Clientes" value={stats.total.toString()} trend="Cartera" />
-                <StatCard title="Nuevos (Mes)" value={stats.nuevos.toString()} trend="Crecimiento" />
-                <StatCard title="Con CIF/NIF" value={stats.conCIF.toString()} trend="Validados" />
+                <StatCard title="Total Clientes" value={stats.total.toString()} trend="Cartera" icon={<Users className="h-4 w-4 text-muted-foreground" />} />
+                <StatCard title="Nuevos (Mes)" value={stats.nuevos.toString()} trend="Crecimiento" icon={<UserPlus className="h-4 w-4 text-muted-foreground" />} />
+                <StatCard title="Con CIF/NIF" value={stats.conCIF.toString()} trend="Validados" icon={<CheckCircle2 className="h-4 w-4 text-muted-foreground" />} />
             </div>
 
             {/* Filters Row */}

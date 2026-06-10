@@ -2,7 +2,7 @@
 
 import { db } from "@/db/config";
 import { invoices, invoiceItems, clients, invoiceTaxes, companyProfiles } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 import { createNotification } from "./notifications";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
@@ -256,6 +256,56 @@ export async function deleteInvoice(invoiceId: string): Promise<ActionResult> {
   } catch (error) {
     console.error("Error deleting invoice:", error);
     return { success: false, error: "No se pudo eliminar la factura." };
+  }
+}
+
+export async function updateInvoiceStatus(invoiceId: string, status: 'Paid' | 'Pending' | 'Overdue' | 'Draft'): Promise<ActionResult> {
+  try {
+    const updated = await db.update(invoices).set({
+      status: status as any,
+    }).where(eq(invoices.id, invoiceId)).returning();
+
+    const newInvoice = updated[0];
+
+    if (newInvoice) {
+        await createNotification({
+            userId: newInvoice.userId,
+            title: "Estado de Factura Actualizado",
+            body: `La factura ${newInvoice.invoiceNumber} ha sido cambiada a ${status}.`,
+            href: `/dashboard/invoices/${invoiceId}`,
+        });
+    }
+
+    revalidatePath("/dashboard/invoices");
+    revalidatePath(`/dashboard/invoices/${invoiceId}`);
+    return { success: true, data: newInvoice };
+  } catch (error) {
+    console.error("Error updating invoice status:", error);
+    return { success: false, error: "No se pudo actualizar el estado de la factura." };
+  }
+}
+
+export async function bulkUpdateInvoiceStatus(invoiceIds: string[], status: 'Paid' | 'Pending' | 'Overdue' | 'Draft'): Promise<ActionResult> {
+  if (!invoiceIds || invoiceIds.length === 0) return { success: true, data: null };
+  try {
+    const updated = await db.update(invoices).set({
+      status: status as any,
+    }).where(inArray(invoices.id, invoiceIds)).returning();
+
+    if (updated.length > 0) {
+        await createNotification({
+            userId: updated[0].userId,
+            title: "Facturas Actualizadas",
+            body: `Se ha cambiado el estado de ${updated.length} facturas a ${status}.`,
+            href: `/dashboard/invoices`,
+        });
+    }
+
+    revalidatePath("/dashboard/invoices");
+    return { success: true, data: updated };
+  } catch (error) {
+    console.error("Error bulk updating invoice status:", error);
+    return { success: false, error: "No se pudieron actualizar las facturas." };
   }
 }
 

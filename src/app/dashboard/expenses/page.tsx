@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { 
     MoreHorizontal, Plus, Search,
     FileDown, Receipt, Trash2, Edit, View, AlertCircle, RefreshCw, Calculator,
-    FileText, Image as ImageIcon
+    FileText, Image as ImageIcon, DollarSign, Tag, Hash
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -28,10 +28,13 @@ import { getExpenses, deleteExpense } from '@/actions/expenses';
 import { toast } from '@/hooks/use-toast';
 import { getReceiptMeta } from '@/lib/receipt-utils';
 
-function StatCard({ title, value, trend }: { title: string, value: string, trend: string }) {
+function StatCard({ title, value, trend, icon }: { title: string, value: string, trend: string, icon?: React.ReactNode }) {
     return (
-        <Card className="p-4 rounded-xl border border-border shadow-sm flex flex-col gap-2 bg-card hover:border-border/80 transition-colors">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{title}</p>
+        <Card className="p-4 rounded-xl border border-border shadow-sm flex flex-col gap-3 bg-card hover:border-border/80 transition-colors">
+            <div className="flex items-center justify-between">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{title}</p>
+                {icon}
+            </div>
             <div className="flex justify-between items-end">
                 <h3 className="text-2xl font-semibold tracking-tight">{value}</h3>
                 <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-md text-muted-foreground">{trend}</span>
@@ -159,9 +162,9 @@ export default function ExpensesPage() {
 
             {/* Stats Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <StatCard title="Gasto Acumulado" value={formatCurrency(expenses.reduce((s, e) => s + ((e.amount || 0) * (e.quantity || 1)), 0))} trend="Total Bruto" />
-                <StatCard title="Categoría Principal" value={expenses.length > 0 ? (expenses[0].category) : "N/A"} trend="Reciente" />
-                <StatCard title="Nº Registros" value={expenses.length.toString()} trend="Últimos 30 días" />
+                <StatCard title="Gasto Acumulado" value={formatCurrency(expenses.reduce((s, e) => s + ((e.amount || 0) * (e.quantity || 1)), 0))} trend="Total Bruto" icon={<DollarSign className="h-4 w-4 text-muted-foreground" />} />
+                <StatCard title="Categoría Principal" value={expenses.length > 0 ? (expenses[0].category) : "N/A"} trend="Reciente" icon={<Tag className="h-4 w-4 text-muted-foreground" />} />
+                <StatCard title="Nº Registros" value={expenses.length.toString()} trend="Últimos 30 días" icon={<Hash className="h-4 w-4 text-muted-foreground" />} />
             </div>
 
             {/* Filters Row */}
