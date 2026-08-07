@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/config";
-import { invoices, invoiceItems, clients, invoiceTaxes, companyProfiles } from "@/db/schema";
+import { invoices, invoiceItems, clients, invoiceTaxes, companyProfiles, notifications } from "@/db/schema";
 import { and, eq, desc, inArray } from "drizzle-orm";
 import { createNotification } from "./notifications";
 import { z } from "zod";
@@ -40,6 +40,14 @@ const InvoiceSchema = z.object({
 });
 
 type ValidatedInvoice = z.infer<typeof InvoiceSchema>;
+
+/** Los estados se guardan en inglés; el texto que lee el usuario no. */
+const STATUS_LABELS: Record<string, string> = {
+  Paid: 'Pagada',
+  Pending: 'Pendiente',
+  Overdue: 'Vencida',
+  Draft: 'Borrador',
+};
 
 /** Importes en céntimos, calculados en el servidor a partir de las líneas. */
 function computeTotals(v: ValidatedInvoice) {
@@ -229,14 +237,31 @@ export async function updateInvoice(invoiceId: string, invoiceData: unknown): Pr
 export async function deleteInvoice(invoiceId: string): Promise<ActionResult> {
   try {
     const userId = await requireUserId();
-    const deleted = await db
-      .delete(invoices)
-      .where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)))
-      .returning({ id: invoices.id });
 
-    if (deleted.length === 0) return { success: false, error: "Factura no encontrada." };
+    const deleted = await db.transaction(async (tx) => {
+      const rows = await tx
+        .delete(invoices)
+        .where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)))
+        .returning({ id: invoices.id });
+
+      if (rows.length === 0) return null;
+
+      // Sus notificaciones apuntan a una factura que ya no existe: si se dejan,
+      // la campana ofrece enlaces que no llevan a ninguna parte.
+      await tx.delete(notifications).where(
+        and(
+          eq(notifications.userId, userId),
+          eq(notifications.href, `/dashboard/invoices/${invoiceId}`),
+        ),
+      );
+
+      return rows[0];
+    });
+
+    if (!deleted) return { success: false, error: "Factura no encontrada." };
 
     revalidatePath("/dashboard/invoices");
+    revalidatePath("/dashboard");
     return { success: true, data: null };
   } catch (error) {
     return toActionError(error, "No se pudo eliminar la factura.", "deleteInvoice");
@@ -260,7 +285,7 @@ export async function updateInvoiceStatus(
     await createNotification({
       userId,
       title: "Estado de Factura Actualizado",
-      body: `La factura ${updated[0].invoiceNumber} ha sido cambiada a ${status}.`,
+      body: `La factura ${updated[0].invoiceNumber} ahora está ${STATUS_LABELS[status] ?? status}.`,
       href: `/dashboard/invoices/${invoiceId}`,
     });
 
@@ -289,7 +314,7 @@ export async function bulkUpdateInvoiceStatus(
       await createNotification({
         userId,
         title: "Facturas Actualizadas",
-        body: `Se ha cambiado el estado de ${updated.length} facturas a ${status}.`,
+        body: `${updated.length} facturas han pasado a ${STATUS_LABELS[status] ?? status}.`,
         href: `/dashboard/invoices`,
       });
     }

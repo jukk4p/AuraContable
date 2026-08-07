@@ -10,6 +10,8 @@ import { Search, UserPlus, Mail, Phone, MapPin, Trash2, Edit, View, MoreHorizont
 import { useLocale } from '@/lib/i18n/locale-provider';
 import type { Client } from '@/lib/types';
 import { getClients, deleteClient } from '@/actions/clients';
+import { getInvoices } from '@/actions/invoices';
+import { getPaymentScore } from '@/lib/fiscal';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { generateClientsCsv } from '@/lib/csv-generator';
@@ -39,6 +41,7 @@ export default function ClientList() {
     const user = session?.user;
     const router = useRouter();
     const [clients, setClients] = useState<Client[]>([]);
+    const [invoices, setInvoices] = useState<{ clientId: string; status: string }[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [dbLoading, setDbLoading] = useState(true);
     const [dbError, setDbError] = useState<string | null>(null);
@@ -52,8 +55,14 @@ export default function ClientList() {
                 setDbLoading(true);
                 setDbError(null);
                 try {
-                    const userClients = await getClients();
+                    // Las facturas se traen para calcular el comportamiento de
+                    // pago de cada cliente con su historial real.
+                    const [userClients, userInvoices] = await Promise.all([
+                        getClients(),
+                        getInvoices(),
+                    ]);
                     setClients(userClients);
+                    setInvoices(userInvoices);
                 } catch (e: any) {
                     console.error("Error fetching clients: ", e);
                     setDbError("Ha ocurrido un error al cargar los clientes.");
@@ -66,6 +75,14 @@ export default function ClientList() {
         };
         fetchClients();
     }, [userId, status]);
+
+    /** Facturas agrupadas por cliente, para no recorrerlas en cada fila. */
+    const invoicesByClient = useMemo(() => {
+        return invoices.reduce((acc: Record<string, { status: string }[]>, invoice) => {
+            (acc[invoice.clientId] ??= []).push(invoice);
+            return acc;
+        }, {});
+    }, [invoices]);
 
     const stats = useMemo(() => {
         const total = clients.length;
@@ -208,10 +225,9 @@ export default function ClientList() {
                                 </tr>
                             ) : (
                                 filteredClients.map((client) => {
-                                    // Mock score computation based on ID to be deterministic but varied
-                                    const scoreValue = client.id.charCodeAt(0) % 3;
-                                    const scoreLabel = scoreValue === 0 ? "Excelente" : scoreValue === 1 ? "Bueno" : "Regular";
-                                    const scoreVariant = scoreValue === 0 ? "success" : scoreValue === 1 ? "primary" : "warning";
+                                    const score = getPaymentScore(invoicesByClient[client.id] ?? []);
+                                    const scoreLabel = score.label;
+                                    const scoreVariant = score.variant;
 
                                     return (
                                     <tr key={client.id} className="hover:bg-muted/30 transition-colors group">
@@ -241,10 +257,11 @@ export default function ClientList() {
                                             ) : '-'}
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <Badge variant="secondary" className={`text-[10px] uppercase font-medium px-2 py-0 border-transparent shadow-none h-5 inline-flex items-center
-                                                ${scoreVariant === 'success' ? 'bg-success/10 text-success' : 
-                                                  scoreVariant === 'primary' ? 'bg-primary/10 text-primary' : 
-                                                  'bg-warning/10 text-warning'}`}>
+                                            <Badge variant="secondary" title={score.detail} className={`text-[10px] uppercase font-medium px-2 py-0 border-transparent shadow-none h-5 inline-flex items-center
+                                                ${scoreVariant === 'success' ? 'bg-success/10 text-success' :
+                                                  scoreVariant === 'primary' ? 'bg-primary/10 text-primary' :
+                                                  scoreVariant === 'warning' ? 'bg-warning/10 text-warning' :
+                                                  'bg-muted text-muted-foreground'}`}>
                                                 {scoreLabel}
                                             </Badge>
                                         </td>

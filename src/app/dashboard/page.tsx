@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { 
     FileText, Users, Receipt, CheckCircle2,
     TrendingUp, TrendingDown, Wallet, FileWarning,
-    Calendar, AlertTriangle, AlertCircle
+    Calendar, AlertTriangle, AlertCircle, Percent
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -41,6 +41,8 @@ export default function DashboardPage() {
     const [expenses, setExpenses] = useState<any[]>([]);
     const [dbLoading, setDbLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
+    /** Ventana del gráfico. Los tabs Q1/Q2/Año de antes no filtraban nada. */
+    const [chartMonths, setChartMonths] = useState(6);
 
     const userId = user?.id;
 
@@ -90,7 +92,7 @@ export default function DashboardPage() {
     }, [invoices, expenses]);
 
     const chartData = useMemo(() => {
-        const buckets = getMonthBuckets(new Date(), 6);
+        const buckets = getMonthBuckets(new Date(), chartMonths);
         return buckets.map(bucket => {
             const income = invoices
                 .filter(i => i.status === 'Paid' && isInBucket(i.issueDate, bucket))
@@ -105,7 +107,7 @@ export default function DashboardPage() {
                 gastos: Math.round(exp)
             };
         });
-    }, [invoices, expenses]);
+    }, [invoices, expenses, chartMonths]);
 
     /** Vencimientos y avisos reales: antes eran texto fijo ("En 5 días (20 Jul)"). */
     const agenda = useMemo(() => {
@@ -216,8 +218,8 @@ export default function DashboardPage() {
             <Button variant="outline" className="h-10 w-full justify-start gap-2 font-medium text-sm bg-card hover:bg-muted" asChild>
                 <Link href="/dashboard/expenses/new"><Receipt className="h-4 w-4" /> Registrar gasto</Link>
             </Button>
-            <Button variant="outline" className="h-10 w-full justify-start gap-2 font-medium text-sm text-success border-success/30 hover:bg-success/5 hover:text-success bg-card" asChild>
-                <Link href="/dashboard/invoices"><CheckCircle2 className="h-4 w-4" /> Marcar cobrada</Link>
+            <Button variant="outline" className="h-10 w-full justify-start gap-2 font-medium text-sm bg-card hover:bg-muted" asChild>
+                <Link href="/dashboard/reports?tab=tax"><Percent className="h-4 w-4" /> Modelo 303</Link>
             </Button>
         </div>
 
@@ -227,14 +229,15 @@ export default function DashboardPage() {
                 <Card className="rounded-xl border border-border shadow-sm bg-card">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <div className="space-y-1">
-                            <CardTitle className="text-base font-medium">Evolución Trimestral</CardTitle>
-                            <CardDescription className="text-xs">Ingresos vs Gastos en el periodo actual</CardDescription>
+                            <CardTitle className="text-base font-medium">Ingresos vs Gastos</CardTitle>
+                            <CardDescription className="text-xs">
+                                {chartMonths === 6 ? 'Últimos 6 meses' : 'Últimos 12 meses'}
+                            </CardDescription>
                         </div>
-                        <Tabs defaultValue="q1" className="w-auto">
+                        <Tabs value={String(chartMonths)} onValueChange={(v) => setChartMonths(Number(v))} className="w-auto">
                             <TabsList className="h-8">
-                                <TabsTrigger value="q1" className="text-[10px] px-3 h-6">Q1</TabsTrigger>
-                                <TabsTrigger value="q2" className="text-[10px] px-3 h-6">Q2</TabsTrigger>
-                                <TabsTrigger value="año" className="text-[10px] px-3 h-6">Año</TabsTrigger>
+                                <TabsTrigger value="6" className="text-[10px] px-3 h-6">6M</TabsTrigger>
+                                <TabsTrigger value="12" className="text-[10px] px-3 h-6">12M</TabsTrigger>
                             </TabsList>
                         </Tabs>
                     </CardHeader>

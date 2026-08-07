@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { formatAxisAmount } from "@/lib/format";
 
 interface DashboardChartProps {
     data: any[];
@@ -13,7 +14,7 @@ export default function DashboardChart({ data, config }: DashboardChartProps) {
     return (
         <ChartContainer config={config} className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={data} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
                     <defs>
                         <linearGradient id="fillIngresos" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.08}/>
@@ -37,9 +38,22 @@ export default function DashboardChart({ data, config }: DashboardChartProps) {
                         axisLine={false}
                         tickMargin={10}
                         className="text-[10px] text-muted-foreground"
-                        tickFormatter={(value) => `${value / 1000}k`}
+                        tickFormatter={(value) => formatAxisAmount(value)}
+                        width={64}
                     />
                     <ChartTooltip cursor={{ stroke: 'hsl(var(--border))', strokeWidth: 1 }} content={<ChartTooltipContent indicator="line" />} />
+                    <Legend
+                        verticalAlign="top"
+                        align="right"
+                        height={28}
+                        iconType="plainline"
+                        iconSize={14}
+                        formatter={(value) => (
+                            <span className="text-xs text-muted-foreground">
+                                {value === 'ingresos' ? 'Ingresos' : 'Gastos'}
+                            </span>
+                        )}
+                    />
                     <Area 
                         type="monotone" 
                         dataKey="ingresos" 

@@ -526,10 +526,9 @@ export default function InvoiceList() {
                                                         {invoice.invoiceNumber}
                                                     </td>
                                                     <td className="px-4 py-3">
-                                                        <div className="flex flex-col">
-                                                            <span className="font-medium text-foreground text-xs">{invoice.client.name}</span>
-                                                            <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">{invoice.client.email}</span>
-                                                        </div>
+                                                        {/* El nombre y el correo ya están en la fila del grupo:
+                                                            repetirlos truncados en cada factura solo mete ruido. */}
+                                                        <span className="text-xs text-muted-foreground">{invoice.client.name}</span>
                                                     </td>
                                                     <td className="px-4 py-3 text-muted-foreground text-xs">
                                                         {format(new Date(invoice.issueDate), 'dd MMM yyyy', { locale: es })}

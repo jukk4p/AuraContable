@@ -83,6 +83,17 @@ export default function ExpensesPage() {
         return ['All', ...cats.slice(0, 4)];
     }, [expenses]);
 
+    /** Categoría con mayor gasto acumulado, no la del último gasto registrado. */
+    const topCategory = useMemo(() => {
+        if (expenses.length === 0) return { name: 'N/A', trend: 'Sin gastos' };
+        const totals = expenses.reduce((acc: Record<string, number>, e) => {
+            acc[e.category] = (acc[e.category] || 0) + (e.amount || 0) * (e.quantity || 1);
+            return acc;
+        }, {});
+        const [name] = Object.entries(totals).sort((a, b) => b[1] - a[1])[0];
+        return { name, trend: 'Mayor gasto' };
+    }, [expenses]);
+
     const filteredExpenses = useMemo(() => {
         return expenses.filter(expense => {
             const matchesSearch = 
@@ -166,8 +177,8 @@ export default function ExpensesPage() {
             {/* Stats Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <StatCard title="Gasto Acumulado" value={formatCurrency(expenses.reduce((s, e) => s + ((e.amount || 0) * (e.quantity || 1)), 0))} trend="Total Bruto" icon={<DollarSign className="h-4 w-4 text-muted-foreground" />} />
-                <StatCard title="Categoría Principal" value={expenses.length > 0 ? (expenses[0].category) : "N/A"} trend="Reciente" icon={<Tag className="h-4 w-4 text-muted-foreground" />} />
-                <StatCard title="Nº Registros" value={expenses.length.toString()} trend="Últimos 30 días" icon={<Hash className="h-4 w-4 text-muted-foreground" />} />
+                <StatCard title="Categoría Principal" value={topCategory.name} trend={topCategory.trend} icon={<Tag className="h-4 w-4 text-muted-foreground" />} />
+                <StatCard title="Nº Registros" value={expenses.length.toString()} trend="Total" icon={<Hash className="h-4 w-4 text-muted-foreground" />} />
             </div>
 
             {/* Filters Row */}
@@ -214,7 +225,7 @@ export default function ExpensesPage() {
                                 <th className="px-4 py-3 font-medium">Concepto</th>
                                 <th className="px-4 py-3 font-medium">Categoría</th>
                                 <th className="px-4 py-3 font-medium">Fecha</th>
-                                <th className="px-4 py-3 font-medium text-center">Deducible</th>
+                                <th className="px-4 py-3 font-medium text-center">IVA</th>
                                 <th className="px-4 py-3 font-medium text-right">Importe</th>
                                 <th className="px-4 py-3 font-medium text-right">Acciones</th>
                             </tr>
@@ -230,9 +241,10 @@ export default function ExpensesPage() {
                                 </tr>
                             ) : (
                                 filteredExpenses.map((expense) => {
-                                    // Mock % deducible & Recurrencia for UI purposes based on category/provider to be deterministic
                                     const isRecurring = expense.provider.toLowerCase().includes('suscripcion') || expense.provider.toLowerCase().includes('software');
-                                    const deductibility = expense.category === 'Transporte' ? '50%' : expense.category === 'Comidas' ? '0%' : '100%';
+                                    // El tipo de IVA guardado con el gasto. Antes esta columna mostraba
+                                    // un "% deducible" inventado a partir de la categoría.
+                                    const vatRate = expense.vatRate ?? 0;
                                     const receiptMeta = getReceiptMeta(expense.receiptUrl);
                                     const hasReceipt = !!receiptMeta;
 
@@ -288,7 +300,7 @@ export default function ExpensesPage() {
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <Badge variant="secondary" className="bg-primary/5 text-primary text-[10px] font-medium border-transparent shadow-none px-1.5 flex items-center justify-center gap-1 w-fit mx-auto">
-                                                <Calculator className="h-3 w-3" /> {deductibility}
+                                                <Calculator className="h-3 w-3" /> {vatRate}%
                                             </Badge>
                                         </td>
                                         <td className="px-4 py-3 text-right font-medium text-foreground">

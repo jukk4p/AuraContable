@@ -168,8 +168,8 @@ export default function SettingsPage() {
                         >
                             <tab.icon className="h-4 w-4" />
                             {tab.label}
-                            {tab.id === 'payments' && (
-                                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            {tab.id === 'payments' && (companyData.stripeEnabled || companyData.paypalEnabled) && (
+                                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-500" title="Hay una pasarela activada" />
                             )}
                         </button>
                     ))}
@@ -194,16 +194,18 @@ export default function SettingsPage() {
                                 <div className="space-y-1 text-center md:text-left">
                                     <h3 className="text-xl font-medium tracking-tight">{user?.name || "Usuario"}</h3>
                                     <p className="text-sm text-muted-foreground">{user?.email}</p>
-                                    <div className="flex gap-2 mt-3 justify-center md:justify-start">
-                                        <Badge variant="outline" className="text-[10px] font-medium uppercase text-emerald-500 border-emerald-500/30 bg-emerald-500/10">Verificado</Badge>
-                                        <Badge variant="outline" className="text-[10px] font-medium uppercase">Enterprise</Badge>
-                                    </div>
                                 </div>
                             </div>
 
                             <div className="grid md:grid-cols-2 gap-6">
                                 <SettingField label="Nombre Completo" placeholder="Ej. Juan Pérez" value={user?.name || ""} disabled />
                                 <SettingField label="Correo Electrónico" placeholder="tu@email.com" value={user?.email || ""} disabled />
+                            </div>
+                            <div className="pt-2">
+                                <p className="text-xs text-muted-foreground">
+                                    Estos datos son los de tu cuenta de acceso y no se editan desde aquí.
+                                    Los que aparecen en tus facturas están en <span className="font-medium text-foreground">Datos de Empresa</span>.
+                                </p>
                             </div>
                         </Card>
                     )}

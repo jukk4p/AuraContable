@@ -110,6 +110,52 @@ export function isInPeriod(date: Date | string, period: FiscalPeriod): boolean {
   return isWithinInterval(new Date(date), { start: period.start, end: period.end });
 }
 
+export type PaymentScore = {
+  label: string;
+  variant: 'success' | 'primary' | 'warning' | 'muted';
+  /** Explicación de en qué se basa, para el tooltip. */
+  detail: string;
+};
+
+/**
+ * Comportamiento de pago de un cliente según su historial de facturas.
+ *
+ * Antes esto salía de `client.id.charCodeAt(0) % 3`: el primer carácter del
+ * UUID. Era ruido presentado como valoración de solvencia.
+ */
+export function getPaymentScore(
+  clientInvoices: { status: string }[],
+): PaymentScore {
+  const issued = clientInvoices.filter((i) => i.status !== 'Draft');
+  if (issued.length === 0) {
+    return { label: 'Sin historial', variant: 'muted', detail: 'Todavía no tiene facturas emitidas.' };
+  }
+
+  const overdue = issued.filter((i) => i.status === 'Overdue').length;
+  const pending = issued.filter((i) => i.status === 'Pending').length;
+  const paid = issued.filter((i) => i.status === 'Paid').length;
+
+  if (overdue > 0) {
+    return {
+      label: 'Riesgo',
+      variant: 'warning',
+      detail: `${overdue} de ${issued.length} facturas vencidas sin cobrar.`,
+    };
+  }
+  if (pending > 0) {
+    return {
+      label: 'Al corriente',
+      variant: 'primary',
+      detail: `${paid} pagadas y ${pending} pendientes, ninguna vencida.`,
+    };
+  }
+  return {
+    label: 'Excelente',
+    variant: 'success',
+    detail: `Las ${paid} facturas emitidas están cobradas.`,
+  };
+}
+
 /** Desglose de una cuota por tipo impositivo, como lo pide el Modelo 303. */
 export type TaxBreakdownRow = {
   /** Tipo aplicado en porcentaje (21, 10, 4…). */

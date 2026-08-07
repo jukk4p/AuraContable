@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { Suspense, useMemo, useState, useEffect } from 'react';
 import { 
     Download, FileDown, Calendar as CalendarIcon, 
     TrendingUp, TrendingDown, PieChart as PieChartIcon, 
@@ -16,6 +16,7 @@ import {
     ResponsiveContainer, AreaChart, Area 
 } from 'recharts';
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,18 +32,20 @@ import { getClients } from '@/actions/clients';
 import { getCompanyProfile } from '@/actions/company';
 import { generateInvoicingReportPdf } from '@/lib/report-pdf-generator';
 import { cn } from '@/lib/utils';
+import { formatAxisAmount } from '@/lib/format';
 import {
     getFiscalPeriod,
+    getNextFilingDeadline,
     getMonthBuckets,
     isInBucket,
+    isInPeriod,
     computeVatSummary,
-    DEFAULT_VAT_RATE,
 } from '@/lib/fiscal';
 import type { Invoice, Expense, Client, CompanyProfile } from '@/lib/types';
 
 const COLORS = ['hsl(var(--primary))', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
-export default function ReportsPage() {
+function ReportsContent() {
     const { formatCurrency, locale } = useLocale();
     const { data: session, status } = useSession();
     const user = session?.user;
@@ -53,7 +56,11 @@ export default function ReportsPage() {
     const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
     const [dbLoading, setDbLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState("summary");
+    // ?tab=tax permite enlazar directamente al Modelo 303 desde el Panel.
+    const searchParams = useSearchParams();
+    const [activeTab, setActiveTab] = useState(
+        searchParams.get("tab") === "tax" ? "tax" : "summary"
+    );
 
     const userId = user?.id;
 
@@ -89,16 +96,36 @@ export default function ReportsPage() {
     /** Trimestre natural en curso: antes estaba escrito a mano como "Q2 2026". */
     const period = useMemo(() => getFiscalPeriod(new Date()), []);
 
-    // Financial Analysis
-    const stats = useMemo(() => {
-        const totalIncomes = invoices.reduce((s, i) => s + i.total, 0);
-        const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
-        const profit = totalIncomes - totalExpenses;
-        const margin = totalIncomes > 0 ? (profit / totalIncomes) * 100 : 0;
-        const netIncomes = invoices.reduce((s, i) => s + (i.subtotal ?? 0), 0);
+    const deadline = useMemo(() => {
+        const { date, daysLeft } = getNextFilingDeadline(new Date());
+        return { label: `${format(date, "d 'de' MMMM", { locale: es })} (en ${daysLeft} días)` };
+    }, []);
 
-        return { totalIncomes, netIncomes, totalExpenses, profit, margin };
-    }, [invoices, expenses]);
+    /**
+     * Dos alcances distintos, y por eso van separados.
+     *
+     * Las tarjetas de arriba resumen el trimestre que anuncia el encabezado; los
+     * saldos del lateral son el acumulado histórico. Antes todo era histórico
+     * bajo un título que decía "Q2", lo que hacía imposible saber qué se miraba.
+     */
+    const stats = useMemo(() => {
+        const periodInvoices = invoices.filter(i => isInPeriod(i.issueDate, period));
+        const periodExpenses = expenses.filter(e => isInPeriod(e.date, period));
+
+        const periodIncomes = periodInvoices.reduce((s, i) => s + i.total, 0);
+        const periodExpensesTotal = periodExpenses.reduce((s, e) => s + e.amount, 0);
+        const periodProfit = periodIncomes - periodExpensesTotal;
+
+        return {
+            periodIncomes,
+            periodExpenses: periodExpensesTotal,
+            periodProfit,
+            periodMargin: periodIncomes > 0 ? (periodProfit / periodIncomes) * 100 : 0,
+            totalIncomes: invoices.reduce((s, i) => s + i.total, 0),
+            netIncomes: invoices.reduce((s, i) => s + (i.subtotal ?? 0), 0),
+            totalExpenses: expenses.reduce((s, e) => s + e.amount, 0),
+        };
+    }, [invoices, expenses, period]);
 
     /** Liquidación del trimestre a partir de los impuestos reales de cada factura. */
     const vat = useMemo(
@@ -252,14 +279,14 @@ export default function ReportsPage() {
 
             {/* Quick Summary Widgets (3 Metrics as requested) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <SummaryWidget title="Beneficio Neto" value={formatCurrency(stats.profit)} subValue={`${stats.margin.toFixed(1)}% Margen`} icon={<TrendingUp />} />
+                <SummaryWidget title={`Beneficio Q${period.quarter}`} value={formatCurrency(stats.periodProfit)} subValue={`${stats.periodMargin.toFixed(1)}% margen del trimestre`} icon={<TrendingUp />} />
                 <SummaryWidget
                     title="Autoliquidación IVA"
                     value={formatCurrency(Math.abs(vat.vatDue))}
                     subValue={`${vat.vatDue >= 0 ? 'A ingresar' : 'A devolver'} · Q${period.quarter}`}
                     icon={<Percent />}
                 />
-                <SummaryWidget title="Gastos Operativos" value={formatCurrency(stats.totalExpenses)} subValue="Total acumulado" icon={<Receipt />} />
+                <SummaryWidget title={`Gastos Q${period.quarter}`} value={formatCurrency(stats.periodExpenses)} subValue="Gastos del trimestre" icon={<Receipt />} />
             </div>
 
             {/* Main Tabs Navigation */}
@@ -281,10 +308,10 @@ export default function ReportsPage() {
                            <CardContent className="px-4 pb-6">
                                <div className="h-[300px] w-full mt-4">
                                    <ResponsiveContainer width="100%" height="100%">
-                                       <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                       <AreaChart data={chartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
                                            <CartesianGrid vertical={false} strokeDasharray="3 3" strokeOpacity={0.1} />
                                            <XAxis dataKey="month" axisLine={false} tickLine={false} tickMargin={10} className="text-xs text-muted-foreground" />
-                                           <YAxis axisLine={false} tickLine={false} tickMargin={10} className="text-xs text-muted-foreground" tickFormatter={(v) => `€${v/1000}k`} />
+                                           <YAxis axisLine={false} tickLine={false} tickMargin={10} width={64} className="text-xs text-muted-foreground" tickFormatter={(v) => formatAxisAmount(v)} />
                                            <Tooltip 
                                                 cursor={{stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4'}}
                                                 content={({ active, payload }) => {
@@ -312,6 +339,18 @@ export default function ReportsPage() {
                                                     return null;
                                                 }}
                                            />
+                                           <Legend
+                                                verticalAlign="top"
+                                                align="right"
+                                                height={28}
+                                                iconType="plainline"
+                                                iconSize={14}
+                                                formatter={(value) => (
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {value === 'ingresos' ? 'Ingresos' : 'Gastos'}
+                                                    </span>
+                                                )}
+                                           />
                                            <Area type="monotone" dataKey="ingresos" stroke="hsl(var(--primary))" strokeWidth={2} fillOpacity={0.1} fill="hsl(var(--primary))" />
                                            <Area type="monotone" dataKey="gastos" stroke="hsl(var(--danger))" strokeWidth={2} fillOpacity={0.05} fill="hsl(var(--danger))" />
                                        </AreaChart>
@@ -323,28 +362,31 @@ export default function ReportsPage() {
                         {/* Financial Table Sidebar */}
                         <div className="space-y-4">
                             <Card className="rounded-xl border border-border shadow-sm p-6 space-y-4 bg-card">
-                                <h4 className="font-semibold tracking-tight text-base">Saldos Acumulados</h4>
+                                <div className="space-y-0.5">
+                                    <h4 className="font-semibold tracking-tight text-base">Saldos Acumulados</h4>
+                                    <p className="text-xs text-muted-foreground">Histórico completo, no solo el trimestre.</p>
+                                </div>
                                 <div className="space-y-3">
                                     <BalanceRow label="Total Facturado (Base)" value={stats.netIncomes} />
                                     <BalanceRow label="Total Facturado (con IVA)" value={stats.totalIncomes} />
                                     <BalanceRow label="Total Gastos (con IVA)" value={stats.totalExpenses} />
                                     <div className="pt-3 border-t border-border flex justify-between items-center">
-                                        <span className="text-sm font-medium">Resultado Previsto</span>
-                                        <span className="text-lg font-semibold text-success">{formatCurrency(stats.profit)}</span>
+                                        <span className="text-sm font-medium">Resultado Acumulado</span>
+                                        <span className="text-lg font-semibold text-success">
+                                            {formatCurrency(stats.totalIncomes - stats.totalExpenses)}
+                                        </span>
                                     </div>
                                 </div>
-                                <Button variant="ghost" className="w-full h-9 rounded-md text-xs font-medium mt-2">
-                                    Ver Libro Diario <ArrowUpRight className="h-3 w-3 ml-1" />
-                                </Button>
                             </Card>
 
                             <Card className="bg-muted/50 border-none p-5 rounded-xl space-y-3 shadow-none">
                                 <div className="flex items-center gap-2">
                                     <Info className="h-4 w-4 text-muted-foreground" />
-                                    <span className="font-medium text-sm">Sugerencia Fiscal</span>
+                                    <span className="font-medium text-sm">Próximo vencimiento</span>
                                 </div>
                                 <p className="text-xs text-muted-foreground leading-relaxed">
-                                    Basado en tus gastos operativos, podrías optimizar tu declaración deduciendo suministros de oficina hasta un 5% adicional.
+                                    Próxima autoliquidación: <span className="font-medium text-foreground">{deadline.label}</span>.
+                                    El plazo va del 1 al 20 del mes siguiente al cierre del trimestre.
                                 </p>
                             </Card>
                         </div>
@@ -547,9 +589,6 @@ export default function ReportsPage() {
                                             {vat.vatDue >= 0 ? "Importe a Ingresar" : "Importe a Devolver / Compensar"}
                                         </p>
                                     </div>
-                                    <Button className="w-full h-10 mt-2 font-medium">
-                                        <CheckCircle2 className="mr-2 h-4 w-4" /> Confirmar Borrador
-                                    </Button>
                                 </div>
                             </Card>
 
@@ -565,6 +604,18 @@ export default function ReportsPage() {
                 </TabsContent>
             </Tabs>
         </div>
+    );
+}
+
+/**
+ * `useSearchParams` obliga a un límite de Suspense: sin él, el prerender de la
+ * ruta falla al no poder resolver la query en build.
+ */
+export default function ReportsPage() {
+    return (
+        <Suspense fallback={<div className="p-10 text-center text-sm text-muted-foreground">Cargando informes...</div>}>
+            <ReportsContent />
+        </Suspense>
     );
 }
 
