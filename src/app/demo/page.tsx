@@ -24,18 +24,31 @@ import {
     ChartContainer, ChartTooltip, ChartTooltipContent 
 } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
+import { formatAxisAmount } from "@/lib/format";
 
 // Types
 type Section = 'dashboard' | 'invoices' | 'clients' | 'reports' | 'settings';
 
+/** La demo enseña la app a alguien que aún no la usa: nada en inglés. */
+const STATUS_LABELS: Record<string, string> = {
+    Paid: 'Pagada', Pending: 'Pendiente', Overdue: 'Vencida',
+};
+const CLIENT_STATUS_LABELS: Record<string, string> = {
+    Active: 'Activo', Inactive: 'Inactivo',
+};
+const SECTION_TITLES: Record<Section, string> = {
+    dashboard: 'Panel de Control', invoices: 'Facturas',
+    clients: 'Clientes', reports: 'Informes', settings: 'Ajustes',
+};
+
 // Mock Data
 const MOCK_INVOICES = [
-    { id: '1', invoiceNumber: 'INV-2026-001', client: { name: 'Juan Alberto' }, total: 1250.50, status: 'Paid', issueDate: '2026-03-20', dueDate: '2026-04-20' },
-    { id: '2', invoiceNumber: 'INV-2026-002', client: { name: 'Empresa Creativa' }, total: 450.00, status: 'Pending', issueDate: '2026-03-22', dueDate: '2026-04-22' },
-    { id: '3', invoiceNumber: 'INV-2026-003', client: { name: 'Sofía Martínez' }, total: 890.75, status: 'Overdue', issueDate: '2026-03-10', dueDate: '2026-03-24' },
-    { id: '4', invoiceNumber: 'INV-2026-004', client: { name: 'Tech Solutions' }, total: 2100.00, status: 'Paid', issueDate: '2026-03-15', dueDate: '2026-04-15' },
-    { id: '5', invoiceNumber: 'INV-2026-005', client: { name: 'Pedro Picapiedra' }, total: 300.25, status: 'Pending', issueDate: '2026-03-24', dueDate: '2026-04-24' },
-    { id: '6', invoiceNumber: 'INV-2026-006', client: { name: 'Diseños Modernos' }, total: 1575.00, status: 'Paid', issueDate: '2026-03-18', dueDate: '2026-04-18' },
+    { id: '1', invoiceNumber: 'FAC-2026-001', client: { name: 'Juan Alberto' }, total: 1250.50, status: 'Paid', issueDate: '2026-03-20', dueDate: '2026-04-20' },
+    { id: '2', invoiceNumber: 'FAC-2026-002', client: { name: 'Empresa Creativa' }, total: 450.00, status: 'Pending', issueDate: '2026-03-22', dueDate: '2026-04-22' },
+    { id: '3', invoiceNumber: 'FAC-2026-003', client: { name: 'Sofía Martínez' }, total: 890.75, status: 'Overdue', issueDate: '2026-03-10', dueDate: '2026-03-24' },
+    { id: '4', invoiceNumber: 'FAC-2026-004', client: { name: 'Tech Solutions' }, total: 2100.00, status: 'Paid', issueDate: '2026-03-15', dueDate: '2026-04-15' },
+    { id: '5', invoiceNumber: 'FAC-2026-005', client: { name: 'Pedro Picapiedra' }, total: 300.25, status: 'Pending', issueDate: '2026-03-24', dueDate: '2026-04-24' },
+    { id: '6', invoiceNumber: 'FAC-2026-006', client: { name: 'Diseños Modernos' }, total: 1575.00, status: 'Paid', issueDate: '2026-03-18', dueDate: '2026-04-18' },
 ];
 
 const MOCK_CLIENTS = [
@@ -101,16 +114,16 @@ export default function DemoPage() {
                 <header className="h-20 bg-background/80 backdrop-blur-xl border-b border-border/50 sticky top-0 z-[60] px-8 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <Badge variant="outline" className="border-primary/20 text-primary uppercase text-[9px] font-black tracking-widest px-3 py-1 bg-primary/5">Interactive Demo</Badge>
-                        <h2 className="font-headline font-bold text-lg text-foreground capitalize">{activeSection === 'dashboard' ? 'Panel de Control' : activeSection}</h2>
+                        <h2 className="font-headline font-bold text-lg text-foreground capitalize">{SECTION_TITLES[activeSection]}</h2>
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-3 px-2 py-1 bg-muted/20 hover:bg-primary/5 hover:text-primary rounded-2xl transition-all cursor-pointer">
                             <Avatar className="h-9 w-9 border-2 border-primary/20 p-0.5">
-                                <AvatarFallback className="bg-primary/10 text-primary font-black text-xs">JD</AvatarFallback>
+                                <AvatarFallback className="bg-primary/10 text-primary font-black text-xs">MR</AvatarFallback>
                             </Avatar>
                             <div className="hidden md:flex flex-col items-start gap-0">
-                                <span className="text-sm font-black leading-none">John Doe</span>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Demo User</span>
+                                <span className="text-sm font-black leading-none">Marta Ruiz</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Cuenta de ejemplo</span>
                             </div>
                         </div>
                     </div>
@@ -187,7 +200,7 @@ function DashboardSection() {
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.05} />
                                 <XAxis dataKey="month" axisLine={false} tickLine={false} tickMargin={10} className="text-[10px] font-bold text-muted-foreground/50 uppercase" />
-                                <YAxis axisLine={false} tickLine={false} tickMargin={10} className="text-[10px] font-bold text-muted-foreground/50" />
+                                <YAxis axisLine={false} tickLine={false} tickMargin={10} width={64} tickFormatter={(v) => formatAxisAmount(v)} className="text-[10px] font-bold text-muted-foreground/50" />
                                 <Tooltip 
                                     contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 50px rgba(0,0,0,0.15)', background: 'rgba(255,255,255,0.9)' }}
                                     itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
@@ -212,15 +225,15 @@ function DashboardSection() {
                                     </Avatar>
                                     <div>
                                         <p className="text-sm font-bold">{inv.client.name}</p>
-                                        <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/50">{inv.invoiceNumber}</p>
+                                        <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/50 whitespace-nowrap">{inv.invoiceNumber}</p>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-sm font-black">{inv.total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</p>
+                                    <p className="text-sm font-black whitespace-nowrap">{inv.total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</p>
                                     <Badge variant="outline" className={cn(
                                         "text-[8px] px-2 py-0 border-none uppercase font-black",
                                         inv.status === 'Paid' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'
-                                    )}>{inv.status}</Badge>
+                                    )}>{STATUS_LABELS[inv.status] ?? inv.status}</Badge>
                                 </div>
                             </div>
                         ))}
@@ -277,14 +290,14 @@ function InvoicesSection() {
                                     <TableCell className="py-6 px-8 font-mono font-bold text-primary">{inv.invoiceNumber}</TableCell>
                                     <TableCell className="py-6 font-bold">{inv.client.name}</TableCell>
                                     <TableCell className="py-6 text-sm text-muted-foreground font-medium">{inv.issueDate}</TableCell>
-                                    <TableCell className="py-6 text-right font-black">{inv.total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</TableCell>
+                                    <TableCell className="py-6 text-right font-black whitespace-nowrap">{inv.total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</TableCell>
                                     <TableCell className="py-6 text-center">
                                          <Badge className={cn(
                                             "rounded-full px-4 py-1.5 text-[10px] font-black tracking-widest uppercase border-none",
                                             inv.status === 'Paid' ? 'bg-emerald-500/10 text-emerald-500' : 
                                             inv.status === 'Pending' ? 'bg-amber-500/10 text-amber-500' : 
                                             'bg-destructive/10 text-destructive'
-                                        )}>{inv.status}</Badge>
+                                        )}>{STATUS_LABELS[inv.status] ?? inv.status}</Badge>
                                     </TableCell>
                                     <TableCell className="py-6 pr-8 text-right">
                                         <Button variant="ghost" size="icon" className="rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
@@ -328,7 +341,7 @@ function ClientsSection() {
                             <div className="pt-6 border-t border-border/10 flex justify-between items-center">
                                 <div className="text-left">
                                      <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/50">Facturado</p>
-                                     <p className="font-bold text-lg">{client.totalBilled.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</p>
+                                     <p className="font-bold text-lg whitespace-nowrap">{client.totalBilled.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</p>
                                 </div>
                                 <Badge className={cn(
                                     "rounded-full px-3 py-1 text-[8px] font-black uppercase border-none",
@@ -377,7 +390,7 @@ function ReportsSection() {
                         <BarChart data={MOCK_CHART_HISTORY}>
                             <CartesianGrid vertical={false} strokeOpacity={0.1} />
                             <XAxis dataKey="month" axisLine={false} tickLine={false} tickMargin={10} />
-                            <YAxis axisLine={false} tickLine={false} tickMargin={10} />
+                            <YAxis axisLine={false} tickLine={false} tickMargin={10} width={64} tickFormatter={(v) => formatAxisAmount(v)} />
                             <Bar dataKey="income" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                             <Bar dataKey="expense" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
                         </BarChart>
@@ -406,7 +419,7 @@ function SettingsSection() {
                     <div className="grid sm:grid-cols-2 gap-8 bg-muted/20 p-8 rounded-3xl border border-border/50">
                         <div className="space-y-2">
                              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Nombre Completo</label>
-                             <Input defaultValue="John Doe" className="rounded-xl h-12 bg-white/50 border-none shadow-sm" />
+                             <Input defaultValue="Marta Ruiz" className="rounded-xl h-12 bg-white/50 border-none shadow-sm" />
                         </div>
                         <div className="space-y-2">
                              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Email</label>
@@ -434,7 +447,7 @@ function SettingsSection() {
                         <div className="grid sm:grid-cols-2 gap-8">
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Nombre Comercial</label>
-                                <Input defaultValue="John Doe Freelance" className="rounded-xl h-12 bg-white/50 border-none shadow-sm" />
+                                <Input defaultValue="Marta Ruiz Diseño" className="rounded-xl h-12 bg-white/50 border-none shadow-sm" />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">NIF / CIF</label>

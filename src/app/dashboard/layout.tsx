@@ -287,9 +287,32 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
                 </Button>
             </div>
 
-            <Button size="sm" className="h-8 text-xs px-3 bg-primary text-primary-foreground hover:bg-primary/90 hidden sm:flex font-medium">
-                <Plus className="h-3 w-3 mr-1" /> Nuevo
-            </Button>
+            {/* Este botón no tenía handler ni enlace: era decorativo. Ahora abre
+                los mismos atajos de creación que el Panel. */}
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button size="sm" className="h-8 text-xs px-3 bg-primary text-primary-foreground hover:bg-primary/90 hidden sm:flex font-medium">
+                        <Plus className="h-3 w-3 mr-1" /> Nuevo
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem asChild>
+                        <Link href="/dashboard/invoices/new" className="cursor-pointer">
+                            <FileText className="mr-2 h-4 w-4" /> Nueva factura
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href="/dashboard/clients/new" className="cursor-pointer">
+                            <Users className="mr-2 h-4 w-4" /> Nuevo cliente
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href="/dashboard/expenses/new" className="cursor-pointer">
+                            <Receipt className="mr-2 h-4 w-4" /> Registrar gasto
+                        </Link>
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

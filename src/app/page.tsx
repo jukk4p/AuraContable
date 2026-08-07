@@ -139,17 +139,23 @@ export default function LandingPage() {
             <section id="stats" className="py-24 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px] -z-10"></div>
                 <div className="container mx-auto px-6 grid md:grid-cols-3 gap-12 text-center items-center">
+                    {/* Características del producto, no métricas de uso: las cifras
+                        que había aquí ("10k+ facturas", "1k+ usuarios", "99.9%")
+                        estaban inventadas. */}
                     <motion.div initial={{ scale: 0.9, opacity: 0 }} whileInView={{ scale: 1, opacity: 1 }} viewport={{ once: true }} className="space-y-2">
-                        <p className="text-5xl lg:text-7xl font-black font-headline tracking-tighter text-primary">10k+</p>
-                        <p className="text-lg font-bold text-muted-foreground tracking-widest uppercase">Facturas Generadas</p>
+                        <p className="text-4xl lg:text-6xl font-black font-headline tracking-tighter text-primary">Tuyo</p>
+                        <p className="text-lg font-bold text-muted-foreground tracking-widest uppercase">Autohospedado</p>
+                        <p className="text-sm text-muted-foreground/80 max-w-xs mx-auto">Tus datos viven en tu servidor, no en el nuestro.</p>
                     </motion.div>
                     <motion.div initial={{ scale: 0.9, opacity: 0 }} whileInView={{ scale: 1, opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="space-y-2">
-                        <p className="text-5xl lg:text-7xl font-black font-headline tracking-tighter text-emerald-400">1k+</p>
-                        <p className="text-lg font-bold text-muted-foreground tracking-widest uppercase">Usuarios Felices</p>
+                        <p className="text-4xl lg:text-6xl font-black font-headline tracking-tighter text-emerald-400">Sin límite</p>
+                        <p className="text-lg font-bold text-muted-foreground tracking-widest uppercase">Facturas y clientes</p>
+                        <p className="text-sm text-muted-foreground/80 max-w-xs mx-auto">Ni cuotas por documento ni topes de uso.</p>
                     </motion.div>
                     <motion.div initial={{ scale: 0.9, opacity: 0 }} whileInView={{ scale: 1, opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.2 }} className="space-y-2">
-                        <p className="text-5xl lg:text-7xl font-black font-headline tracking-tighter text-amber-400">99.9%</p>
-                        <p className="text-lg font-bold text-muted-foreground tracking-widest uppercase">Disponibilidad</p>
+                        <p className="text-4xl lg:text-6xl font-black font-headline tracking-tighter text-amber-400">Modelo 303</p>
+                        <p className="text-lg font-bold text-muted-foreground tracking-widest uppercase">IVA trimestral</p>
+                        <p className="text-sm text-muted-foreground/80 max-w-xs mx-auto">Borrador orientativo a partir de tus facturas.</p>
                     </motion.div>
                 </div>
             </section>
@@ -162,7 +168,7 @@ export default function LandingPage() {
 
                 <div className="container mx-auto px-6 text-center space-y-12 relative z-10">
                     <h2 className="text-5xl lg:text-7xl font-black font-headline tracking-tighter">¿Listo para hacer brillar <br />tu negocio?</h2>
-                    <p className="text-2xl font-medium opacity-90 max-w-2xl mx-auto">Únete a miles de emprendedores que ya han transformado su gestión financiera.</p>
+                    <p className="text-2xl font-medium opacity-90 max-w-2xl mx-auto">Monta tu propia instancia y lleva tu facturación sin depender de nadie.</p>
                     <Link href="/login" className="inline-block pt-8">
                         <Button className="h-16 px-12 rounded-full text-2xl font-bold bg-white text-primary hover:bg-emerald-50 transition-all shadow-2xl">
                             Consigue AuraContable Ahora

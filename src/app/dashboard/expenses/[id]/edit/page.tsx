@@ -42,7 +42,7 @@ export default function EditExpensePage() {
             }
         };
         fetchExpense();
-    }, [user, status, expenseId, router, toast]);
+    }, [user?.id, status, expenseId, router, toast]);
 
     if (status === 'loading' || isLoading) {
         return <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;

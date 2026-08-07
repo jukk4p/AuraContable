@@ -165,7 +165,7 @@ export default function NewInvoicePage() {
             }
         }
         fetchData();
-    }, [user, authStatus, isEditing, invoiceId, toast, router]);
+    }, [user?.id, authStatus, isEditing, invoiceId, toast, router]);
 
 
     const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({

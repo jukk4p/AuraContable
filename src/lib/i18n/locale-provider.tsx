@@ -23,21 +23,47 @@ function getNestedValue(obj: any, key: string): string {
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
-  const user = session?.user;
+  // Solo el id: `session.user` es un objeto nuevo en cada render, así que usarlo
+  // como dependencia reejecutaba el efecto sin parar.
+  const userId = session?.user?.id;
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [locale, setLocaleState] = useState<Locale>(defaultLocale);
 
+  // Estable entre renders: si se recreara, `value` cambiaría de identidad en
+  // cada render y arrastraría a todos los consumidores del contexto.
+  const setLocale = useCallback((newLocale: Locale) => {
+    setLocaleState(newLocale);
+    setCookie('locale', newLocale, { maxAge: 60 * 60 * 24 * 365 });
+    document.documentElement.lang = newLocale;
+  }, []);
+
+  /**
+   * Este proveedor envuelve toda la aplicación, así que un efecto que se
+   * reejecute aquí golpea al servidor en bucle. La cadena era:
+   * pedir perfil → setCompanyProfile (objeto nuevo) → render → `user` cambia de
+   * identidad → el efecto vuelve a dispararse → sin fin.
+   */
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchProfileAndSetLocale() {
-        if (user) {
-            const profile = await getCompanyProfile();
-            setCompanyProfile(profile);
-            if (profile?.language && profile.language in locales) {
-                setLocale(profile.language as Locale);
-                return;
+        if (userId) {
+            try {
+                const profile = await getCompanyProfile();
+                if (cancelled) return;
+                setCompanyProfile(profile);
+                if (profile?.language && profile.language in locales) {
+                    setLocale(profile.language as Locale);
+                    return;
+                }
+            } catch (error) {
+                if (cancelled) return;
+                console.error("Error cargando el idioma del perfil:", error);
             }
         }
-        
+
+        if (cancelled) return;
+
         const cookieLocale = getCookie('locale');
         if (cookieLocale && locales[cookieLocale as Locale]) {
             setLocale(cookieLocale as Locale);
@@ -49,14 +75,10 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
           setLocale(browserLang);
         }
     }
-    fetchProfileAndSetLocale();
-  }, [user]);
 
-  const setLocale = (newLocale: Locale) => {
-    setLocaleState(newLocale);
-    setCookie('locale', newLocale, { maxAge: 60 * 60 * 24 * 365 });
-    document.documentElement.lang = newLocale;
-  };
+    fetchProfileAndSetLocale();
+    return () => { cancelled = true; };
+  }, [userId, setLocale]);
 
   const t = useCallback((key: string): string => {
     const translations = locales[locale] || locales[defaultLocale];

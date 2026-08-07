@@ -43,7 +43,7 @@ export default function EditClientPage() {
             }
         };
         fetchClient();
-    }, [user, clientId, status]);
+    }, [user?.id, clientId, status]);
 
     if (status === 'loading' || loading) return <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
 

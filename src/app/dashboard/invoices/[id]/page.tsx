@@ -72,7 +72,7 @@ export default function InvoiceDetailsPage() {
         } else if (!user) {
             setIsLoading(false)
         }
-    }, [user, invoiceId]);
+    }, [user?.id, invoiceId]);
 
     const handleDownloadPdf = async () => {
         if (!invoice) return;
