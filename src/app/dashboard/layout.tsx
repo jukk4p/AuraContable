@@ -21,13 +21,16 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
-import React, { useState } from "react"
+import React, { useCallback, useEffect, useState } from "react"
+import { formatDistanceToNow } from "date-fns"
+import { es } from "date-fns/locale"
 import { useLocale } from "@/lib/i18n/locale-provider"
 import { cn } from "@/lib/utils"
 import { AnimatePresence } from "framer-motion"
 import { PageWrapper } from "@/components/page-wrapper"
 import { signOut, useSession } from "next-auth/react"
 import { useTheme } from "next-themes"
+import { getNotifications, markNotificationAsRead } from "@/actions/notifications"
 
 function CustomSidebarTrigger() {
     const { toggleSidebar } = useSidebar();
@@ -43,22 +46,51 @@ function CustomSidebarTrigger() {
     )
 }
 
-function NotificationsBell() {
-    const [unreadCount] = useState(3);
+type NotificationRow = Awaited<ReturnType<typeof getNotifications>>[number];
 
-    const MOCK_NOTIFICATIONS = [
-        { id: 1, title: 'Factura Vencida', desc: 'La factura INV-2026-004 ha vencido hoy.', time: 'Hace 2 horas', unread: true, type: 'warning' },
-        { id: 2, title: 'Cobro Recibido', desc: 'Has recibido un pago de 1,500€ de Acme Corp.', time: 'Hace 5 horas', unread: true, type: 'success' },
-        { id: 3, title: 'Presupuesto Rechazado', desc: 'María García ha rechazado el presupuesto PR-2026-003.', time: 'Ayer', unread: true, type: 'danger' },
-        { id: 4, title: 'Nuevo Gasto', desc: 'Se ha registrado el gasto recurrente de AWS.', time: 'Ayer', unread: false, type: 'info' }
-    ];
+/**
+ * Campana conectada a la tabla `notifications`.
+ *
+ * Mostraba cuatro avisos inventados en el propio componente (facturas y
+ * clientes que no existen) mientras las acciones reales no las llamaba nadie.
+ */
+function NotificationsBell() {
+    const { data: session, status } = useSession();
+    const userId = session?.user?.id;
+
+    const [notifications, setNotifications] = useState<NotificationRow[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const load = useCallback(async () => {
+        if (!userId) {
+            if (status !== 'loading') setLoading(false);
+            return;
+        }
+        try {
+            setNotifications(await getNotifications());
+        } catch (error) {
+            console.error("Error cargando las notificaciones:", error);
+        } finally {
+            setLoading(false);
+        }
+    }, [userId, status]);
+
+    useEffect(() => { load(); }, [load]);
+
+    const unread = notifications.filter(n => !n.isRead);
+
+    const handleMarkAllRead = async () => {
+        // Optimista: la campana no debe parpadear esperando al servidor.
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        await Promise.all(unread.map(n => markNotificationAsRead(n.id)));
+    };
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground transition-all rounded-md">
                     <Bell className="h-4 w-4" />
-                    {unreadCount > 0 && (
+                    {unread.length > 0 && (
                         <span className="absolute top-1 right-1 flex h-2 w-2 rounded-full bg-danger" />
                     )}
                 </Button>
@@ -67,26 +99,47 @@ function NotificationsBell() {
                 <div className="p-4 border-b border-border/50 bg-muted/20">
                     <div className="flex justify-between items-center">
                         <DropdownMenuLabel className="p-0 text-sm font-medium">Notificaciones</DropdownMenuLabel>
-                        <Button variant="ghost" size="sm" className="h-auto p-0 text-xs text-primary font-medium hover:bg-transparent">Marcar leídas</Button>
+                        {unread.length > 0 && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleMarkAllRead}
+                                className="h-auto p-0 text-xs text-primary font-medium hover:bg-transparent"
+                            >
+                                Marcar leídas
+                            </Button>
+                        )}
                     </div>
                 </div>
                 <div className="max-h-[400px] overflow-y-auto">
-                    {MOCK_NOTIFICATIONS.map(notif => (
-                        <div key={notif.id} className={cn("p-4 border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer", notif.unread ? "bg-primary/5" : "")}>
-                            <div className="flex gap-3">
-                                <div className={cn("mt-1 h-2 w-2 rounded-full shrink-0", 
-                                    notif.type === 'warning' ? 'bg-warning' : 
-                                    notif.type === 'success' ? 'bg-success' : 
-                                    notif.type === 'danger' ? 'bg-danger' : 'bg-primary'
-                                )} />
-                                <div className="space-y-1">
-                                    <p className="text-sm font-medium leading-none">{notif.title}</p>
-                                    <p className="text-xs text-muted-foreground leading-snug">{notif.desc}</p>
-                                    <p className="text-[10px] text-muted-foreground opacity-70">{notif.time}</p>
+                    {loading ? (
+                        <p className="p-4 text-xs text-muted-foreground">Cargando...</p>
+                    ) : notifications.length === 0 ? (
+                        <p className="p-4 text-xs text-muted-foreground">No tienes notificaciones.</p>
+                    ) : (
+                        notifications.map(notif => (
+                            <Link
+                                key={notif.id}
+                                href={notif.href}
+                                onClick={() => { if (!notif.isRead) markNotificationAsRead(notif.id); }}
+                                className={cn(
+                                    "block p-4 border-b border-border/50 hover:bg-muted/30 transition-colors",
+                                    !notif.isRead && "bg-primary/5"
+                                )}
+                            >
+                                <div className="flex gap-3">
+                                    <div className={cn("mt-1 h-2 w-2 rounded-full shrink-0", notif.isRead ? "bg-muted-foreground/30" : "bg-primary")} />
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-medium leading-none">{notif.title}</p>
+                                        <p className="text-xs text-muted-foreground leading-snug">{notif.body}</p>
+                                        <p className="text-[10px] text-muted-foreground opacity-70">
+                                            {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true, locale: es })}
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    ))}
+                            </Link>
+                        ))
+                    )}
                 </div>
             </DropdownMenuContent>
         </DropdownMenu>

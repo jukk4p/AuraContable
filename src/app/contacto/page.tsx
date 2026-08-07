@@ -9,22 +9,38 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 
+const CONTACT_EMAIL = 'hola@auracontable.com';
+
 export default function ContactoPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    /**
+     * Abre el cliente de correo con el mensaje redactado.
+     *
+     * Antes esto esperaba 1,5 s y anunciaba "Mensaje enviado" sin enviar nada:
+     * los campos ni siquiera estaban conectados a un estado. Hasta que haya un
+     * backend de correo, redactar el email de verdad es lo único honesto.
+     */
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsSubmitting(true);
-        
-        // Simular envío
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
+
+        const data = new FormData(e.currentTarget);
+        const nombre = String(data.get('nombre') ?? '');
+        const email = String(data.get('email') ?? '');
+        const asunto = String(data.get('asunto') ?? '');
+        const mensaje = String(data.get('mensaje') ?? '');
+
+        const cuerpo = `${mensaje}\n\n—\n${nombre}\n${email}`;
+        window.location.href =
+            `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+
         setIsSubmitting(false);
         setIsSuccess(true);
         toast({
-            title: "Mensaje enviado",
-            description: "Nos pondremos en contacto contigo muy pronto.",
+            title: "Abriendo tu cliente de correo",
+            description: "Revisa el mensaje y envíalo desde ahí.",
         });
     };
 
@@ -90,11 +106,15 @@ export default function ContactoPage() {
                                         <CheckCircle2 className="h-16 w-16 text-emerald-500" />
                                     </div>
                                     <div className="space-y-2">
-                                        <h2 className="text-3xl font-black font-headline tracking-tighter">¡Recibido!</h2>
-                                        <p className="text-muted-foreground font-medium leading-relaxed">Tu mensaje ha sido enviado correctamente. Uno de nuestros asesores te contactará en las próximas 24 horas.</p>
+                                        <h2 className="text-3xl font-black font-headline tracking-tighter">Casi listo</h2>
+                                        <p className="text-muted-foreground font-medium leading-relaxed">
+                                            Hemos abierto tu cliente de correo con el mensaje redactado. Revísalo y
+                                            envíalo desde ahí. Si no se ha abierto, escríbenos a{" "}
+                                            <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary underline">{CONTACT_EMAIL}</a>.
+                                        </p>
                                     </div>
                                     <Button onClick={() => setIsSuccess(false)} variant="outline" className="rounded-full px-8 py-6 h-auto font-bold uppercase tracking-widest text-xs">
-                                        Enviar otro mensaje
+                                        Redactar otro mensaje
                                     </Button>
                                 </CardContent>
                             </Card>
@@ -103,24 +123,24 @@ export default function ContactoPage() {
                                 <div className="grid sm:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60 ml-2">Nombre</label>
-                                        <Input required placeholder="Tu nombre" className="h-14 rounded-2xl border-white/10 focus:ring-primary focus:border-primary px-6" />
+                                        <Input required name="nombre" placeholder="Tu nombre" className="h-14 rounded-2xl border-white/10 focus:ring-primary focus:border-primary px-6" />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60 ml-2">Email</label>
-                                        <Input required type="email" placeholder="email@ejemplo.com" className="h-14 rounded-2xl border-white/10 focus:ring-primary focus:border-primary px-6" />
+                                        <Input required name="email" type="email" placeholder="email@ejemplo.com" className="h-14 rounded-2xl border-white/10 focus:ring-primary focus:border-primary px-6" />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60 ml-2">Asunto</label>
-                                    <Input required placeholder="¿En qué podemos ayudarte?" className="h-14 rounded-2xl border-white/10 focus:ring-primary focus:border-primary px-6" />
+                                    <Input required name="asunto" placeholder="¿En qué podemos ayudarte?" className="h-14 rounded-2xl border-white/10 focus:ring-primary focus:border-primary px-6" />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60 ml-2">Mensaje</label>
-                                    <Textarea required placeholder="Escribe tu mensaje aquí..." className="min-h-[150px] rounded-[1.5rem] border-white/10 focus:ring-primary focus:border-primary px-6 py-4" />
+                                    <Textarea required name="mensaje" placeholder="Escribe tu mensaje aquí..." className="min-h-[150px] rounded-[1.5rem] border-white/10 focus:ring-primary focus:border-primary px-6 py-4" />
                                 </div>
                                 <Button disabled={isSubmitting} className="w-full h-16 rounded-2xl text-lg font-bold shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all gap-3 bg-primary hover:bg-primary/90 text-white border-none">
                                     {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : <Send className="h-6 w-6" />}
-                                    {isSubmitting ? "Enviando..." : "Enviar Mensaje"}
+                                    {isSubmitting ? "Abriendo..." : "Redactar Mensaje"}
                                 </Button>
                             </form>
                         )}

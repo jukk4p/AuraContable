@@ -6,7 +6,8 @@ import {
     Palette, Bell, Languages, CreditCard, 
     Shield, Check, Save, Globe,
     Trash2, Edit, Sun, Moon, Monitor,
-    Sparkles, Palette as PaletteIcon, Zap, Camera, Smartphone
+    Sparkles, Palette as PaletteIcon, Zap, Camera, Smartphone,
+    AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -337,17 +338,26 @@ export default function SettingsPage() {
 
                     {activeTab === 'payments' && (
                         <div className="grid gap-4">
-                            <IntegrationCard 
-                                name="Stripe" 
-                                desc="Acepta pagos con tarjeta y Apple Pay en tus facturas." 
-                                icon="/images/stripe.svg" 
-                                connected={true} 
+                            <Alert className="rounded-md">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle className="font-medium text-sm">Configuración no editable aquí</AlertTitle>
+                                <AlertDescription className="text-xs">
+                                    Las claves de las pasarelas todavía se introducen directamente en la
+                                    base de datos (tabla <code>company_profiles</code>). Las secretas nunca
+                                    se envían al navegador, así que esta pantalla solo indica si están puestas.
+                                </AlertDescription>
+                            </Alert>
+                            <IntegrationCard
+                                name="Stripe"
+                                desc="Acepta pagos con tarjeta y Apple Pay en tus facturas."
+                                icon="/images/stripe.svg"
+                                connected={Boolean(companyData.stripeEnabled && companyData.hasStripeSecretKey)}
                             />
-                            <IntegrationCard 
-                                name="PayPal" 
-                                desc="Recibe pagos mediante PayPal de forma sencilla." 
-                                icon="/images/PP_logo_h_200x51.png" 
-                                connected={true}
+                            <IntegrationCard
+                                name="PayPal"
+                                desc="Recibe pagos mediante PayPal de forma sencilla."
+                                icon="/images/PP_logo_h_200x51.png"
+                                connected={Boolean(companyData.paypalEnabled && companyData.hasPaypalSecret)}
                             />
                         </div>
                     )}

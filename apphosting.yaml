@@ -2,6 +2,9 @@
 # https://firebase.google.com/docs/app-hosting/configure
 
 runConfig:
-  # Increase this value if you'd like to automatically spin up
-  # more instances in response to increased traffic.
-  maxInstances: 1
+  # Con una sola instancia, cualquier petición lenta bloquea al resto y las
+  # siguientes se rechazan con 503. Tres deja margen sin disparar el número de
+  # conexiones a la base de datos (ver DATABASE_POOL_MAX en src/db/config.ts).
+  maxInstances: 3
+  minInstances: 0
+  concurrency: 80

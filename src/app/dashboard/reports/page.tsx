@@ -131,20 +131,30 @@ export default function ReportsPage() {
             .slice(0, 5);
     }, [invoices]);
 
+    /**
+     * Reparto de la facturación por cliente.
+     *
+     * Antes esto asignaba cada factura a una de cuatro categorías fijas según
+     * `idx % 4`: las facturas no tienen categoría, así que el gráfico repartía
+     * los importes al azar. El cliente sí es un dato real.
+     */
     const categoryData = useMemo(() => {
-        const cats: Record<string, number> = {
-            'Servicios': 0,
-            'Productos': 0,
-            'Consultoría': 0,
-            'Otros': 0
-        };
-        invoices.forEach((inv, idx) => {
-            const cat = Object.keys(cats)[idx % 4];
-            cats[cat] += inv.total;
-        });
-        return Object.entries(cats)
-            .filter(([_, value]) => value > 0)
-            .map(([name, value]) => ({ name, value }));
+        const totals = invoices.reduce((acc: Record<string, number>, inv) => {
+            const name = inv.client?.name || 'Sin cliente';
+            acc[name] = (acc[name] || 0) + inv.total;
+            return acc;
+        }, {});
+
+        const sorted = Object.entries(totals)
+            .map(([name, value]) => ({ name, value }))
+            .filter(entry => entry.value > 0)
+            .sort((a, b) => b.value - a.value);
+
+        // Más de seis porciones no se leen: el resto se agrupa.
+        if (sorted.length <= 6) return sorted;
+        const top = sorted.slice(0, 5);
+        const rest = sorted.slice(5).reduce((sum, entry) => sum + entry.value, 0);
+        return [...top, { name: 'Otros clientes', value: rest }];
     }, [invoices]);
 
     const handleExportCsv = () => {
@@ -379,7 +389,7 @@ export default function ReportsPage() {
                         <Card className="rounded-xl border border-border shadow-sm p-6 space-y-4 bg-card">
                             <div className="flex justify-between items-center">
                                 <CardTitle className="text-base font-semibold tracking-tight flex items-center gap-2">
-                                    Distribución de Ventas
+                                    Distribución por Cliente
                                 </CardTitle>
                             </div>
                             <div className="h-[280px] w-full">
