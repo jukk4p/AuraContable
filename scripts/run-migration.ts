@@ -11,7 +11,14 @@ import * as dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 
-dotenv.config({ path: path.join(__dirname, '../.env') });
+// Se busca en el directorio de trabajo además de junto al script: si este
+// archivo se compila a otra ruta, __dirname deja de apuntar al proyecto.
+for (const candidate of [path.join(process.cwd(), '.env'), path.join(__dirname, '../.env')]) {
+  if (fs.existsSync(candidate)) {
+    dotenv.config({ path: candidate });
+    break;
+  }
+}
 
 async function main() {
   const file = process.argv[2];
