@@ -107,7 +107,7 @@ export default function NewInvoicePage() {
             if(user) {
                 setIsLoading(true);
                 try {
-                    const userClients = await getClients(user.id);
+                    const userClients = await getClients();
                     setClients(userClients);
 
                     if (isEditing) {
@@ -123,8 +123,8 @@ export default function NewInvoicePage() {
                         }
                     } else {
                         const [userInvoices, companyProfile] = await Promise.all([
-                            getInvoices(user.id),
-                            getCompanyProfile(user.id)
+                            getInvoices(),
+                            getCompanyProfile()
                         ]);
 
                         const currentYear = new Date().getFullYear();
@@ -150,7 +150,7 @@ export default function NewInvoicePage() {
                             ...form.getValues(),
                             invoiceNumber: newInvoiceNumber,
                             terms: companyProfile?.defaultTerms || "",
-                            taxes: companyProfile?.defaultTaxes || [],
+                            taxes: companyProfile?.defaultTaxes ?? [],
                             clientId: defaultClientId
                         });
                     }
@@ -217,14 +217,13 @@ export default function NewInvoicePage() {
             Object.entries(selectedClient).filter(([_, v]) => v !== undefined)
         );
 
+        // Ni los totales ni el userId se envían: el servidor deriva los importes
+        // de las líneas y toma la identidad de la sesión. Los que se ven en
+        // pantalla son solo la previsualización.
         const invoicePayload = {
             ...data,
-            subtotal,
-            total,
             taxes: data.taxes || [],
             notes: data.notes || '',
-            terms: data.terms || '',
-            userId: user.id,
         };
         
         try {

@@ -7,7 +7,8 @@ import { eq } from "drizzle-orm";
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
-  debug: true,
+  // En producción el modo debug vuelca detalle de autenticación a los logs.
+  debug: process.env.NODE_ENV !== "production",
   session: {
     strategy: "jwt",
   },
@@ -38,18 +39,17 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials");
         }
 
-        const userResults = await db.select().from(users).where(eq(users.email, credentials.email));
+        const email = credentials.email.trim().toLowerCase();
+        const userResults = await db.select().from(users).where(eq(users.email, email));
         const user = userResults[0];
 
-        if (!user || !user.passwordHash) {
-          throw new Error("Usuario no encontrado");
-        }
+        // Un único mensaje para los dos casos: distinguir "no existe" de
+        // "contraseña incorrecta" permite averiguar qué correos están dados de
+        // alta probándolos uno a uno.
+        const invalid = new Error("Credenciales incorrectas");
 
-        const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
-
-        if (!isValidPassword) {
-            throw new Error("Contraseña incorrecta");
-        }
+        if (!user || !user.passwordHash) throw invalid;
+        if (!(await bcrypt.compare(credentials.password, user.passwordHash))) throw invalid;
 
         return {
           id: user.id,

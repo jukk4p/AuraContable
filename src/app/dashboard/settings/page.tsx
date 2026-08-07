@@ -18,6 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useTheme } from "next-themes";
 import { 
     Select, SelectContent, SelectItem, 
@@ -32,10 +33,11 @@ import { toast } from '@/hooks/use-toast';
 
 export default function SettingsPage() {
     const { t } = useLocale();
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
     const user = session?.user;
     const [activeTab, setActiveTab] = useState("profile");
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const { setTheme, theme } = useTheme();
     const [companyData, setCompanyData] = useState<any>({
@@ -49,24 +51,38 @@ export default function SettingsPage() {
         currency: 'EUR',
     });
 
+    const userId = user?.id;
+
     useEffect(() => {
         async function loadProfile() {
-            if (user?.id) {
-                const profile = await getCompanyProfile(user.id);
+            // Sin usuario no hay nada que pedir, pero el loading tiene que apagarse
+            // igualmente: si no, la pantalla se queda en el esqueleto para siempre.
+            if (!userId) {
+                if (status !== 'loading') setLoading(false);
+                return;
+            }
+            setLoading(true);
+            setLoadError(null);
+            try {
+                const profile = await getCompanyProfile();
                 if (profile) {
                     setCompanyData(profile);
                 }
+            } catch (e) {
+                console.error("Error cargando el perfil de empresa:", e);
+                setLoadError("No se ha podido cargar la configuración. Revisa tu conexión e inténtalo de nuevo.");
+            } finally {
                 setLoading(false);
             }
         }
         loadProfile();
-    }, [user]);
+    }, [userId, status]);
 
     const handleSave = async () => {
         if (!user?.id) return;
         setSaving(true);
         try {
-            const result = await saveCompanyProfile({ ...companyData, userId: user.id });
+            const result = await saveCompanyProfile(companyData);
             if (result.success) {
                 toast({ title: "Configuración Guardada", description: "Los cambios se han aplicado correctamente." });
             } else {
@@ -111,6 +127,14 @@ export default function SettingsPage() {
 
     return (
         <div className="space-y-6 pb-20">
+            {loadError && (
+                <Alert variant="destructive" className="rounded-md border-danger text-danger">
+                    <Shield className="h-4 w-4" />
+                    <AlertTitle className="font-medium text-sm">No se pudo cargar la configuración</AlertTitle>
+                    <AlertDescription className="text-xs">{loadError}</AlertDescription>
+                </Alert>
+            )}
+
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="space-y-1">

@@ -206,15 +206,9 @@ export default function LoginPage() {
                                 </div>
 
                                 <div className="pt-4">
-                                    <Button 
-                                        type="submit" 
-                                        onClick={(e) => {
-                                            // Fail-safe check: if form submit doesn't fire, we trigger it here
-                                            if (!isLoading) {
-                                                console.log("Login button clicked");
-                                            }
-                                        }}
-                                        className="w-full h-12 text-lg font-bold group relative overflow-hidden shadow-lg shadow-primary/20 transition-all hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98]" 
+                                    <Button
+                                        type="submit"
+                                        className="w-full h-12 text-lg font-bold group relative overflow-hidden shadow-lg shadow-primary/20 transition-all hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98]"
                                         disabled={isLoading}
                                     >
                                         <span className="relative z-10 flex items-center justify-center gap-2">

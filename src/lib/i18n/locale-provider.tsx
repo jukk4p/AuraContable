@@ -30,7 +30,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function fetchProfileAndSetLocale() {
         if (user) {
-            const profile = await getCompanyProfile(user.id);
+            const profile = await getCompanyProfile();
             setCompanyProfile(profile);
             if (profile?.language && profile.language in locales) {
                 setLocale(profile.language as Locale);

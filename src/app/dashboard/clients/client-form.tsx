@@ -66,7 +66,7 @@ export default function ClientForm({ client, userId }: ClientFormProps) {
                     toast({ title: "Error al actualizar", description: result.error, variant: "destructive" });
                 }
             } else {
-                result = await addClient({ ...values, userId });
+                result = await addClient(values);
                 if (result.success) {
                     toast({ title: "Cliente Añadido", description: "El nuevo cliente ha sido añadido correctamente." });
                     router.push('/dashboard/clients');

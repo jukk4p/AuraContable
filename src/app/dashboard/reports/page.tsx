@@ -31,6 +31,13 @@ import { getClients } from '@/actions/clients';
 import { getCompanyProfile } from '@/actions/company';
 import { generateInvoicingReportPdf } from '@/lib/report-pdf-generator';
 import { cn } from '@/lib/utils';
+import {
+    getFiscalPeriod,
+    getMonthBuckets,
+    isInBucket,
+    computeVatSummary,
+    DEFAULT_VAT_RATE,
+} from '@/lib/fiscal';
 import type { Invoice, Expense, Client, CompanyProfile } from '@/lib/types';
 
 const COLORS = ['hsl(var(--primary))', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
@@ -45,25 +52,30 @@ export default function ReportsPage() {
     const [clients, setClients] = useState<Client[]>([]);
     const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
     const [dbLoading, setDbLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState("summary");
+
+    const userId = user?.id;
 
     useEffect(() => {
         const fetchData = async () => {
-            if (user?.id) {
+            if (userId) {
                 setDbLoading(true);
+                setLoadError(null);
                 try {
                     const [invData, expData, cliData, compData] = await Promise.all([
-                        getInvoices(user.id),
-                        getExpenses(user.id),
-                        getClients(user.id),
-                        getCompanyProfile(user.id)
+                        getInvoices(),
+                        getExpenses(),
+                        getClients(),
+                        getCompanyProfile()
                     ]);
                     setInvoices(invData);
                     setExpenses(expData);
                     setClients(cliData);
                     setCompanyProfile(compData);
                 } catch (e) {
-                    console.error(e);
+                    console.error("Error cargando los informes:", e);
+                    setLoadError("No se han podido cargar los datos. Revisa tu conexión e inténtalo de nuevo.");
                 } finally {
                     setDbLoading(false);
                 }
@@ -72,7 +84,10 @@ export default function ReportsPage() {
             }
         };
         fetchData();
-    }, [user, status]);
+    }, [userId, status]);
+
+    /** Trimestre natural en curso: antes estaba escrito a mano como "Q2 2026". */
+    const period = useMemo(() => getFiscalPeriod(new Date()), []);
 
     // Financial Analysis
     const stats = useMemo(() => {
@@ -80,21 +95,27 @@ export default function ReportsPage() {
         const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
         const profit = totalIncomes - totalExpenses;
         const margin = totalIncomes > 0 ? (profit / totalIncomes) * 100 : 0;
-        
-        // IVA Calculation (Demo logic)
-        const ivaVentas = invoices.reduce((s, i) => s + (i.total - (i.total / 1.21)), 0);
-        const ivaCompras = expenses.reduce((s, e) => s + (e.amount * 0.21), 0); // Assuming 21% for demo
-        const autoIva = ivaVentas - ivaCompras;
+        const netIncomes = invoices.reduce((s, i) => s + (i.subtotal ?? 0), 0);
 
-        return { totalIncomes, totalExpenses, profit, margin, ivaVentas, ivaCompras, autoIva };
+        return { totalIncomes, netIncomes, totalExpenses, profit, margin };
     }, [invoices, expenses]);
 
+    /** Liquidación del trimestre a partir de los impuestos reales de cada factura. */
+    const vat = useMemo(
+        () => computeVatSummary(invoices, expenses, period),
+        [invoices, expenses, period]
+    );
+
     const chartData = useMemo(() => {
-        const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun"];
-        return months.map((month, idx) => {
-            const inc = invoices.filter(i => new Date(i.issueDate).getMonth() === idx).reduce((s, i) => s + i.total, 0);
-            const exp = expenses.filter(e => new Date(e.date).getMonth() === idx).reduce((s, e) => s + e.amount, 0);
-            return { month, ingresos: inc, gastos: exp, beneficio: inc - exp };
+        const buckets = getMonthBuckets(new Date(), 6);
+        return buckets.map(bucket => {
+            const inc = invoices
+                .filter(i => isInBucket(i.issueDate, bucket))
+                .reduce((s, i) => s + i.total, 0);
+            const exp = expenses
+                .filter(e => isInBucket(e.date, bucket))
+                .reduce((s, e) => s + e.amount, 0);
+            return { month: bucket.label, year: bucket.year, ingresos: inc, gastos: exp, beneficio: inc - exp };
         });
     }, [invoices, expenses]);
 
@@ -192,11 +213,19 @@ export default function ReportsPage() {
 
     return (
         <div className="space-y-6 pb-10">
+            {loadError && (
+                <Alert variant="destructive" className="rounded-md border-danger text-danger">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle className="font-medium text-xs">No se pudieron cargar los datos</AlertTitle>
+                    <AlertDescription className="text-sm">{loadError}</AlertDescription>
+                </Alert>
+            )}
+
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="space-y-1">
                     <h2 className="text-2xl font-semibold tracking-tight">Informes de Negocio</h2>
-                    <p className="text-sm text-muted-foreground">Q2 - Segundo Trimestre 2026</p>
+                    <p className="text-sm text-muted-foreground">{period.label}</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button onClick={handleExportCsv} variant="outline" size="sm" className="h-9">
@@ -214,7 +243,12 @@ export default function ReportsPage() {
             {/* Quick Summary Widgets (3 Metrics as requested) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <SummaryWidget title="Beneficio Neto" value={formatCurrency(stats.profit)} subValue={`${stats.margin.toFixed(1)}% Margen`} icon={<TrendingUp />} />
-                <SummaryWidget title="Autoliquidación IVA" value={formatCurrency(stats.autoIva)} subValue="Importe a ingresar" icon={<Percent />} />
+                <SummaryWidget
+                    title="Autoliquidación IVA"
+                    value={formatCurrency(Math.abs(vat.vatDue))}
+                    subValue={`${vat.vatDue >= 0 ? 'A ingresar' : 'A devolver'} · Q${period.quarter}`}
+                    icon={<Percent />}
+                />
                 <SummaryWidget title="Gastos Operativos" value={formatCurrency(stats.totalExpenses)} subValue="Total acumulado" icon={<Receipt />} />
             </div>
 
@@ -247,7 +281,7 @@ export default function ReportsPage() {
                                                     if (active && payload && payload.length) {
                                                         return (
                                                             <div className="bg-popover text-popover-foreground border border-border shadow-md rounded-md p-3 text-sm">
-                                                                <p className="font-medium mb-2">{payload[0].payload.month} 2026</p>
+                                                                <p className="font-medium mb-2">{payload[0].payload.month} {payload[0].payload.year}</p>
                                                                 <div className="flex flex-col gap-1.5">
                                                                     <div className="flex justify-between gap-4">
                                                                         <span className="text-muted-foreground">Ingresos:</span>
@@ -281,8 +315,9 @@ export default function ReportsPage() {
                             <Card className="rounded-xl border border-border shadow-sm p-6 space-y-4 bg-card">
                                 <h4 className="font-semibold tracking-tight text-base">Saldos Acumulados</h4>
                                 <div className="space-y-3">
-                                    <BalanceRow label="Total Facturado (Neto)" value={stats.totalIncomes} />
-                                    <BalanceRow label="Total Gastos (Neto)" value={stats.totalExpenses} />
+                                    <BalanceRow label="Total Facturado (Base)" value={stats.netIncomes} />
+                                    <BalanceRow label="Total Facturado (con IVA)" value={stats.totalIncomes} />
+                                    <BalanceRow label="Total Gastos (con IVA)" value={stats.totalExpenses} />
                                     <div className="pt-3 border-t border-border flex justify-between items-center">
                                         <span className="text-sm font-medium">Resultado Previsto</span>
                                         <span className="text-lg font-semibold text-success">{formatCurrency(stats.profit)}</span>
@@ -413,7 +448,9 @@ export default function ReportsPage() {
                                         <CardTitle className="text-lg font-semibold tracking-tight">Modelo 303</CardTitle>
                                         <p className="text-xs text-muted-foreground">Autoliquidación IVA</p>
                                     </div>
-                                    <Badge variant="outline" className="text-[10px] font-medium uppercase">EJERCICIO 2026</Badge>
+                                    <Badge variant="outline" className="text-[10px] font-medium uppercase">
+                                        Q{period.quarter} · EJERCICIO {period.year}
+                                    </Badge>
                                 </div>
 
                                 {/* IVA DEVENGADO */}
@@ -422,12 +459,34 @@ export default function ReportsPage() {
                                         IVA Devengado (Ingresos)
                                     </h5>
                                     <div className="space-y-3">
-                                        <TaxRow label="Régimen ordinario (21%)" base={stats.totalIncomes / 1.21} rate="21%" quota={stats.ivaVentas} />
-                                        <TaxRow label="Otros tipos / Recargo" base={0} rate="-" quota={0} />
+                                        {vat.vatChargedRows.length > 0 ? (
+                                            vat.vatChargedRows.map(row => (
+                                                <TaxRow
+                                                    key={row.rate}
+                                                    label={`Régimen ordinario (${row.rate}%)`}
+                                                    base={row.base}
+                                                    rate={`${row.rate}%`}
+                                                    quota={row.quota}
+                                                />
+                                            ))
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground">
+                                                No hay facturas emitidas con IVA en este trimestre.
+                                            </p>
+                                        )}
+                                        {vat.otherTaxes !== 0 && (
+                                            <TaxRow label="Otros tributos en factura" base={0} rate="-" quota={vat.otherTaxes} />
+                                        )}
                                         <div className="pt-3 flex justify-between items-center border-t border-border">
                                             <span className="text-sm font-medium">Total cuota devengada</span>
-                                            <span className="text-sm font-semibold">{formatCurrency(stats.ivaVentas)}</span>
+                                            <span className="text-sm font-semibold">{formatCurrency(vat.vatCharged)}</span>
                                         </div>
+                                        {vat.retentions !== 0 && (
+                                            <p className="text-[10px] text-muted-foreground">
+                                                Se han excluido {formatCurrency(Math.abs(vat.retentions))} de retenciones de IRPF:
+                                                no forman parte del Modelo 303.
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -437,11 +496,25 @@ export default function ReportsPage() {
                                         IVA Deducible (Gastos)
                                     </h5>
                                     <div className="space-y-3">
-                                        <TaxRow label="Compras interiores" base={stats.totalExpenses} rate="21%" quota={stats.ivaCompras} />
+                                        {vat.vatDeductibleRows.length > 0 ? (
+                                            vat.vatDeductibleRows.map(row => (
+                                                <TaxRow
+                                                    key={row.rate}
+                                                    label={`Compras interiores (${row.rate}%)`}
+                                                    base={row.base}
+                                                    rate={`${row.rate}%`}
+                                                    quota={row.quota}
+                                                />
+                                            ))
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground">
+                                                No hay gastos registrados en este trimestre.
+                                            </p>
+                                        )}
                                         <TaxRow label="Adquisiciones Intracom." base={0} rate="-" quota={0} />
                                         <div className="pt-3 flex justify-between items-center border-t border-border">
                                             <span className="text-sm font-medium">Total cuota deducible</span>
-                                            <span className="text-sm font-semibold">{formatCurrency(stats.ivaCompras)}</span>
+                                            <span className="text-sm font-semibold">{formatCurrency(vat.vatDeductible)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -452,16 +525,16 @@ export default function ReportsPage() {
                             {/* Final Result Card */}
                             <Card className={cn(
                                 "p-6 rounded-xl border border-border shadow-sm",
-                                stats.autoIva >= 0 ? "bg-muted/30" : "bg-success/5"
+                                vat.vatDue >= 0 ? "bg-muted/30" : "bg-success/5"
                             )}>
                                 <div className="space-y-4">
                                     <h4 className="text-base font-semibold tracking-tight">Resultado Liquidación</h4>
                                     <div className="space-y-1">
                                         <p className="text-3xl font-semibold tracking-tight">
-                                            {formatCurrency(Math.abs(stats.autoIva))}
+                                            {formatCurrency(Math.abs(vat.vatDue))}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            {stats.autoIva >= 0 ? "Importe a Ingresar" : "Importe a Devolver / Compensar"}
+                                            {vat.vatDue >= 0 ? "Importe a Ingresar" : "Importe a Devolver / Compensar"}
                                         </p>
                                     </div>
                                     <Button className="w-full h-10 mt-2 font-medium">

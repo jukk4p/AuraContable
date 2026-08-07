@@ -59,7 +59,7 @@ export default function TerminosPage() {
                         <section className="space-y-4">
                             <h2 className="text-2xl font-bold font-headline text-primary border-l-4 border-primary pl-4">4. Limitación de Responsabilidad</h2>
                             <p className="text-muted-foreground leading-relaxed italic">
-                                AuraContable se proporciona "tal cual". No garantizamos que el servicio sea ininterrumpido o libre de errores, aunque nos esforzamos por ofrecer la máxima disponibilidad.
+                                AuraContable se proporciona &ldquo;tal cual&rdquo;. No garantizamos que el servicio sea ininterrumpido o libre de errores, aunque nos esforzamos por ofrecer la máxima disponibilidad.
                             </p>
                         </section>
 

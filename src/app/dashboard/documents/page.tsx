@@ -46,16 +46,18 @@ export default function DocumentsPage() {
     const [dbError, setDbError] = useState<string | null>(null);
     const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
 
+    const userId = user?.id;
+
     useEffect(() => {
         const fetchDocuments = async () => {
-            if (!user?.id) {
+            if (!userId) {
                 if (status !== 'loading') setDbLoading(false);
                 return;
             }
             setDbLoading(true);
             setDbError(null);
             try {
-                const expenses = await getExpenses(user.id);
+                const expenses = await getExpenses();
                 const docs: ReceiptDocument[] = expenses
                     .filter((e: any) => e.receiptUrl)
                     .map((e: any) => {
@@ -81,7 +83,7 @@ export default function DocumentsPage() {
             }
         };
         fetchDocuments();
-    }, [user, status]);
+    }, [userId, status]);
 
     const filteredDocs = useMemo(() => {
         const term = searchTerm.toLowerCase().trim();

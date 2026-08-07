@@ -25,7 +25,7 @@ export default function EditClientPage() {
             if (user?.id && clientId) {
                 setLoading(true);
                 try {
-                    const userClients = await getClients(user.id);
+                    const userClients = await getClients();
                     const matched = userClients.find(c => c.id === clientId);
                     if (matched) {
                         setClient(matched);

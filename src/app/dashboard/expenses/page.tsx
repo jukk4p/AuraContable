@@ -55,16 +55,19 @@ export default function ExpensesPage() {
     const [dbLoading, setDbLoading] = useState(true);
     const [dbError, setDbError] = useState<string | null>(null);
 
+    const userId = user?.id;
+
     useEffect(() => {
         const fetchExpenses = async () => {
-            if (user?.id) {
+            if (userId) {
                 setDbLoading(true);
+                setDbError(null);
                 try {
-                    const data = await getExpenses(user.id);
+                    const data = await getExpenses();
                     setExpenses(data);
                 } catch (e) {
-                    console.error(e);
-                    setDbError("No se pudieron cargar los gastos.");
+                    console.error("Error cargando los gastos:", e);
+                    setDbError("No se pudieron cargar los gastos. Revisa tu conexión e inténtalo de nuevo.");
                 } finally {
                     setDbLoading(false);
                 }
@@ -73,7 +76,7 @@ export default function ExpensesPage() {
             }
         };
         fetchExpenses();
-    }, [user, status]);
+    }, [userId, status]);
 
     const categories = useMemo(() => {
         const cats = Array.from(new Set(expenses.map(e => e.category).filter(Boolean))) as string[];

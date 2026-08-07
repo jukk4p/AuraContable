@@ -1,3 +1,15 @@
+/**
+ * Alta del usuario inicial.
+ *
+ * Las credenciales vienen del entorno: antes estaban escritas en este archivo y
+ * quedaron en el historial de git, además de que el script pisaba la contraseña
+ * del usuario existente en cada ejecución.
+ *
+ *   SEED_ADMIN_EMAIL=tu@correo.com SEED_ADMIN_PASSWORD='...' npx tsx scripts/seed-admin.ts
+ *
+ * Para reescribir la contraseña de un usuario que ya existe hay que pedirlo
+ * explícitamente con SEED_ADMIN_FORCE=true.
+ */
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { users } from '../src/db/schema';
@@ -6,53 +18,58 @@ import * as bcrypt from 'bcryptjs';
 import * as dotenv from 'dotenv';
 import path from 'path';
 
-// Load .env from project root
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const connectionString = process.env.DATABASE_URL;
+const BCRYPT_ROUNDS = 12;
+const MIN_PASSWORD_LENGTH = 10;
 
-if (!connectionString) {
-  console.error("DATABASE_URL is not defined in .env file");
+function fail(message: string): never {
+  console.error(`❌ ${message}`);
+  process.exit(1);
 }
 
 async function seed() {
-  if (!connectionString) return;
-  
-  const client = postgres(connectionString, { prepare: false });
+  const connectionString = process.env.DATABASE_URL;
+  const email = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
+  const password = process.env.SEED_ADMIN_PASSWORD;
+  const name = process.env.SEED_ADMIN_NAME || 'Usuario Administrador';
+  const force = process.env.SEED_ADMIN_FORCE === 'true';
+
+  if (!connectionString) fail('DATABASE_URL no está definida.');
+  if (!email) fail('Define SEED_ADMIN_EMAIL.');
+  if (!password) fail('Define SEED_ADMIN_PASSWORD.');
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    fail(`SEED_ADMIN_PASSWORD debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+  }
+
+  const client = postgres(connectionString, { prepare: false, max: 1 });
   const db = drizzle(client);
 
-  console.log("🌱 Seeding Admin User...");
-  
-  const ADMIN_EMAIL = 'admin@auracontable.com';
-  const ADMIN_PASS = 'Aura.2026!';
-  const ADMIN_NAME = 'Usuario Administrador';
-
   try {
-    const hashedPassword = await bcrypt.hash(ADMIN_PASS, 10);
+    const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
 
-    // Using raw SQL or mapping directly to check existence
-    const existing = await db.select().from(users).where(eq(users.email, ADMIN_EMAIL));
-    
     if (existing.length > 0) {
-      console.log("⚠️ User already exists. Updating password...");
+      if (!force) {
+        console.log(`⚠️  ${email} ya existe. No se toca nada.`);
+        console.log('   Para reescribir su contraseña: SEED_ADMIN_FORCE=true');
+        return;
+      }
       await db.update(users)
-        .set({ passwordHash: hashedPassword, name: ADMIN_NAME })
-        .where(eq(users.email, ADMIN_EMAIL));
-    } else {
-      console.log("✨ Creating new admin user...");
-      await db.insert(users).values({
-        email: ADMIN_EMAIL,
-        passwordHash: hashedPassword,
-        name: ADMIN_NAME,
-      });
+        .set({ passwordHash: await bcrypt.hash(password, BCRYPT_ROUNDS), name })
+        .where(eq(users.email, email));
+      console.log(`✅ Contraseña de ${email} actualizada.`);
+      return;
     }
 
-    console.log("✅ Admin user seeded successfully!");
-    console.log(`📧 Email: ${ADMIN_EMAIL}`);
-    console.log(`🔑 Password: ${ADMIN_PASS}`);
-    
+    await db.insert(users).values({
+      email,
+      passwordHash: await bcrypt.hash(password, BCRYPT_ROUNDS),
+      name,
+    });
+    console.log(`✅ Usuario ${email} creado.`);
   } catch (error) {
-    console.error("❌ Error seeding admin user:", error);
+    console.error('❌ Error al crear el usuario:', error);
+    process.exitCode = 1;
   } finally {
     await client.end();
   }

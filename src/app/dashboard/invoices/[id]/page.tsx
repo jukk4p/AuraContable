@@ -51,7 +51,7 @@ export default function InvoiceDetailsPage() {
                 try {
                     const [invoiceData, companyData] = await Promise.all([
                         getInvoiceById(invoiceId),
-                        getCompanyProfile(user.id)
+                        getCompanyProfile()
                     ]);
 
                     if (invoiceData && invoiceData.userId === user.id) {

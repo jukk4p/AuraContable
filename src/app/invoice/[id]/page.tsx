@@ -17,6 +17,7 @@ export default function PublicInvoicePage() {
     const id = params.id as string;
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [paying, setPaying] = useState(false);
     
     const isSuccess = searchParams.get("success") === "true";
@@ -24,9 +25,17 @@ export default function PublicInvoicePage() {
 
     useEffect(() => {
         async function fetchData() {
-            const res = await getPublicInvoiceById(id);
-            setData(res);
-            setLoading(false);
+            try {
+                const res = await getPublicInvoiceById(id);
+                setData(res);
+            } catch (error) {
+                // Esta pantalla la ve el cliente que va a pagar: si falla, tiene que
+                // verlo, no quedarse mirando un spinner indefinidamente.
+                console.error("Error cargando la factura pública:", error);
+                setLoadError("No se ha podido cargar la factura. Vuelve a intentarlo en unos minutos.");
+            } finally {
+                setLoading(false);
+            }
         }
         fetchData();
     }, [id]);
@@ -56,16 +65,20 @@ export default function PublicInvoicePage() {
     }
 
     if (!data) {
+        // Distinguimos el fallo de carga de la factura inexistente: al cliente que
+        // paga le sirve saber si debe reintentar o si el enlace ya no vale.
         return (
             <div className="min-h-screen flex items-center justify-center bg-muted/30">
                 <Card className="max-w-md w-full mx-4 shadow-xl border-destructive/20 overflow-hidden">
                     <div className="h-2 bg-destructive" />
                     <CardHeader>
                         <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-                        <CardTitle className="text-center text-2xl font-headline">Factura no encontrada</CardTitle>
+                        <CardTitle className="text-center text-2xl font-headline">
+                            {loadError ? "No se pudo cargar la factura" : "Factura no encontrada"}
+                        </CardTitle>
                     </CardHeader>
                     <CardContent className="text-center text-muted-foreground pb-8">
-                        El enlace que has seguido puede haber expirado o la factura no existe.
+                        {loadError ?? "El enlace que has seguido puede haber expirado o la factura no existe."}
                     </CardContent>
                 </Card>
             </div>
@@ -198,7 +211,7 @@ export default function PublicInvoicePage() {
                             <div className="space-y-2">
                                 <h4 className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-[0.2em]">NOTAS ADICIONALES</h4>
                                 <p className="text-xs text-muted-foreground bg-muted/30 p-4 rounded-xl italic leading-loose">
-                                    "{invoice.notes}"
+                                    &ldquo;{invoice.notes}&rdquo;
                                 </p>
                             </div>
                         )}

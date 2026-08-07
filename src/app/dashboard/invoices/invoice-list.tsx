@@ -57,6 +57,7 @@ export default function InvoiceList() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
     const [dbLoading, setDbLoading] = useState(true);
+    const [dbError, setDbError] = useState<string | null>(null);
     const [sortBy, setSortBy] = useState<'name' | 'issueDate' | 'dueDate'>('issueDate');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [isStacked, setIsStacked] = useState(true);
@@ -70,19 +71,23 @@ export default function InvoiceList() {
         }));
     };
 
+    const userId = user?.id;
+
     useEffect(() => {
         const fetchData = async () => {
-            if (user?.id) {
+            if (userId) {
                 setDbLoading(true);
+                setDbError(null);
                 try {
                     const [invoicesData, companyData] = await Promise.all([
-                        getInvoices(user.id),
-                        getCompanyProfile(user.id)
+                        getInvoices(),
+                        getCompanyProfile()
                     ]);
                     setInvoices(invoicesData);
                     setCompanyProfile(companyData);
                 } catch (e) {
-                    console.error(e);
+                    console.error("Error cargando las facturas:", e);
+                    setDbError("No se pudieron cargar las facturas. Revisa tu conexión e inténtalo de nuevo.");
                 } finally {
                     setDbLoading(false);
                 }
@@ -91,7 +96,7 @@ export default function InvoiceList() {
             }
         };
         fetchData();
-    }, [user, status]);
+    }, [userId, status]);
 
     const stats = useMemo(() => {
         const total = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
@@ -215,6 +220,14 @@ export default function InvoiceList() {
 
     return (
         <div className="space-y-6 pb-10">
+            {dbError && (
+                <Alert variant="destructive" className="rounded-md border-danger text-danger">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle className="font-medium text-xs">No se pudieron cargar las facturas</AlertTitle>
+                    <AlertDescription className="text-sm">{dbError}</AlertDescription>
+                </Alert>
+            )}
+
             {/* Header & Actions */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="space-y-1">

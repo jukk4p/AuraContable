@@ -107,7 +107,8 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
           items: [
               { href: "/dashboard", icon: LayoutDashboard, label: "Panel", exact: true },
               { href: "/dashboard/invoices", icon: FileText, label: "Facturas" },
-              { href: "/dashboard/quotes", icon: FileSignature, label: "Presupuestos" },
+              // Presupuestos está fuera del menú hasta que exista de verdad: la
+              // pantalla es solo interfaz, no hay tabla ni acciones detrás.
               { href: "/dashboard/clients", icon: Users, label: "Clientes" },
               { href: "/dashboard/expenses", icon: Receipt, label: "Gastos" },
               { href: "/dashboard/documents", icon: Folder, label: "Documentos" },

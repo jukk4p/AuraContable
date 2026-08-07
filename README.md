@@ -15,28 +15,37 @@
 
 ---
 
-## 💎 Estándar de Calidad: Diamante
+## 🏛️ Arquitectura
 
-Tras un exhaustivo proceso de modernización, la plataforma alcanza un nivel de excelencia técnica superior:
+- **Autorización en el servidor**: cada Server Action resuelve la identidad con `requireUserId()` a partir de la sesión y filtra por `userId`. El cliente nunca envía a quién pertenecen los datos.
+- **Server Actions con Zod**: las mutaciones se validan con esquemas Zod. Los importes de una factura se derivan de sus líneas en el servidor, no se aceptan del formulario.
+- **ActionResult**: respuestas uniformes (`{ success, data | error }`) para un manejo de errores predecible.
+- **Transacciones**: crear o editar una factura escribe cabecera, líneas e impuestos como una sola unidad.
+- **Cálculo fiscal**: `src/lib/fiscal.ts` deriva trimestre, vencimientos e IVA de los datos reales y de la fecha actual.
 
-### 🏛️ Arquitectura Robusta
-- **Server Actions con Zod**: Todas las mutaciones de datos están validadas estrictamente con esquemas Zod, garantizando integridad total.
-- **ActionResult Pattern**: Estandarización de respuestas del servidor para un manejo de errores predecible y una UX fluida.
-- **Optimización de Caché**: Revalidación selectiva de etiquetas y rutas mediante `revalidatePath` y `revalidateTag`.
+### ⚡ Rendimiento
+- **Dynamic Imports**: carga diferida de los gráficos de Recharts mediante `next/dynamic`.
+- **Next/Image**: optimización automática de imágenes, WebP y lazy loading.
+- **Índices**: las tablas están indexadas por `user_id`, que es la columna por la que filtra todo.
 
-### ⚡ Rendimiento Optimizado
-- **Dynamic Imports**: Carga diferida de componentes pesados (como gráficos de Recharts) mediante `next/dynamic` con `ssr: false`.
-- **Next/Image**: Optimización automática de activos visuales, formatos WebP y Lazy Loading para un LCP sobresaliente.
-- **Métricas Vitales**: Enfoque en Core Web Vitals para asegurar una interactividad casi instantánea.
+### 🔍 SEO
+- **Metadata**: OpenGraph, Twitter Cards y robots.
+- **Structured Data**: Schema.org (JSON-LD).
+- **Sitemap & Robots**: generación automática.
 
-### 🔍 SEO Táctico
-- **Metadata Dinámica**: Configuración avanzada de OpenGraph, Twitter Cards y robots para máxima visibilidad.
-- **Structured Data**: Implementación de Schema.org (JSON-LD) para que AuraContable destaque en los resultados de búsqueda.
-- **Sitemap & Robots**: Generación automática de rutas para rastreadores de motores de búsqueda.
+### 🧪 Calidad
+- **TypeScript en modo estricto** y **ESLint**, ambos exigidos durante el build (`next.config.ts` no los silencia).
 
-### 🧪 Validación y Testing
-- **Playwright Suite**: Infraestructura de pruebas E2E lista para validar flujos críticos (Login, Creación de Factura, Generación de PDF).
-- **TypeScript Strict Mode**: Tipado exhaustivo para prevenir errores en tiempo de ejecución.
+---
+
+## ⚠️ Estado actual
+
+Lo que hay en el menú funciona, con estas salvedades:
+
+- **Presupuestos** es solo interfaz: no hay tabla ni acciones detrás. Está fuera del menú lateral.
+- **La pestaña de Pagos en Ajustes** no permite introducir las claves de Stripe/PayPal todavía; hay que escribirlas en la base de datos.
+- **El Modelo 303** calcula sobre datos reales, pero es orientativo: revísalo con tu gestor antes de presentar nada.
+- **No hay tests automatizados.** `@playwright/test` está en las dependencias pero no existe ninguna suite.
 
 ---
 
@@ -61,15 +70,39 @@ Tras un exhaustivo proceso de modernización, la plataforma alcanza un nivel de 
 - PostgreSQL (Neon.tech o local)
 
 ### 2. Configuración
+
+Crea un `.env` con:
+
+```bash
+DATABASE_URL=postgres://...
+NEXTAUTH_SECRET=...        # openssl rand -base64 32
+NEXTAUTH_URL=http://localhost:9002
+```
+
 ```bash
 npm install
-npx drizzle-kit push
+npx drizzle-kit push       # solo la primera vez, sobre una base vacía
 npm run dev
 ```
 
-### 3. Testing
+Si ya tenías datos de una versión anterior, aplica la migración en su lugar:
+
 ```bash
-npx playwright test
+psql "$DATABASE_URL" -f drizzle/001_indexes_and_vat.sql
+```
+
+### 3. Usuario inicial
+
+```bash
+SEED_ADMIN_EMAIL=tu@correo.com SEED_ADMIN_PASSWORD='...' npx tsx scripts/seed-admin.ts
+```
+
+### 4. Comprobaciones
+
+```bash
+npm run typecheck
+npm run lint
+npm run build
 ```
 
 ---

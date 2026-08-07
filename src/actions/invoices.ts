@@ -2,16 +2,14 @@
 
 import { db } from "@/db/config";
 import { invoices, invoiceItems, clients, invoiceTaxes, companyProfiles } from "@/db/schema";
-import { eq, desc, inArray } from "drizzle-orm";
+import { and, eq, desc, inArray } from "drizzle-orm";
 import { createNotification } from "./notifications";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { requireUserId } from "@/lib/session";
+import { type ActionResult, toActionError } from "@/lib/action-result";
 
 // --- Types & Schemas ---
-
-export type ActionResult<T = any> = 
-  | { success: true; data: T }
-  | { success: false; error: string };
 
 const InvoiceItemSchema = z.object({
   description: z.string().min(1, "La descripción es requerida"),
@@ -21,39 +19,48 @@ const InvoiceItemSchema = z.object({
 
 const InvoiceTaxSchema = z.object({
   name: z.string().min(1),
-  percentage: z.number().min(0).max(100),
+  percentage: z.number().min(-100).max(100),
 });
 
+/**
+ * Los totales NO se aceptan del cliente: se derivan de las líneas y los
+ * impuestos. Antes llegaban como número desde el formulario y se guardaban tal
+ * cual, así que una factura podía quedar con un importe que no cuadraba con su
+ * propio desglose.
+ */
 const InvoiceSchema = z.object({
-  userId: z.string().uuid(),
   clientId: z.string().uuid(),
   invoiceNumber: z.string().min(1),
   issueDate: z.coerce.date(),
   dueDate: z.coerce.date(),
   status: z.enum(['Paid', 'Pending', 'Overdue', 'Draft'] as const),
-  subtotal: z.number(),
-  total: z.number(),
   notes: z.string().optional(),
   items: z.array(InvoiceItemSchema).min(1, "Debe haber al menos un ítem"),
   taxes: z.array(InvoiceTaxSchema).optional(),
 });
 
-// --- Actions ---
+type ValidatedInvoice = z.infer<typeof InvoiceSchema>;
 
-export async function getInvoices(userId: string): Promise<any[]> {
-  if (!userId) return [];
-  
-  const results = await db.query.invoices.findMany({
-    where: eq(invoices.userId, userId),
-    with: {
-      client: true,
-      items: true,
-      taxes: true,
-    },
-    orderBy: [desc(invoices.createdAt)],
-  });
-  
-  return results.map(row => ({
+/** Importes en céntimos, calculados en el servidor a partir de las líneas. */
+function computeTotals(v: ValidatedInvoice) {
+  const items = v.items.map((item) => ({
+    description: item.description,
+    quantity: item.quantity,
+    price: Math.round(item.price * 100),
+    total: Math.round(item.price * item.quantity * 100),
+  }));
+
+  const subtotal = items.reduce((sum, i) => sum + i.total, 0);
+  const taxTotal = (v.taxes ?? []).reduce(
+    (sum, t) => sum + Math.round(subtotal * (t.percentage / 100)),
+    0,
+  );
+
+  return { items, subtotal, total: subtotal + taxTotal };
+}
+
+function mapInvoice(row: any) {
+  return {
     id: row.id,
     userId: row.userId,
     clientId: row.clientId,
@@ -64,312 +71,286 @@ export async function getInvoices(userId: string): Promise<any[]> {
     subtotal: row.subtotal / 100,
     total: row.total / 100,
     notes: row.notes || undefined,
-    taxes: row.taxes.map(t => ({
-        id: t.id,
-        name: t.name,
-        percentage: t.percentage,
-    })),
+    taxes: row.taxes.map((t: any) => ({ id: t.id, name: t.name, percentage: Number(t.percentage) })),
     createdAt: row.createdAt,
     client: {
-        name: row.client.name,
-        email: row.client.email,
-        address: row.client.address || undefined,
-        taxId: row.client.taxId || undefined,
+      name: row.client.name,
+      email: row.client.email,
+      address: row.client.address || undefined,
+      taxId: row.client.taxId || undefined,
     },
-    items: row.items.map(i => ({
-        id: i.id,
-        description: i.description,
-        quantity: i.quantity,
-        price: i.price / 100,
+    items: row.items.map((i: any) => ({
+      id: i.id,
+      description: i.description,
+      quantity: i.quantity,
+      price: i.price / 100,
     })),
-  }));
+  };
 }
 
-export async function getInvoiceById(invoiceId: string): Promise<any | null> {
-    if (!invoiceId) return null;
-    const row = await db.query.invoices.findFirst({
-        where: eq(invoices.id, invoiceId),
-        with: {
-            client: true,
-            items: true,
-            taxes: true,
-        }
+/** Comprueba que el cliente facturado pertenece a quien emite la factura. */
+async function assertOwnsClient(clientId: string, userId: string) {
+  const owned = await db
+    .select({ id: clients.id })
+    .from(clients)
+    .where(and(eq(clients.id, clientId), eq(clients.userId, userId)))
+    .limit(1);
+  if (owned.length === 0) throw new z.ZodError([{
+    code: "custom", path: ["clientId"], message: "El cliente seleccionado no existe.",
+  }]);
+}
+
+// --- Actions ---
+
+export async function getInvoices() {
+  const userId = await requireUserId();
+  const results = await db.query.invoices.findMany({
+    where: eq(invoices.userId, userId),
+    with: { client: true, items: true, taxes: true },
+    orderBy: [desc(invoices.createdAt)],
+  });
+  return results.map(mapInvoice);
+}
+
+export async function getInvoiceById(invoiceId: string) {
+  if (!invoiceId) return null;
+  const userId = await requireUserId();
+  const row = await db.query.invoices.findFirst({
+    where: and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)),
+    with: { client: true, items: true, taxes: true },
+  });
+  return row ? mapInvoice(row) : null;
+}
+
+export async function addInvoice(invoiceData: unknown): Promise<ActionResult<{ id: string } | null>> {
+  try {
+    const userId = await requireUserId();
+    const v = InvoiceSchema.parse(invoiceData);
+    await assertOwnsClient(v.clientId, userId);
+
+    const { items, subtotal, total } = computeTotals(v);
+
+    // Una factura y sus líneas son una unidad: si falla la inserción de los
+    // ítems, la cabecera no debe quedarse suelta y sin desglose.
+    const created = await db.transaction(async (tx) => {
+      const inserted = await tx.insert(invoices).values({
+        userId,
+        clientId: v.clientId,
+        invoiceNumber: v.invoiceNumber,
+        issueDate: v.issueDate,
+        dueDate: v.dueDate,
+        status: v.status,
+        subtotal,
+        total,
+        notes: v.notes,
+      }).returning();
+
+      const invoice = inserted[0];
+
+      await tx.insert(invoiceItems).values(items.map((i) => ({ ...i, invoiceId: invoice.id })));
+
+      if (v.taxes?.length) {
+        await tx.insert(invoiceTaxes).values(
+          v.taxes.map((t) => ({ invoiceId: invoice.id, name: t.name, percentage: String(t.percentage) })),
+        );
+      }
+
+      return invoice;
     });
 
-    if (!row) return null;
-
-    return {
-        id: row.id,
-        userId: row.userId,
-        clientId: row.clientId,
-        invoiceNumber: row.invoiceNumber,
-        issueDate: row.issueDate,
-        dueDate: row.dueDate,
-        status: row.status,
-        subtotal: row.subtotal / 100,
-        total: row.total / 100,
-        notes: row.notes || undefined,
-        taxes: row.taxes.map(t => ({
-            id: t.id,
-            name: t.name,
-            percentage: t.percentage,
-        })),
-        createdAt: row.createdAt,
-        client: {
-            name: row.client.name,
-            email: row.client.email,
-            address: row.client.address || undefined,
-            taxId: row.client.taxId || undefined,
-        },
-        items: row.items.map(i => ({
-            id: i.id,
-            description: i.description,
-            quantity: i.quantity,
-            price: i.price / 100,
-        })),
-    };
-}
-
-export async function addInvoice(invoiceData: any): Promise<ActionResult> {
-  try {
-    const validated = InvoiceSchema.parse(invoiceData);
-
-    const insertInvoice = await db.insert(invoices).values({
-      userId: validated.userId,
-      clientId: validated.clientId,
-      invoiceNumber: validated.invoiceNumber,
-      issueDate: validated.issueDate,
-      dueDate: validated.dueDate,
-      status: validated.status as any,
-      subtotal: Math.round(validated.subtotal * 100),
-      total: Math.round(validated.total * 100),
-      notes: validated.notes,
-    }).returning();
-    
-    const newInvoice = insertInvoice[0];
-
-    if (validated.items && validated.items.length > 0) {
-        const itemsToInsert = validated.items.map((item: any) => ({
-            invoiceId: newInvoice.id,
-            description: item.description,
-            quantity: item.quantity,
-            price: Math.round(item.price * 100),
-            total: Math.round((item.price * item.quantity) * 100),
-        }));
-        await db.insert(invoiceItems).values(itemsToInsert);
-    }
-
-    if (validated.taxes && validated.taxes.length > 0) {
-        const taxesToInsert = validated.taxes.map((tax: any) => ({
-            invoiceId: newInvoice.id,
-            name: tax.name,
-            percentage: tax.percentage,
-        }));
-        await db.insert(invoiceTaxes).values(taxesToInsert);
-    }
-
     await createNotification({
-        userId: validated.userId,
-        title: "Nueva Factura",
-        body: `Se ha creado la factura ${newInvoice.invoiceNumber}.`,
-        href: `/dashboard/invoices/${newInvoice.id}`,
+      userId,
+      title: "Nueva Factura",
+      body: `Se ha creado la factura ${created.invoiceNumber}.`,
+      href: `/dashboard/invoices/${created.id}`,
     });
 
     revalidatePath("/dashboard/invoices");
-    return { success: true, data: newInvoice };
+    return { success: true, data: { id: created.id } };
   } catch (error) {
-    console.error("Error adding invoice:", error);
-    if (error instanceof z.ZodError) {
-      return { success: false, error: error.errors[0].message };
-    }
-    return { success: false, error: "Error interno al crear la factura." };
+    return toActionError(error, "Error interno al crear la factura.", "addInvoice");
   }
 }
 
-export async function updateInvoice(invoiceId: string, invoiceData: any): Promise<ActionResult> {
+export async function updateInvoice(invoiceId: string, invoiceData: unknown): Promise<ActionResult> {
   try {
-    const validated = InvoiceSchema.parse(invoiceData);
+    const userId = await requireUserId();
+    const v = InvoiceSchema.parse(invoiceData);
+    await assertOwnsClient(v.clientId, userId);
 
-    await db.update(invoices).set({
-      clientId: validated.clientId,
-      status: validated.status as any,
-      invoiceNumber: validated.invoiceNumber,
-      issueDate: validated.issueDate,
-      dueDate: validated.dueDate,
-      subtotal: Math.round(validated.subtotal * 100),
-      total: Math.round(validated.total * 100),
-      notes: validated.notes,
-    }).where(eq(invoices.id, invoiceId));
-    
-    if (validated.items) {
-        await db.delete(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
-        const itemsToInsert = validated.items.map((item: any) => ({
-            invoiceId: invoiceId,
-            description: item.description,
-            quantity: item.quantity,
-            price: Math.round(item.price * 100),
-            total: Math.round((item.price * item.quantity) * 100),
-        }));
-        await db.insert(invoiceItems).values(itemsToInsert);
-    }
+    const { items, subtotal, total } = computeTotals(v);
 
-    if (validated.taxes) {
-        await db.delete(invoiceTaxes).where(eq(invoiceTaxes.invoiceId, invoiceId));
-        const taxesToInsert = validated.taxes.map((tax: any) => ({
-            invoiceId: invoiceId,
-            name: tax.name,
-            percentage: tax.percentage,
-        }));
-        await db.insert(invoiceTaxes).values(taxesToInsert);
-    }
+    const updated = await db.transaction(async (tx) => {
+      const rows = await tx.update(invoices).set({
+        clientId: v.clientId,
+        status: v.status,
+        invoiceNumber: v.invoiceNumber,
+        issueDate: v.issueDate,
+        dueDate: v.dueDate,
+        subtotal,
+        total,
+        notes: v.notes,
+      })
+        .where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)))
+        .returning({ id: invoices.id, invoiceNumber: invoices.invoiceNumber });
 
-    const invoice = await db.query.invoices.findFirst({
-        where: eq(invoices.id, invoiceId),
+      if (rows.length === 0) return null;
+
+      await tx.delete(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
+      await tx.insert(invoiceItems).values(items.map((i) => ({ ...i, invoiceId })));
+
+      await tx.delete(invoiceTaxes).where(eq(invoiceTaxes.invoiceId, invoiceId));
+      if (v.taxes?.length) {
+        await tx.insert(invoiceTaxes).values(
+          v.taxes.map((t) => ({ invoiceId, name: t.name, percentage: String(t.percentage) })),
+        );
+      }
+
+      return rows[0];
     });
 
-    if (invoice) {
-        await createNotification({
-            userId: invoice.userId,
-            title: "Factura Actualizada",
-            body: `La factura ${invoice.invoiceNumber} ha sido actualizada.`,
-            href: `/dashboard/invoices/${invoiceId}`,
-        });
-    }
+    if (!updated) return { success: false, error: "Factura no encontrada." };
+
+    await createNotification({
+      userId,
+      title: "Factura Actualizada",
+      body: `La factura ${updated.invoiceNumber} ha sido actualizada.`,
+      href: `/dashboard/invoices/${invoiceId}`,
+    });
 
     revalidatePath("/dashboard/invoices");
     revalidatePath(`/dashboard/invoices/${invoiceId}`);
-    return { success: true, data: invoice };
+    return { success: true, data: null };
   } catch (error) {
-    console.error("Error updating invoice:", error);
-    if (error instanceof z.ZodError) {
-      return { success: false, error: error.errors[0].message };
-    }
-    return { success: false, error: "Error interno al actualizar la factura." };
+    return toActionError(error, "Error interno al actualizar la factura.", "updateInvoice");
   }
 }
 
 export async function deleteInvoice(invoiceId: string): Promise<ActionResult> {
   try {
-    await db.delete(invoices).where(eq(invoices.id, invoiceId));
+    const userId = await requireUserId();
+    const deleted = await db
+      .delete(invoices)
+      .where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)))
+      .returning({ id: invoices.id });
+
+    if (deleted.length === 0) return { success: false, error: "Factura no encontrada." };
+
     revalidatePath("/dashboard/invoices");
     return { success: true, data: null };
   } catch (error) {
-    console.error("Error deleting invoice:", error);
-    return { success: false, error: "No se pudo eliminar la factura." };
+    return toActionError(error, "No se pudo eliminar la factura.", "deleteInvoice");
   }
 }
 
-export async function updateInvoiceStatus(invoiceId: string, status: 'Paid' | 'Pending' | 'Overdue' | 'Draft'): Promise<ActionResult> {
+export async function updateInvoiceStatus(
+  invoiceId: string,
+  status: 'Paid' | 'Pending' | 'Overdue' | 'Draft',
+): Promise<ActionResult> {
   try {
-    const updated = await db.update(invoices).set({
-      status: status as any,
-    }).where(eq(invoices.id, invoiceId)).returning();
+    const userId = await requireUserId();
+    const updated = await db
+      .update(invoices)
+      .set({ status })
+      .where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)))
+      .returning({ id: invoices.id, invoiceNumber: invoices.invoiceNumber });
 
-    const newInvoice = updated[0];
+    if (updated.length === 0) return { success: false, error: "Factura no encontrada." };
 
-    if (newInvoice) {
-        await createNotification({
-            userId: newInvoice.userId,
-            title: "Estado de Factura Actualizado",
-            body: `La factura ${newInvoice.invoiceNumber} ha sido cambiada a ${status}.`,
-            href: `/dashboard/invoices/${invoiceId}`,
-        });
-    }
+    await createNotification({
+      userId,
+      title: "Estado de Factura Actualizado",
+      body: `La factura ${updated[0].invoiceNumber} ha sido cambiada a ${status}.`,
+      href: `/dashboard/invoices/${invoiceId}`,
+    });
 
     revalidatePath("/dashboard/invoices");
     revalidatePath(`/dashboard/invoices/${invoiceId}`);
-    return { success: true, data: newInvoice };
+    return { success: true, data: null };
   } catch (error) {
-    console.error("Error updating invoice status:", error);
-    return { success: false, error: "No se pudo actualizar el estado de la factura." };
+    return toActionError(error, "No se pudo actualizar el estado de la factura.", "updateInvoiceStatus");
   }
 }
 
-export async function bulkUpdateInvoiceStatus(invoiceIds: string[], status: 'Paid' | 'Pending' | 'Overdue' | 'Draft'): Promise<ActionResult> {
-  if (!invoiceIds || invoiceIds.length === 0) return { success: true, data: null };
+export async function bulkUpdateInvoiceStatus(
+  invoiceIds: string[],
+  status: 'Paid' | 'Pending' | 'Overdue' | 'Draft',
+): Promise<ActionResult> {
+  if (!invoiceIds?.length) return { success: true, data: null };
   try {
-    const updated = await db.update(invoices).set({
-      status: status as any,
-    }).where(inArray(invoices.id, invoiceIds)).returning();
+    const userId = await requireUserId();
+    const updated = await db
+      .update(invoices)
+      .set({ status })
+      .where(and(inArray(invoices.id, invoiceIds), eq(invoices.userId, userId)))
+      .returning({ id: invoices.id });
 
     if (updated.length > 0) {
-        await createNotification({
-            userId: updated[0].userId,
-            title: "Facturas Actualizadas",
-            body: `Se ha cambiado el estado de ${updated.length} facturas a ${status}.`,
-            href: `/dashboard/invoices`,
-        });
+      await createNotification({
+        userId,
+        title: "Facturas Actualizadas",
+        body: `Se ha cambiado el estado de ${updated.length} facturas a ${status}.`,
+        href: `/dashboard/invoices`,
+      });
     }
 
     revalidatePath("/dashboard/invoices");
-    return { success: true, data: updated };
+    return { success: true, data: null };
   } catch (error) {
-    console.error("Error bulk updating invoice status:", error);
-    return { success: false, error: "No se pudieron actualizar las facturas." };
+    return toActionError(error, "No se pudieron actualizar las facturas.", "bulkUpdateInvoiceStatus");
   }
 }
 
-export async function getPublicInvoiceById(invoiceId: string): Promise<any | null> {
-    if (!invoiceId) return null;
-    
-    const row = await db.query.invoices.findFirst({
-        where: eq(invoices.id, invoiceId),
-        with: {
-            client: true,
-            items: true,
-            taxes: true,
-        }
-    });
+/**
+ * Vista pública de una factura, para el enlace de pago que recibe el cliente.
+ *
+ * No lleva sesión a propósito: la protege lo imprevisible del UUID. Devuelve
+ * solo lo que hay que enseñar para pagar — nunca las claves secretas de la
+ * pasarela, únicamente las publicables.
+ */
+export async function getPublicInvoiceById(invoiceId: string) {
+  if (!invoiceId) return null;
 
-    if (!row) return null;
+  const row = await db.query.invoices.findFirst({
+    where: eq(invoices.id, invoiceId),
+    with: { client: true, items: true, taxes: true },
+  });
+  if (!row) return null;
 
-    const companyResults = await db.query.companyProfiles.findFirst({
-        where: eq(companyProfiles.userId, row.userId),
-    });
+  const company = await db.query.companyProfiles.findFirst({
+    where: eq(companyProfiles.userId, row.userId),
+  });
+  if (!company) return null;
 
-    if (!companyResults) return null;
+  const mapped = mapInvoice(row);
 
-    return {
-        invoice: {
-            id: row.id,
-            invoiceNumber: row.invoiceNumber,
-            issueDate: row.issueDate,
-            dueDate: row.dueDate,
-            status: row.status,
-            subtotal: row.subtotal / 100,
-            total: row.total / 100,
-            notes: row.notes || undefined,
-            taxes: row.taxes.map(t => ({
-                id: t.id,
-                name: t.name,
-                percentage: t.percentage,
-            })),
-            client: {
-                name: row.client.name,
-                email: row.client.email,
-                address: row.client.address || undefined,
-                taxId: row.client.taxId || undefined,
-            },
-            items: row.items.map(i => ({
-                id: i.id,
-                description: i.description,
-                quantity: i.quantity,
-                price: i.price / 100,
-            })),
-        },
-        company: {
-            name: companyResults.companyName,
-            email: companyResults.email,
-            address: companyResults.address,
-            taxId: companyResults.taxId,
-            logoUrl: companyResults.logoUrl,
-            currency: companyResults.currency,
-            iban: companyResults.iban,
-            stripeEnabled: companyResults.stripeEnabled,
-            stripePublishableKey: companyResults.stripePublishableKey,
-            paypalEnabled: companyResults.paypalEnabled,
-            paypalClientId: companyResults.paypalClientId,
-            paypalSandbox: companyResults.paypalSandbox,
-        }
-    };
+  return {
+    invoice: {
+      id: mapped.id,
+      invoiceNumber: mapped.invoiceNumber,
+      issueDate: mapped.issueDate,
+      dueDate: mapped.dueDate,
+      status: mapped.status,
+      subtotal: mapped.subtotal,
+      total: mapped.total,
+      notes: mapped.notes,
+      taxes: mapped.taxes,
+      client: mapped.client,
+      items: mapped.items,
+    },
+    company: {
+      name: company.companyName,
+      email: company.email,
+      address: company.address,
+      taxId: company.taxId,
+      logoUrl: company.logoUrl,
+      currency: company.currency,
+      iban: company.iban,
+      stripeEnabled: company.stripeEnabled,
+      stripePublishableKey: company.stripePublishableKey,
+      paypalEnabled: company.paypalEnabled,
+      paypalClientId: company.paypalClientId,
+      paypalSandbox: company.paypalSandbox,
+    },
+  };
 }

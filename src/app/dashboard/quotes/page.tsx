@@ -87,14 +87,23 @@ export default function QuotesPage() {
                     <p className="text-sm text-muted-foreground">Envía propuestas a tus clientes y conviértelas en facturas.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="h-9">
+                    <Button variant="outline" size="sm" className="h-9" disabled>
                         <FileDown className="mr-2 h-4 w-4" /> Exportar CSV
                     </Button>
-                    <Button size="sm" className="h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-medium">
+                    <Button size="sm" className="h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-medium" disabled>
                         <Plus className="mr-2 h-4 w-4" /> Nuevo Presupuesto
                     </Button>
                 </div>
             </div>
+
+            <Alert className="rounded-md">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle className="font-medium text-sm">Módulo no disponible</AlertTitle>
+                <AlertDescription className="text-xs">
+                    Los presupuestos todavía no se guardan: esta pantalla es solo la interfaz y no
+                    tiene almacenamiento detrás. Se ha retirado del menú lateral hasta que funcione.
+                </AlertDescription>
+            </Alert>
 
             {/* Stats Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

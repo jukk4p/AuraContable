@@ -1,34 +1,43 @@
 /**
- * @fileoverview This file defines the core data structures and types used throughout the application,
- * mapping directly to the collections and documents stored in Cloud Firestore.
+ * @fileoverview Estructuras de datos de la aplicación. Reflejan lo que devuelven
+ * las acciones de `src/actions`, que leen de PostgreSQL vía Drizzle.
+ *
+ * Los campos opcionales admiten `null` porque es lo que devuelve el driver para
+ * una columna vacía; tratarlos solo como `undefined` ocultaba desajustes reales.
  */
 
 import type { Locale } from "./i18n/locales";
 
-/**
- * Represents the status of an invoice.
- */
-export type InvoiceStatus = 'Paid' | 'Pending' | 'Overdue';
+/** 'Draft' existe en la base de datos y en la validación desde el principio. */
+export type InvoiceStatus = 'Paid' | 'Pending' | 'Overdue' | 'Draft';
+
+/** Datos del cliente que se incrustan en una factura para mostrarla. */
+export type InvoiceClient = {
+  name: string;
+  email: string;
+  address?: string | null;
+  taxId?: string | null;
+};
 
 /**
  * Represents a user's company profile and settings.
  * Maps to the "companyProfiles" collection, where the document ID is the user's UID.
  */
 export type CompanyProfile = {
-  userId: string; // Foreign key to the user in Firebase Auth.
+  userId: string;
   name: string;
-  taxId?: string;
-  address?: string;
-  billingEmail?: string;
-  iban?: string;
-  logoUrl?: string; // URL to the company logo in Cloud Storage.
-  currency?: 'EUR' | 'USD' | 'GBP';
-  fiscalData?: string;
-  language?: Locale;
+  taxId?: string | null;
+  address?: string | null;
+  billingEmail?: string | null;
+  iban?: string | null;
+  logoUrl?: string | null;
+  currency?: 'EUR' | 'USD' | 'GBP' | string | null;
+  fiscalData?: string | null;
+  language?: Locale | string | null;
 
   // Default invoice settings
-  defaultTerms?: string;
-  defaultTaxes?: InvoiceTax[];
+  defaultTerms?: string | null;
+  defaultTaxes?: InvoiceTax[] | null;
 
   // Email template settings
   templates?: {
@@ -40,19 +49,19 @@ export type CompanyProfile = {
   notifications?: NotificationPreferences;
 
   // Appearance preferences
-  theme?: 'light' | 'dark' | 'system';
+  theme?: 'light' | 'dark' | 'system' | string | null;
 
   // Stripe Integration
-  stripeEnabled?: boolean;
-  stripePublishableKey?: string;
+  stripeEnabled?: boolean | null;
+  stripePublishableKey?: string | null;
   stripeSecretKey?: string;
   stripeWebhookSecret?: string;
 
   // PayPal Integration
-  paypalEnabled?: boolean;
-  paypalClientId?: string;
+  paypalEnabled?: boolean | null;
+  paypalClientId?: string | null;
   paypalSecret?: string;
-  paypalSandbox?: boolean;
+  paypalSandbox?: boolean | null;
 };
 
 export type NotificationPreferences = {
@@ -70,8 +79,8 @@ export type Client = {
   name: string;
   email: string;
   taxId?: string;
-  address?: string;
-  country?: string;
+  address?: string | null;
+  country?: string | null;
   avatarUrl?: string;
   phone?: string;
   notes?: string;
@@ -107,7 +116,7 @@ export type Invoice = {
   id: string; // Firestore document ID.
   userId: string; // The UID of the user who owns this invoice.
   clientId: string; // Foreign key to the "clients" collection.
-  client: Client; // Denormalized client data for display.
+  client: InvoiceClient;
   invoiceNumber: string;
   status: InvoiceStatus;
   issueDate: Date;

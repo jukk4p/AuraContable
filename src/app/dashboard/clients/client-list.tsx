@@ -44,13 +44,15 @@ export default function ClientList() {
     const [dbError, setDbError] = useState<string | null>(null);
     const [isExporting, setIsExporting] = useState(false);
 
+    const userId = user?.id;
+
     useEffect(() => {
         const fetchClients = async () => {
-            if (user?.id) {
+            if (userId) {
                 setDbLoading(true);
                 setDbError(null);
                 try {
-                    const userClients = await getClients(user.id);
+                    const userClients = await getClients();
                     setClients(userClients);
                 } catch (e: any) {
                     console.error("Error fetching clients: ", e);
@@ -63,7 +65,7 @@ export default function ClientList() {
             }
         };
         fetchClients();
-    }, [user, status]);
+    }, [userId, status]);
 
     const stats = useMemo(() => {
         const total = clients.length;

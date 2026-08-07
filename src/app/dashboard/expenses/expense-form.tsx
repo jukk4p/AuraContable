@@ -215,6 +215,10 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
                 finalAmount = totalCalculated.total;
             }
 
+            // El tipo de IVA elegido se persiste: es lo que permite que el
+            // Modelo 303 calcule la cuota deducible real en vez de estimarla.
+            const vatTax = (data.taxes || []).find(t => /iva|vat|tva/i.test(t.name));
+
             const payload = {
                 amount: finalAmount,
                 category: data.category === 'Otros' ? (data.customCategory || 'Otros') : data.category,
@@ -223,7 +227,7 @@ export default function ExpenseForm({ expense, userId }: ExpenseFormProps) {
                 date: data.date,
                 receiptUrl: data.receiptUrl,
                 quantity: finalQuantity,
-                userId
+                vatRate: vatTax ? Number(vatTax.percentage) : 0,
             };
 
             if (isEditing) {

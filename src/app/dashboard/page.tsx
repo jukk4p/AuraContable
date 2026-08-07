@@ -9,6 +9,7 @@ import {
     Calendar, AlertTriangle, AlertCircle
 } from "lucide-react";
 import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import { getInvoices } from "@/actions/invoices";
 import { getExpenses } from "@/actions/expenses";
 import { getClients } from "@/actions/clients";
 import { cn } from "@/lib/utils";
+import { getMonthBuckets, isInBucket, getNextFilingDeadline } from "@/lib/fiscal";
 import dynamic from 'next/dynamic';
 
 const DashboardChart = dynamic(() => import('@/components/dashboard/dashboard-chart'), { 
@@ -38,22 +40,27 @@ export default function DashboardPage() {
     const [clients, setClients] = useState<any[]>([]);
     const [expenses, setExpenses] = useState<any[]>([]);
     const [dbLoading, setDbLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
+
+    const userId = user?.id;
 
     useEffect(() => {
         const fetchData = async () => {
-            if (user?.id) {
+            if (userId) {
                 setDbLoading(true);
+                setLoadError(null);
                 try {
                     const [invData, cliData, expData] = await Promise.all([
-                        getInvoices(user.id),
-                        getClients(user.id),
-                        getExpenses(user.id)
+                        getInvoices(),
+                        getClients(),
+                        getExpenses()
                     ]);
                     setInvoices(invData);
                     setClients(cliData);
                     setExpenses(expData);
                 } catch (e) {
-                    console.error(e);
+                    console.error("Error cargando el panel:", e);
+                    setLoadError("No se han podido cargar tus datos. Revisa tu conexión e inténtalo de nuevo.");
                 } finally {
                     setDbLoading(false);
                 }
@@ -62,7 +69,7 @@ export default function DashboardPage() {
             }
         };
         fetchData();
-    }, [user, status]);
+    }, [userId, status]);
 
     const stats = useMemo(() => {
         const paid = invoices.filter(i => i.status === 'Paid');
@@ -83,22 +90,33 @@ export default function DashboardPage() {
     }, [invoices, expenses]);
 
     const chartData = useMemo(() => {
-        const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun"];
-        return months.map((month, idx) => {
+        const buckets = getMonthBuckets(new Date(), 6);
+        return buckets.map(bucket => {
             const income = invoices
-                .filter(i => i.status === 'Paid' && new Date(i.issueDate).getMonth() === idx)
+                .filter(i => i.status === 'Paid' && isInBucket(i.issueDate, bucket))
                 .reduce((s, i) => s + i.total, 0);
             const exp = expenses
-                .filter(e => new Date(e.date).getMonth() === idx)
+                .filter(e => isInBucket(e.date, bucket))
                 .reduce((s, e) => s + e.amount, 0);
 
             return {
-                name: month,
+                name: bucket.label,
                 ingresos: Math.round(income),
                 gastos: Math.round(exp)
             };
         });
     }, [invoices, expenses]);
+
+    /** Vencimientos y avisos reales: antes eran texto fijo ("En 5 días (20 Jul)"). */
+    const agenda = useMemo(() => {
+        const { date, daysLeft } = getNextFilingDeadline(new Date());
+        const missingTaxId = invoices.filter(i => !i.client?.taxId).length;
+        return {
+            deadlineLabel: `En ${daysLeft} ${daysLeft === 1 ? 'día' : 'días'} (${format(date, "d 'de' MMMM", { locale: es })})`,
+            urgent: daysLeft <= 10,
+            missingTaxId,
+        };
+    }, [invoices]);
 
     const topClients = useMemo(() => {
         return clients
@@ -126,6 +144,13 @@ export default function DashboardPage() {
 
     return (
       <div className="space-y-6">
+        {loadError && (
+            <Alert variant="destructive" className="rounded-md border-danger text-danger">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle className="font-medium text-sm">No se pudieron cargar los datos</AlertTitle>
+                <AlertDescription className="text-xs">{loadError}</AlertDescription>
+            </Alert>
+        )}
         {needsAlert && (
             <Alert className="bg-danger/10 border-danger/20 text-danger rounded-md flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -266,29 +291,43 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="flex gap-3">
-                            <div className="mt-0.5"><AlertCircle className="h-4 w-4 text-danger" /></div>
+                            <div className="mt-0.5">
+                                <AlertCircle className={cn("h-4 w-4", agenda.urgent ? "text-danger" : "text-muted-foreground")} />
+                            </div>
                             <div className="space-y-1">
                                 <p className="text-sm font-medium leading-none">Modelo 303 IVA</p>
                                 <p className="text-xs text-muted-foreground">Presentación trimestral del IVA</p>
-                                <p className="text-xs font-medium text-danger">En 5 días (20 Jul)</p>
+                                <p className={cn("text-xs font-medium", agenda.urgent ? "text-danger" : "text-muted-foreground")}>
+                                    {agenda.deadlineLabel}
+                                </p>
                             </div>
                         </div>
                         <div className="flex gap-3">
-                            <div className="mt-0.5"><AlertCircle className="h-4 w-4 text-warning" /></div>
+                            <div className="mt-0.5">
+                                <AlertCircle className={cn("h-4 w-4", agenda.urgent ? "text-warning" : "text-muted-foreground")} />
+                            </div>
                             <div className="space-y-1">
                                 <p className="text-sm font-medium leading-none">Retenciones IRPF</p>
                                 <p className="text-xs text-muted-foreground">Modelo 130 pago fraccionado</p>
-                                <p className="text-xs font-medium text-warning">En 5 días (20 Jul)</p>
+                                <p className={cn("text-xs font-medium", agenda.urgent ? "text-warning" : "text-muted-foreground")}>
+                                    {agenda.deadlineLabel}
+                                </p>
                             </div>
                         </div>
-                        <div className="flex gap-3">
-                            <div className="mt-0.5"><AlertCircle className="h-4 w-4 text-primary" /></div>
-                            <div className="space-y-1">
-                                <p className="text-sm font-medium leading-none">Avisos pendientes</p>
-                                <p className="text-xs text-muted-foreground">3 facturas sin NIF de cliente</p>
-                                <p className="text-xs font-medium text-primary cursor-pointer hover:underline">Revisar ahora</p>
+                        {agenda.missingTaxId > 0 && (
+                            <div className="flex gap-3">
+                                <div className="mt-0.5"><AlertCircle className="h-4 w-4 text-primary" /></div>
+                                <div className="space-y-1">
+                                    <p className="text-sm font-medium leading-none">Avisos pendientes</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {agenda.missingTaxId} {agenda.missingTaxId === 1 ? 'factura' : 'facturas'} sin NIF de cliente
+                                    </p>
+                                    <Link href="/dashboard/invoices" className="text-xs font-medium text-primary cursor-pointer hover:underline">
+                                        Revisar ahora
+                                    </Link>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
