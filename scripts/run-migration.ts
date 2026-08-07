@@ -39,7 +39,9 @@ async function main() {
     process.exit(1);
   }
 
-  const sql = postgres(connectionString, { prepare: false, max: 1 });
+  // Los NOTICE de "ya existe, se omite" son el resultado esperado de las
+  // cláusulas IF NOT EXISTS al reejecutar; no son errores.
+  const sql = postgres(connectionString, { prepare: false, max: 1, onnotice: () => {} });
 
   try {
     console.log(`▶ Aplicando ${path.basename(sqlPath)}...`);
