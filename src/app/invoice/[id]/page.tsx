@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { CreditCard, Download, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import Image from "next/image";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export default function PublicInvoicePage() {
     const params = useParams();
@@ -19,7 +20,8 @@ export default function PublicInvoicePage() {
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [paying, setPaying] = useState(false);
-    
+    const { t } = useLocale();
+
     const isSuccess = searchParams.get("success") === "true";
     const isCanceled = searchParams.get("canceled") === "true";
 
@@ -87,6 +89,7 @@ export default function PublicInvoicePage() {
 
     const { invoice, company } = data;
     const isPaid = invoice.status === "Paid" || isSuccess;
+    const isPartiallyPaid = invoice.status === "PartiallyPaid" && !isPaid;
 
     return (
         <div className="min-h-screen bg-[#fcfcfd] dark:bg-[#0a0a0b] py-12 px-4 selection:bg-primary/20">
@@ -136,11 +139,11 @@ export default function PublicInvoicePage() {
                     </div>
                     
                     <div className="flex flex-col items-start md:items-end gap-3">
-                         <Badge 
+                         <Badge
                             variant={isPaid ? "default" : (invoice.status === "Overdue" ? "destructive" : "secondary")}
-                            className={`px-4 py-1.5 text-sm font-bold uppercase tracking-widest ${isPaid ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
+                            className={`px-4 py-1.5 text-sm font-bold uppercase tracking-widest ${isPaid ? 'bg-emerald-500 hover:bg-emerald-600' : ''} ${isPartiallyPaid ? 'bg-sky-500! text-white hover:bg-sky-600!' : ''}`}
                         >
-                            {isPaid ? "PAGADA" : (invoice.status === "Overdue" ? "VENCIDA" : "PENDIENTE")}
+                            {isPaid ? "PAGADA" : (isPartiallyPaid ? "PAGO PARCIAL" : (invoice.status === "Overdue" ? "VENCIDA" : "PENDIENTE"))}
                         </Badge>
                         <div className="text-right">
                              <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-tighter">Vencimiento</p>
@@ -234,8 +237,21 @@ export default function PublicInvoicePage() {
                                 {new Intl.NumberFormat('es-ES', { style: 'currency', currency: company.currency || 'EUR' }).format(invoice.total)}
                             </span>
                         </div>
-                        
-                        {!isPaid && (
+
+                        {isPartiallyPaid && (
+                            <div className="flex justify-between items-center py-2 text-sm font-medium">
+                                <span>Pagado: {new Intl.NumberFormat('es-ES', { style: 'currency', currency: company.currency || 'EUR' }).format(invoice.amountPaid)}</span>
+                                <span>Pendiente: {new Intl.NumberFormat('es-ES', { style: 'currency', currency: company.currency || 'EUR' }).format(invoice.amountDue)}</span>
+                            </div>
+                        )}
+
+                        {!isPaid && isPartiallyPaid && (
+                            <p className="text-xs text-muted-foreground pt-4">
+                                {t('invoices.payments.gatewayDisabledNotice')}
+                            </p>
+                        )}
+
+                        {!isPaid && !isPartiallyPaid && (
                             <div className="space-y-4 pt-6">
                                 {company.stripeEnabled && (
                                     <Button 
