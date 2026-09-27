@@ -74,11 +74,10 @@ export default function DashboardPage() {
     }, [userId, status]);
 
     const stats = useMemo(() => {
-        const paid = invoices.filter(i => i.status === 'Paid');
-        const pending = invoices.filter(i => i.status === 'Pending');
+        const pending = invoices.filter(i => i.status === 'Pending' || i.status === 'PartiallyPaid');
         const overdue = invoices.filter(i => i.status === 'Overdue');
 
-        const totalIncome = paid.reduce((sum, i) => sum + (i.total || 0), 0);
+        const totalIncome = invoices.reduce((sum, i) => sum + (i.amountPaid || 0), 0);
         const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
         const cashFlow = totalIncome - totalExpenses;
 

@@ -30,7 +30,7 @@ import type { Invoice, InvoiceTax } from "./types";
 export const DEFAULT_VAT_RATE = 21;
 
 /** Facturas en borrador no devengan IVA: aún no se han emitido. */
-const TAXABLE_STATUSES = new Set(["Paid", "Pending", "Overdue"]);
+const TAXABLE_STATUSES = new Set(["Paid", "PartiallyPaid", "Pending", "Overdue"]);
 
 const VAT_NAME = /iva|vat/i;
 const RETENTION_NAME = /irpf|retenc/i;
@@ -133,6 +133,7 @@ export function getPaymentScore(
 
   const overdue = issued.filter((i) => i.status === 'Overdue').length;
   const pending = issued.filter((i) => i.status === 'Pending').length;
+  const partiallyPaid = issued.filter((i) => i.status === 'PartiallyPaid').length;
   const paid = issued.filter((i) => i.status === 'Paid').length;
 
   if (overdue > 0) {
@@ -142,11 +143,13 @@ export function getPaymentScore(
       detail: `${overdue} de ${issued.length} facturas vencidas sin cobrar.`,
     };
   }
-  if (pending > 0) {
+  if (pending > 0 || partiallyPaid > 0) {
     return {
       label: 'Al corriente',
       variant: 'primary',
-      detail: `${paid} pagadas y ${pending} pendientes, ninguna vencida.`,
+      detail: partiallyPaid > 0
+        ? `${paid} pagadas, ${partiallyPaid} con abono parcial y ${pending} pendientes, ninguna vencida.`
+        : `${paid} pagadas y ${pending} pendientes, ninguna vencida.`,
     };
   }
   return {

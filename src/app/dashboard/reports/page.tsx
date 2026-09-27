@@ -200,7 +200,7 @@ function ReportsContent() {
             (inv.total || 0).toFixed(2),
             inv.status,
         ]);
-        const statusMap: Record<string, string> = { Paid: 'Pagada', Pending: 'Pendiente', Overdue: 'Vencida', Draft: 'Borrador' };
+        const statusMap: Record<string, string> = { Paid: 'Pagada', PartiallyPaid: 'Parcialmente Pagada', Pending: 'Pendiente', Overdue: 'Vencida', Draft: 'Borrador' };
         const translatedRows = rows.map(r => [...r.slice(0, -1), statusMap[r[r.length - 1] as string] || r[r.length - 1]]);
         const csvContent = '\uFEFF' + [headers, ...translatedRows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

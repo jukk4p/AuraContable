@@ -19,14 +19,14 @@ type Localization = {
 // between the server and the client without a proper state management library.
 function calculateReportData(data: Invoice[], t: (key: string) => string): ReportData {
      const totalAmount = data.reduce((sum, inv) => sum + inv.total, 0);
-    const totalPaid = data.filter(inv => inv.status === 'Paid').reduce((sum, inv) => sum + inv.total, 0);
+    const totalPaid = data.reduce((sum, inv) => sum + (inv.amountPaid || 0), 0);
     const totalTaxes = data.reduce((sum, inv) => {
         const invoiceTaxes = (inv.taxes || []).reduce((taxSum, tax) => taxSum + (inv.subtotal * (tax.percentage / 100)), 0);
         return sum + invoiceTaxes;
     }, 0);
     
     const paidCount = data.filter(inv => inv.status === 'Paid').length;
-    const pendingCount = data.filter(inv => inv.status === 'Pending').length;
+    const pendingCount = data.filter(inv => inv.status === 'Pending' || inv.status === 'PartiallyPaid').length;
     const overdueCount = data.filter(inv => inv.status === 'Overdue').length;
 
     const monthlyData = data.reduce((acc, inv) => {
@@ -36,6 +36,10 @@ function calculateReportData(data: Invoice[], t: (key: string) => string): Repor
         }
         acc[month].total += inv.total;
         if (inv.status === 'Paid') acc[month].paid += inv.total;
+        if (inv.status === 'PartiallyPaid') {
+            acc[month].paid += inv.amountPaid;
+            acc[month].pending += inv.amountDue;
+        }
         if (inv.status === 'Pending') acc[month].pending += inv.total;
         if (inv.status === 'Overdue') acc[month].overdue += inv.total;
 
