@@ -62,9 +62,28 @@
         "downloadPdf": "Descargar PDF",
         "deleteInvoice": "Eliminar Factura",
         "statusPaid": "Pagada",
+        "statusPartiallyPaid": "Parcialmente Pagada",
         "statusPending": "Pendiente",
         "statusOverdue": "Vencida",
-        "invoice": "Factura"
+        "invoice": "Factura",
+        "payments": {
+            "title": "Pagos",
+            "addButton": "Añadir pago",
+            "amount": "Importe",
+            "date": "Fecha",
+            "method": "Método",
+            "methodTransfer": "Transferencia",
+            "methodCash": "Efectivo",
+            "methodOther": "Otro",
+            "note": "Nota",
+            "notePlaceholder": "Nota opcional",
+            "amountPaid": "Pagado",
+            "amountDue": "Pendiente",
+            "emptyState": "Todavía no se ha registrado ningún pago.",
+            "deleteConfirmTitle": "¿Eliminar este pago?",
+            "deleteConfirmDescription": "Esta acción no se puede deshacer. El saldo pendiente de la factura se recalculará.",
+            "gatewayDisabledNotice": "Este pago se está gestionando por transferencia directa. Contacta con nosotros si tienes cualquier duda."
+        }
     },
     "newInvoice": {
         "title": "Crear Nueva Factura",

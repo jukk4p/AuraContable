@@ -62,9 +62,28 @@
         "downloadPdf": "Descarrega el PDF",
         "deleteInvoice": "Elimina la Factura",
         "statusPaid": "Pagada",
+        "statusPartiallyPaid": "Pagada Parcialment",
         "statusPending": "Pendent",
         "statusOverdue": "Vençuda",
-        "invoice": "Factura"
+        "invoice": "Factura",
+        "payments": {
+            "title": "Pagaments",
+            "addButton": "Afegeix Pagament",
+            "amount": "Import",
+            "date": "Data",
+            "method": "Mètode",
+            "methodTransfer": "Transferència",
+            "methodCash": "Efectiu",
+            "methodOther": "Altre",
+            "note": "Nota",
+            "notePlaceholder": "Nota opcional",
+            "amountPaid": "Pagat",
+            "amountDue": "Pendent",
+            "emptyState": "Encara no s'ha registrat cap pagament.",
+            "deleteConfirmTitle": "Eliminar aquest pagament?",
+            "deleteConfirmDescription": "Aquesta acció no es pot desfer. El saldo pendent de la factura es recalcularà.",
+            "gatewayDisabledNotice": "Aquest pagament es gestiona per transferència directa. Contacta amb nosaltres si tens cap dubte."
+        }
     },
     "newInvoice": {
         "title": "Crea una Nova Factura",

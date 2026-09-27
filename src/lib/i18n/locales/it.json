@@ -62,9 +62,28 @@
         "downloadPdf": "Scarica PDF",
         "deleteInvoice": "Elimina Fattura",
         "statusPaid": "Pagata",
+        "statusPartiallyPaid": "Parzialmente Pagata",
         "statusPending": "In sospeso",
         "statusOverdue": "Scaduta",
-        "invoice": "Fattura"
+        "invoice": "Fattura",
+        "payments": {
+            "title": "Pagamenti",
+            "addButton": "Aggiungi Pagamento",
+            "amount": "Importo",
+            "date": "Data",
+            "method": "Metodo",
+            "methodTransfer": "Bonifico",
+            "methodCash": "Contanti",
+            "methodOther": "Altro",
+            "note": "Nota",
+            "notePlaceholder": "Nota opzionale",
+            "amountPaid": "Pagato",
+            "amountDue": "Dovuto",
+            "emptyState": "Non è stato ancora registrato alcun pagamento.",
+            "deleteConfirmTitle": "Eliminare questo pagamento?",
+            "deleteConfirmDescription": "Questa azione non può essere annullata. Il saldo residuo della fattura verrà ricalcolato.",
+            "gatewayDisabledNotice": "Questo pagamento viene gestito tramite bonifico diretto. Contattaci se hai domande."
+        }
     },
     "newInvoice": {
         "title": "Crea Nuova Fattura",

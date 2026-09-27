@@ -62,9 +62,28 @@
         "downloadPdf": "Download PDF",
         "deleteInvoice": "Delete Invoice",
         "statusPaid": "Paid",
+        "statusPartiallyPaid": "Partially Paid",
         "statusPending": "Pending",
         "statusOverdue": "Overdue",
-        "invoice": "Invoice"
+        "invoice": "Invoice",
+        "payments": {
+            "title": "Payments",
+            "addButton": "Add payment",
+            "amount": "Amount",
+            "date": "Date",
+            "method": "Method",
+            "methodTransfer": "Bank transfer",
+            "methodCash": "Cash",
+            "methodOther": "Other",
+            "note": "Note",
+            "notePlaceholder": "Optional note",
+            "amountPaid": "Paid",
+            "amountDue": "Due",
+            "emptyState": "No payments registered yet.",
+            "deleteConfirmTitle": "Delete this payment?",
+            "deleteConfirmDescription": "This action cannot be undone. The invoice balance will be recalculated.",
+            "gatewayDisabledNotice": "This invoice is being paid by direct transfer. Contact us if you have any questions."
+        }
     },
     "newInvoice": {
         "title": "Create New Invoice",

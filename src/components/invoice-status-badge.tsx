@@ -13,6 +13,7 @@ export default function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) 
   const getStatusText = () => {
     switch (status) {
       case 'Paid': return t('invoices.statusPaid');
+      case 'PartiallyPaid': return t('invoices.statusPartiallyPaid');
       case 'Pending': return t('invoices.statusPending');
       case 'Overdue': return t('invoices.statusOverdue');
       default: return status;
@@ -23,6 +24,8 @@ export default function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) 
     switch (status) {
       case 'Paid':
         return 'bg-emerald-500/10 text-emerald-500 border-none';
+      case 'PartiallyPaid':
+        return 'bg-sky-500/10 text-sky-500 border-none';
       case 'Pending':
         return 'bg-amber-500/10 text-amber-500 border-none';
       case 'Overdue':

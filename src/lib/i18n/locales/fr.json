@@ -62,9 +62,28 @@
         "downloadPdf": "Télécharger le PDF",
         "deleteInvoice": "Supprimer la facture",
         "statusPaid": "Payée",
+        "statusPartiallyPaid": "Partiellement payée",
         "statusPending": "En attente",
         "statusOverdue": "En retard",
-        "invoice": "Facture"
+        "invoice": "Facture",
+        "payments": {
+            "title": "Paiements",
+            "addButton": "Ajouter un paiement",
+            "amount": "Montant",
+            "date": "Date",
+            "method": "Méthode",
+            "methodTransfer": "Virement bancaire",
+            "methodCash": "Espèces",
+            "methodOther": "Autre",
+            "note": "Note",
+            "notePlaceholder": "Note facultative",
+            "amountPaid": "Payé",
+            "amountDue": "Dû",
+            "emptyState": "Aucun paiement n'a encore été enregistré.",
+            "deleteConfirmTitle": "Supprimer ce paiement ?",
+            "deleteConfirmDescription": "Cette action ne peut pas être annulée. Le solde restant de la facture sera recalculé.",
+            "gatewayDisabledNotice": "Ce paiement est géré par virement bancaire direct. Contactez-nous si vous avez des questions."
+        }
     },
     "newInvoice": {
         "title": "Créer une nouvelle facture",
