@@ -2,7 +2,7 @@
 
 "use client"
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from "next-auth/react";
 import { format } from 'date-fns';
@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import InvoiceStatusBadge from '@/components/invoice-status-badge';
+import InvoicePaymentsCard from '@/components/invoice-payments-card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { generateInvoicePdf } from '@/lib/pdf-generator';
 import { toast } from '@/hooks/use-toast';
@@ -44,35 +45,37 @@ export default function InvoiceDetailsPage() {
     const invoiceId = params.id as string;
     const localeMap = { es: es };
 
+    const fetchInvoiceData = useCallback(async () => {
+        if (!user || !invoiceId) return;
+        setIsLoading(true);
+        try {
+            const [invoiceData, companyData] = await Promise.all([
+                getInvoiceById(invoiceId),
+                getCompanyProfile()
+            ]);
+
+            if (invoiceData && invoiceData.userId === user.id) {
+                setInvoice(invoiceData);
+            } else {
+                toast({ title: "Error", description: "Factura no encontrada o sin acceso.", variant: "destructive" });
+                setInvoice(null);
+            }
+            setCompanyProfile(companyData);
+        } catch (error) {
+            console.error("Error fetching invoice details:", error);
+            toast({ title: "Error", description: "No se pudieron cargar los detalles de la factura.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [user, invoiceId]);
+
     useEffect(() => {
         if (user && invoiceId) {
-            const fetchInvoiceData = async () => {
-                setIsLoading(true);
-                try {
-                    const [invoiceData, companyData] = await Promise.all([
-                        getInvoiceById(invoiceId),
-                        getCompanyProfile()
-                    ]);
-
-                    if (invoiceData && invoiceData.userId === user.id) {
-                        setInvoice(invoiceData);
-                    } else {
-                        toast({ title: "Error", description: "Factura no encontrada o sin acceso.", variant: "destructive" });
-                        setInvoice(null);
-                    }
-                    setCompanyProfile(companyData);
-                } catch (error) {
-                    console.error("Error fetching invoice details:", error);
-                    toast({ title: "Error", description: "No se pudieron cargar los detalles de la factura.", variant: "destructive" });
-                } finally {
-                    setIsLoading(false);
-                }
-            };
             fetchInvoiceData();
         } else if (!user) {
-            setIsLoading(false)
+            setIsLoading(false);
         }
-    }, [user?.id, invoiceId]);
+    }, [user, invoiceId, fetchInvoiceData]);
 
     const handleDownloadPdf = async () => {
         if (!invoice) return;
@@ -357,6 +360,8 @@ export default function InvoiceDetailsPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            <InvoicePaymentsCard invoice={invoice} onChanged={fetchInvoiceData} />
         </div>
     );
 }
