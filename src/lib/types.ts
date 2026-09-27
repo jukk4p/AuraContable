@@ -9,7 +9,7 @@
 import type { Locale } from "./i18n/locales";
 
 /** 'Draft' existe en la base de datos y en la validación desde el principio. */
-export type InvoiceStatus = 'Paid' | 'Pending' | 'Overdue' | 'Draft';
+export type InvoiceStatus = 'Paid' | 'PartiallyPaid' | 'Pending' | 'Overdue' | 'Draft';
 
 /** Datos del cliente que se incrustan en una factura para mostrarla. */
 export type InvoiceClient = {
@@ -109,6 +109,18 @@ export type InvoiceTax = {
 };
 
 /**
+ * Un abono registrado a mano contra una factura. Solo hay alta y borrado —
+ * no edición — así que no lleva `updatedAt`.
+ */
+export type InvoicePayment = {
+  id: string;
+  amount: number;
+  paidAt: Date;
+  method?: 'Transferencia' | 'Efectivo' | 'Otro' | null;
+  note?: string | null;
+};
+
+/**
  * Represents a single invoice.
  * Maps to the "invoices" collection.
  */
@@ -123,16 +135,21 @@ export type Invoice = {
   dueDate: Date;
   items: InvoiceItem[];
   taxes: InvoiceTax[];
+  payments: InvoicePayment[];
   subtotal: number;
   total: number;
+  /** Suma real de `payments`, salvo que `status === 'Paid'`, en cuyo caso vale `total`. */
+  amountPaid: number;
+  /** `max(total - amountPaid, 0)`. */
+  amountDue: number;
   notes?: string;
   terms?: string;
-  
+
   // Payment Integration
   paymentMethod?: 'Stripe' | 'PayPal' | 'Manual';
   paymentId?: string;
   paymentStatus?: string;
-  
+
   createdAt: Date;
 };
 
