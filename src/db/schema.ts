@@ -103,6 +103,18 @@ export const invoiceTaxes = pgTable('invoice_taxes', {
   invoiceIdx: index('invoice_taxes_invoice_id_idx').on(table.invoiceId),
 }));
 
+export const invoicePayments = pgTable('invoice_payments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  invoiceId: uuid('invoice_id').notNull().references(() => invoices.id, { onDelete: 'cascade' }),
+  amount: integer('amount').notNull(), // céntimos, igual que el resto de importes
+  paidAt: timestamp('paid_at').notNull(),
+  method: varchar('method', { length: 50 }), // 'Transferencia' | 'Efectivo' | 'Otro'
+  note: text('note'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  invoiceIdx: index('invoice_payments_invoice_id_idx').on(table.invoiceId),
+}));
+
 export const notifications = pgTable('notifications', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -164,6 +176,7 @@ export const invoicesRelations = relations(invoices, ({ one, many }) => ({
   }),
   items: many(invoiceItems),
   taxes: many(invoiceTaxes),
+  payments: many(invoicePayments),
 }));
 
 export const invoiceTaxesRelations = relations(invoiceTaxes, ({ one }) => ({
@@ -176,6 +189,13 @@ export const invoiceTaxesRelations = relations(invoiceTaxes, ({ one }) => ({
 export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
   invoice: one(invoices, {
     fields: [invoiceItems.invoiceId],
+    references: [invoices.id],
+  }),
+}));
+
+export const invoicePaymentsRelations = relations(invoicePayments, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [invoicePayments.invoiceId],
     references: [invoices.id],
   }),
 }));
