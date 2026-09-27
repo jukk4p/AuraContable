@@ -68,6 +68,10 @@ function computeTotals(v: ValidatedInvoice) {
 }
 
 function mapInvoice(row: any) {
+  const rawAmountPaid = (row.payments || []).reduce((sum: number, p: any) => sum + p.amount, 0);
+  const amountPaid = row.status === 'Paid' ? row.total : rawAmountPaid;
+  const amountDue = Math.max(row.total - amountPaid, 0);
+
   return {
     id: row.id,
     userId: row.userId,
@@ -78,8 +82,19 @@ function mapInvoice(row: any) {
     status: row.status,
     subtotal: row.subtotal / 100,
     total: row.total / 100,
+    amountPaid: amountPaid / 100,
+    amountDue: amountDue / 100,
     notes: row.notes || undefined,
     taxes: row.taxes.map((t: any) => ({ id: t.id, name: t.name, percentage: Number(t.percentage) })),
+    payments: (row.payments || [])
+      .map((p: any) => ({
+        id: p.id,
+        amount: p.amount / 100,
+        paidAt: p.paidAt,
+        method: p.method || undefined,
+        note: p.note || undefined,
+      }))
+      .sort((a: any, b: any) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime()),
     createdAt: row.createdAt,
     client: {
       name: row.client.name,
@@ -114,7 +129,7 @@ export async function getInvoices() {
   const userId = await requireUserId();
   const results = await db.query.invoices.findMany({
     where: eq(invoices.userId, userId),
-    with: { client: true, items: true, taxes: true },
+    with: { client: true, items: true, taxes: true, payments: true },
     orderBy: [desc(invoices.createdAt)],
   });
   return results.map(mapInvoice);
@@ -125,7 +140,7 @@ export async function getInvoiceById(invoiceId: string) {
   const userId = await requireUserId();
   const row = await db.query.invoices.findFirst({
     where: and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)),
-    with: { client: true, items: true, taxes: true },
+    with: { client: true, items: true, taxes: true, payments: true },
   });
   return row ? mapInvoice(row) : null;
 }
@@ -338,7 +353,7 @@ export async function getPublicInvoiceById(invoiceId: string) {
 
   const row = await db.query.invoices.findFirst({
     where: eq(invoices.id, invoiceId),
-    with: { client: true, items: true, taxes: true },
+    with: { client: true, items: true, taxes: true, payments: true },
   });
   if (!row) return null;
 
@@ -358,6 +373,8 @@ export async function getPublicInvoiceById(invoiceId: string) {
       status: mapped.status,
       subtotal: mapped.subtotal,
       total: mapped.total,
+      amountPaid: mapped.amountPaid,
+      amountDue: mapped.amountDue,
       notes: mapped.notes,
       taxes: mapped.taxes,
       client: mapped.client,
