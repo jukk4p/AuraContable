@@ -40,7 +40,7 @@ const invoiceFormSchema = z.object({
     clientId: z.string().min(1, "El cliente es obligatorio"),
     issueDate: z.date({required_error: "La fecha de emisión es obligatoria"}),
     dueDate: z.date({required_error: "La fecha de vencimiento es obligatoria"}),
-    status: z.enum(["Pending", "Paid", "Overdue"]),
+    status: z.enum(["Pending", "Paid", "Overdue", "PartiallyPaid"]),
     items: z.array(z.object({
         id: z.string(),
         description: z.string().min(1, "La descripción es obligatoria"),
@@ -331,6 +331,11 @@ export default function NewInvoicePage() {
                                                 <SelectItem value="Pending">{t('invoices.statusPending')}</SelectItem>
                                                 <SelectItem value="Paid">{t('invoices.statusPaid')}</SelectItem>
                                                 <SelectItem value="Overdue">{t('invoices.statusOverdue')}</SelectItem>
+                                                {field.value === "PartiallyPaid" && (
+                                                    <SelectItem value="PartiallyPaid" disabled>
+                                                        {t('invoices.statusPartiallyPaid')} (automático)
+                                                    </SelectItem>
+                                                )}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />

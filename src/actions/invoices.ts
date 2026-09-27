@@ -33,7 +33,7 @@ const InvoiceSchema = z.object({
   invoiceNumber: z.string().min(1),
   issueDate: z.coerce.date(),
   dueDate: z.coerce.date(),
-  status: z.enum(['Paid', 'Pending', 'Overdue', 'Draft'] as const),
+  status: z.enum(['Paid', 'PartiallyPaid', 'Pending', 'Overdue', 'Draft'] as const),
   notes: z.string().optional(),
   items: z.array(InvoiceItemSchema).min(1, "Debe haber al menos un ítem"),
   taxes: z.array(InvoiceTaxSchema).optional(),
