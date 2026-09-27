@@ -100,8 +100,10 @@ export default function InvoiceList() {
 
     const stats = useMemo(() => {
         const total = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
-        const cobrado = invoices.filter(inv => inv.status === 'Paid').reduce((sum, inv) => sum + (inv.total || 0), 0);
-        const pendiente = invoices.filter(inv => inv.status === 'Pending' || inv.status === 'Overdue').reduce((sum, inv) => sum + (inv.total || 0), 0);
+        const cobrado = invoices.reduce((sum, inv) => sum + (inv.amountPaid || 0), 0);
+        const pendiente = invoices
+            .filter(inv => inv.status === 'Pending' || inv.status === 'Overdue' || inv.status === 'PartiallyPaid')
+            .reduce((sum, inv) => sum + (inv.amountDue ?? inv.total ?? 0), 0);
         return { total, cobrado, pendiente };
     }, [invoices]);
 
