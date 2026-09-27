@@ -16,10 +16,18 @@ function paypalApiBase(sandbox: boolean | null) {
 export async function createStripeSession(invoiceId: string) {
     const invoice = await db.query.invoices.findFirst({
         where: eq(invoices.id, invoiceId),
-        with: { client: true, items: true },
+        with: { client: true, items: true, payments: true },
     });
 
     if (!invoice) throw new Error("Invoice not found");
+
+    // Igual que en la página pública: si ya hay abonos registrados (o la
+    // factura está marcada como pagada), cobrar el total por Stripe
+    // duplicaría lo que el cliente ya pagó a mano.
+    const amountPaidSoFar = (invoice.payments ?? []).reduce((sum, p) => sum + p.amount, 0);
+    if (invoice.status === "Paid" || amountPaidSoFar > 0) {
+        throw new Error("Esta factura ya tiene pagos registrados; no se puede iniciar un cobro por el importe total.");
+    }
 
     const company = await db.query.companyProfiles.findFirst({
         where: eq(companyProfiles.userId, invoice.userId),
@@ -66,11 +74,19 @@ export async function capturePayPalOrder(orderId: string, invoiceId: string) {
         return { success: false, error: "Solicitud incompleta." };
     }
 
-    const invoice = await db.query.invoices.findFirst({ where: eq(invoices.id, invoiceId) });
+    const invoice = await db.query.invoices.findFirst({
+        where: eq(invoices.id, invoiceId),
+        with: { payments: true },
+    });
     if (!invoice) return { success: false, error: "Factura no encontrada." };
 
     if (invoice.status === "Paid") {
         return { success: true, alreadyPaid: true };
+    }
+
+    const amountPaidSoFar = (invoice.payments ?? []).reduce((sum, p) => sum + p.amount, 0);
+    if (amountPaidSoFar > 0) {
+        return { success: false, error: "Esta factura ya tiene abonos registrados; contacta directamente para completar el pago." };
     }
 
     const company = await db.query.companyProfiles.findFirst({

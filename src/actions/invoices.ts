@@ -4,6 +4,7 @@ import { db } from "@/db/config";
 import { invoices, invoiceItems, clients, invoiceTaxes, companyProfiles, notifications } from "@/db/schema";
 import { and, eq, desc, inArray } from "drizzle-orm";
 import { createNotification } from "./notifications";
+import { recomputeInvoiceStatus } from "./invoice-payments";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireUserId } from "@/lib/session";
@@ -227,6 +228,16 @@ export async function updateInvoice(invoiceId: string, invoiceData: unknown): Pr
         await tx.insert(invoiceTaxes).values(
           v.taxes.map((t) => ({ invoiceId, name: t.name, percentage: String(t.percentage) })),
         );
+      }
+
+      // v.status === 'PartiallyPaid' solo puede llegar aquí si el campo se
+      // dejó tal cual estaba (no es seleccionable a mano en el formulario) —
+      // recalculamos por si el nuevo total ya no cuadra con lo que consta
+      // cobrado (p.ej. se bajó el total hasta el importe ya pagado). Si el
+      // usuario eligió otro estado a mano (Pending/Paid/Overdue), se respeta
+      // tal cual y no se toca.
+      if (v.status === 'PartiallyPaid') {
+        await recomputeInvoiceStatus(tx as unknown as typeof db, invoiceId);
       }
 
       return rows[0];

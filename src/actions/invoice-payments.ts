@@ -33,7 +33,7 @@ async function getAmountPaid(executor: typeof db, invoiceId: string): Promise<nu
  * (Pending <-> PartiallyPaid <-> Paid). Así borrar un pago suelto en una
  * factura marcada Overdue no la devuelve a Pending por sorpresa.
  */
-async function recomputeInvoiceStatus(tx: typeof db, invoiceId: string): Promise<void> {
+export async function recomputeInvoiceStatus(tx: typeof db, invoiceId: string): Promise<void> {
   const invoice = await tx.query.invoices.findFirst({ where: eq(invoices.id, invoiceId) });
   if (!invoice) return;
 

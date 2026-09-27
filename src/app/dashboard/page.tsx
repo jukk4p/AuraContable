@@ -94,8 +94,8 @@ export default function DashboardPage() {
         const buckets = getMonthBuckets(new Date(), chartMonths);
         return buckets.map(bucket => {
             const income = invoices
-                .filter(i => i.status === 'Paid' && isInBucket(i.issueDate, bucket))
-                .reduce((s, i) => s + i.total, 0);
+                .filter(i => isInBucket(i.issueDate, bucket))
+                .reduce((s, i) => s + (i.amountPaid || 0), 0);
             const exp = expenses
                 .filter(e => isInBucket(e.date, bucket))
                 .reduce((s, e) => s + e.amount, 0);

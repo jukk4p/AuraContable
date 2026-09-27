@@ -89,7 +89,13 @@ export default function PublicInvoicePage() {
 
     const { invoice, company } = data;
     const isPaid = invoice.status === "Paid" || isSuccess;
-    const isPartiallyPaid = invoice.status === "PartiallyPaid" && !isPaid;
+    // No basta con mirar el status: si alguien cambia a mano el estado de una
+    // factura que ya tiene abonos (p.ej. la marca "Vencida" desde el listado),
+    // el status deja de ser 'PartiallyPaid' pero el dinero ya cobrado sigue
+    // siendo real. Por eso esto se calcula sobre el importe realmente pagado,
+    // no sobre la etiqueta de estado — así el aviso y el bloqueo de las
+    // pasarelas nunca dependen de qué estado se haya elegido a mano.
+    const hasOutstandingPayments = !isPaid && invoice.amountPaid > 0;
 
     return (
         <div className="min-h-screen bg-[#fcfcfd] dark:bg-[#0a0a0b] py-12 px-4 selection:bg-primary/20">
@@ -141,9 +147,9 @@ export default function PublicInvoicePage() {
                     <div className="flex flex-col items-start md:items-end gap-3">
                          <Badge
                             variant={isPaid ? "default" : (invoice.status === "Overdue" ? "destructive" : "secondary")}
-                            className={`px-4 py-1.5 text-sm font-bold uppercase tracking-widest ${isPaid ? 'bg-emerald-500 hover:bg-emerald-600' : ''} ${isPartiallyPaid ? 'bg-sky-500! text-white hover:bg-sky-600!' : ''}`}
+                            className={`px-4 py-1.5 text-sm font-bold uppercase tracking-widest ${isPaid ? 'bg-emerald-500 hover:bg-emerald-600' : ''} ${hasOutstandingPayments ? 'bg-sky-500! text-white hover:bg-sky-600!' : ''}`}
                         >
-                            {isPaid ? "PAGADA" : (isPartiallyPaid ? "PAGO PARCIAL" : (invoice.status === "Overdue" ? "VENCIDA" : "PENDIENTE"))}
+                            {isPaid ? "PAGADA" : (hasOutstandingPayments ? "PAGO PARCIAL" : (invoice.status === "Overdue" ? "VENCIDA" : "PENDIENTE"))}
                         </Badge>
                         <div className="text-right">
                              <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-tighter">Vencimiento</p>
@@ -238,20 +244,20 @@ export default function PublicInvoicePage() {
                             </span>
                         </div>
 
-                        {isPartiallyPaid && (
+                        {hasOutstandingPayments && (
                             <div className="flex justify-between items-center py-2 text-sm font-medium">
                                 <span>Pagado: {new Intl.NumberFormat('es-ES', { style: 'currency', currency: company.currency || 'EUR' }).format(invoice.amountPaid)}</span>
                                 <span>Pendiente: {new Intl.NumberFormat('es-ES', { style: 'currency', currency: company.currency || 'EUR' }).format(invoice.amountDue)}</span>
                             </div>
                         )}
 
-                        {!isPaid && isPartiallyPaid && (
+                        {hasOutstandingPayments && (
                             <p className="text-xs text-muted-foreground pt-4">
                                 {t('invoices.payments.gatewayDisabledNotice')}
                             </p>
                         )}
 
-                        {!isPaid && !isPartiallyPaid && (
+                        {!isPaid && !hasOutstandingPayments && (
                             <div className="space-y-4 pt-6">
                                 {company.stripeEnabled && (
                                     <Button 
