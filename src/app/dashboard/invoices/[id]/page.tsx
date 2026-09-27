@@ -67,7 +67,10 @@ export default function InvoiceDetailsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [user, invoiceId]);
+        // Solo el id: `user` (de useSession()) es un objeto nuevo en cada
+        // render, así que usarlo como dependencia reejecutaba el efecto sin
+        // parar. Ver src/lib/i18n/locale-provider.tsx para el mismo patrón.
+    }, [user?.id, invoiceId]);
 
     useEffect(() => {
         if (user && invoiceId) {
@@ -75,7 +78,7 @@ export default function InvoiceDetailsPage() {
         } else if (!user) {
             setIsLoading(false);
         }
-    }, [user, invoiceId, fetchInvoiceData]);
+    }, [user?.id, invoiceId, fetchInvoiceData]);
 
     const handleDownloadPdf = async () => {
         if (!invoice) return;
