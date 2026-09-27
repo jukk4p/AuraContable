@@ -84,18 +84,27 @@ suma real de `invoice_payments` (el "ledger"):
 amountPaid = Σ invoice_payments.amount para esa factura
 amountDue  = max(invoice.total - amountPaid, 0)
 
-si amountDue <= 0                                   → status = 'Paid'
-si no, si amountPaid > 0                             → status = 'PartiallyPaid'
-si no (amountPaid == 0) y el status actual es
-  'PartiallyPaid' (lo puso el propio sistema)        → status = 'Pending'
-si no (amountPaid == 0) y el status actual es
-  otra cosa (Pending/Overdue/Draft/Paid puesto a mano) → se deja como está
+si el status actual ya es 'Paid'                     → no se toca nunca
+si no:
+  si amountDue <= 0                                   → status = 'Paid'
+  si no, si amountPaid > 0                             → status = 'PartiallyPaid'
+  si no (amountPaid == 0) y el status actual es
+    'PartiallyPaid' (lo puso el propio sistema)        → status = 'Pending'
+  si no (amountPaid == 0) y el status actual es
+    otra cosa (Pending/Overdue/Draft)                  → se deja como está
 ```
 
-La tercera y cuarta línea existen para que borrar un pago nunca "retroceda"
-por sorpresa un estado que el usuario puso a mano (p. ej. borrar un abono
-suelto en una factura marcada `Overdue` no debe devolverla a `Pending`), y
-solo revierte el estado que el propio sistema generó automáticamente.
+La primera línea existe porque `'Paid'` es una afirmación deliberada —ya sea
+por el botón "Marcar como pagada" o porque el saldo llegó a 0€ por pagos—
+y no debe deshacerse solo porque alguien añade o borra un abono suelto
+después (p. ej. para corregir un registro): sin esta guarda, registrar un
+pago parcial sobre una factura ya marcada `Paid` a mano la habría hecho
+retroceder a `PartiallyPaid`, justo lo que esta regla quiere evitar. Las
+dos últimas líneas cubren el resto de casos: borrar un abono nunca
+"retrocede" por sorpresa un estado que el usuario puso a mano en
+`Pending`/`Overdue`/`Draft`, solo revierte el estado que el propio sistema
+generó automáticamente (`PartiallyPaid` → `Pending` cuando el saldo vuelve
+a 0 sin pagos).
 
 Si el usuario pulsa "Marcar como pagada" (botón que ya existe hoy en el
 detalle de factura) sin haber registrado ningún abono, la factura se trata
