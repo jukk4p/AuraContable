@@ -391,7 +391,9 @@ export default function InvoiceList() {
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3 font-medium text-foreground">
-                                                    {invoice.invoiceNumber}
+                                                    <Link href={`/dashboard/invoices/${invoice.id}`} className="hover:text-primary hover:underline">
+                                                        {invoice.invoiceNumber}
+                                                    </Link>
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex flex-col">
@@ -525,7 +527,9 @@ export default function InvoiceList() {
                                                         />
                                                     </td>
                                                     <td className="px-4 py-3 pl-4 font-medium text-foreground text-xs">
-                                                        {invoice.invoiceNumber}
+                                                        <Link href={`/dashboard/invoices/${invoice.id}`} className="hover:text-primary hover:underline">
+                                                            {invoice.invoiceNumber}
+                                                        </Link>
                                                     </td>
                                                     <td className="px-4 py-3">
                                                         {/* El nombre y el correo ya están en la fila del grupo:
@@ -609,7 +613,9 @@ export default function InvoiceList() {
                                             />
                                         </td>
                                         <td className="px-4 py-3 font-medium text-foreground">
-                                            {invoice.invoiceNumber}
+                                            <Link href={`/dashboard/invoices/${invoice.id}`} className="hover:text-primary hover:underline">
+                                                {invoice.invoiceNumber}
+                                            </Link>
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex flex-col">
