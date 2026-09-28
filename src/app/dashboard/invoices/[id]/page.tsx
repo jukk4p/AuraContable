@@ -7,18 +7,20 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from "next-auth/react";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ArrowLeft, Download, Edit, Trash2, CheckCircle, Clock, AlertCircle as AlertCircleIcon, Send, Link as LinkIcon, Share2, Eye } from 'lucide-react';
+import { ArrowLeft, Download, Edit, Trash2, CheckCircle, Clock, AlertCircle as AlertCircleIcon, Send, Link as LinkIcon, Share2, Eye, ReceiptEuro } from 'lucide-react';
 import Link from 'next/link';
 
-import type { Invoice, CompanyProfile } from '@/lib/types';
+import type { Invoice, CompanyProfile, Receipt } from '@/lib/types';
 import { getInvoiceById, updateInvoice, deleteInvoice } from '@/actions/invoices';
 import { getCompanyProfile } from '@/actions/company';
+import { getReceipts } from '@/actions/receipts';
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import InvoiceStatusBadge from '@/components/invoice-status-badge';
 import InvoicePaymentsCard from '@/components/invoice-payments-card';
+import ReceiptFormDialog, { type ClientOption } from '@/components/receipt-form-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { generateInvoicePdf } from '@/lib/pdf-generator';
 import { toast } from '@/hooks/use-toast';
@@ -35,12 +37,14 @@ export default function InvoiceDetailsPage() {
     const user = session?.user;
     const [invoice, setInvoice] = useState<Invoice | null>(null);
     const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+    const [receipts, setReceipts] = useState<Receipt[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDownloading, setIsDownloading] = useState(false);
     const [isPreviewing, setIsPreviewing] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSending, setIsSending] = useState(false);
+    const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
 
     const invoiceId = params.id as string;
     const localeMap = { es: es };
@@ -49,9 +53,10 @@ export default function InvoiceDetailsPage() {
         if (!user || !invoiceId) return;
         setIsLoading(true);
         try {
-            const [invoiceData, companyData] = await Promise.all([
+            const [invoiceData, companyData, receiptsData] = await Promise.all([
                 getInvoiceById(invoiceId),
-                getCompanyProfile()
+                getCompanyProfile(),
+                getReceipts(),
             ]);
 
             if (invoiceData && invoiceData.userId === user.id) {
@@ -61,6 +66,7 @@ export default function InvoiceDetailsPage() {
                 setInvoice(null);
             }
             setCompanyProfile(companyData);
+            setReceipts(receiptsData);
         } catch (error) {
             console.error("Error fetching invoice details:", error);
             toast({ title: "Error", description: "No se pudieron cargar los detalles de la factura.", variant: "destructive" });
@@ -242,6 +248,9 @@ export default function InvoiceDetailsPage() {
                          <Button variant="outline" size="sm" disabled={isActionDisabled || invoice.status === 'Paid'} onClick={handleMarkAsPaid}>
                             <CheckCircle className="mr-2 h-4 w-4"/> {t('invoices.markAsPaid')}
                         </Button>
+                        <Button variant="outline" size="sm" disabled={isActionDisabled} onClick={() => setIsReceiptDialogOpen(true)}>
+                            <ReceiptEuro className="mr-2 h-4 w-4"/> {t('receipts.generateFromInvoiceButton')}
+                        </Button>
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="destructive" size="sm" disabled={isActionDisabled}>
@@ -365,6 +374,22 @@ export default function InvoiceDetailsPage() {
             </Card>
 
             <InvoicePaymentsCard invoice={invoice} onChanged={fetchInvoiceData} />
+
+            <ReceiptFormDialog
+                open={isReceiptDialogOpen}
+                onOpenChange={setIsReceiptDialogOpen}
+                receipts={receipts}
+                clients={[{ id: invoice.clientId, name: invoice.client.name, taxId: invoice.client.taxId }] as ClientOption[]}
+                defaultValues={{
+                    invoiceId: invoice.id,
+                    clientId: invoice.clientId,
+                    clientName: invoice.client.name,
+                    clientTaxId: invoice.client.taxId,
+                    concept: `Factura ${invoice.invoiceNumber}`,
+                    amount: invoice.total,
+                }}
+                onCreated={fetchInvoiceData}
+            />
         </div>
     );
 }
