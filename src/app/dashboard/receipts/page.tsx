@@ -254,6 +254,7 @@ export default function ReceiptsPage() {
                 onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingReceipt(null); }}
                 receipts={receipts}
                 clients={clientOptions}
+                invoices={invoices}
                 receiptToEdit={editingReceipt}
                 onCreated={fetchData}
             />

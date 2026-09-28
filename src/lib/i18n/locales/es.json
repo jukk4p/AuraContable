@@ -162,6 +162,7 @@
         "linkButton": "Vincular a factura",
         "linkDialogTitle": "Vincular recibo a una factura",
         "linkSelectLabel": "Factura",
+        "invoiceOptionalLabel": "Factura (opcional)",
         "linkNoInvoice": "Sin vincular",
         "linkEmptyState": "Este cliente no tiene facturas disponibles para vincular.",
         "linkConceptAutoHint": "El concepto se genera automáticamente a partir de las líneas de la factura.",

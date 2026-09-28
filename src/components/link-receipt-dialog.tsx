@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 
 import type { Invoice, Receipt } from "@/lib/types";
 import { linkReceiptToInvoice } from "@/actions/receipts";
+import { buildInvoiceConcept } from "@/lib/receipt-utils";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -14,11 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const NO_INVOICE = "__none__";
-
-function buildInvoiceDetail(invoice: Invoice): string {
-  if (!invoice.items?.length) return `Factura ${invoice.invoiceNumber}`;
-  return invoice.items.map((item) => `${item.description} (x${item.quantity})`).join(', ');
-}
 
 interface LinkReceiptDialogProps {
   open: boolean;
@@ -56,7 +52,7 @@ export default function LinkReceiptDialog({ open, onOpenChange, receipt, invoice
   useEffect(() => {
     // Al elegir una factura, el concepto pasa a mostrar su detalle (líneas)
     // en vez del texto manual: es lo que representa el cobro de verdad.
-    if (selectedInvoice) setConcept(buildInvoiceDetail(selectedInvoice));
+    if (selectedInvoice) setConcept(buildInvoiceConcept(selectedInvoice));
   }, [selectedInvoice]);
 
   if (!receipt) return null;

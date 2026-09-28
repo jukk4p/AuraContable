@@ -14,6 +14,7 @@ import type { Invoice, CompanyProfile, Receipt } from '@/lib/types';
 import { getInvoiceById, updateInvoice, deleteInvoice } from '@/actions/invoices';
 import { getCompanyProfile } from '@/actions/company';
 import { getReceipts } from '@/actions/receipts';
+import { buildInvoiceConcept } from '@/lib/receipt-utils';
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -390,7 +391,7 @@ export default function InvoiceDetailsPage() {
                     clientId: invoice.clientId,
                     clientName: invoice.client.name,
                     clientTaxId: invoice.client.taxId,
-                    concept: `Factura ${invoice.invoiceNumber}`,
+                    concept: buildInvoiceConcept(invoice),
                     amount: invoice.total,
                 }}
                 onCreated={fetchInvoiceData}

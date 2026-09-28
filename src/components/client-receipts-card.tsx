@@ -155,6 +155,7 @@ export default function ClientReceiptsCard({ clientId, clientName, clientTaxId }
         onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingReceipt(null); }}
         receipts={receipts}
         clients={[{ id: clientId, name: clientName, taxId: clientTaxId }]}
+        invoices={invoices}
         defaultValues={{ clientId, clientName, clientTaxId }}
         receiptToEdit={editingReceipt}
         onCreated={fetchData}

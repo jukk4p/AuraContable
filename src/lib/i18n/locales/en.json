@@ -162,6 +162,7 @@
         "linkButton": "Link to invoice",
         "linkDialogTitle": "Link receipt to an invoice",
         "linkSelectLabel": "Invoice",
+        "invoiceOptionalLabel": "Invoice (optional)",
         "linkNoInvoice": "Not linked",
         "linkEmptyState": "This client has no invoices available to link.",
         "linkConceptAutoHint": "The concept is generated automatically from the invoice's line items.",

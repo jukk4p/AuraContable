@@ -52,6 +52,11 @@ export async function createReceipt(data: unknown): Promise<ActionResult<{ id: s
         where: and(eq(invoices.id, v.invoiceId), eq(invoices.userId, userId)),
       });
       if (!owned) return { success: false, error: "Factura no encontrada." };
+      // Un recibo vinculado a la factura de otro cliente no tendría sentido
+      // en el desglose de cobros de ese cliente.
+      if (v.clientId && owned.clientId !== v.clientId) {
+        return { success: false, error: "La factura debe ser del mismo cliente que el recibo." };
+      }
       invoiceNumber = owned.invoiceNumber;
     }
 

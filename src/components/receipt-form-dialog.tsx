@@ -5,8 +5,9 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarIcon, Loader2 } from "lucide-react";
 
-import type { Receipt } from "@/lib/types";
+import type { Invoice, Receipt } from "@/lib/types";
 import { createReceipt, updateReceipt } from "@/actions/receipts";
+import { buildInvoiceConcept } from "@/lib/receipt-utils";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -30,12 +31,15 @@ const METHODS: { value: Method; labelKey: string }[] = [
 ];
 
 const NO_CLIENT = '__none__';
+const NO_INVOICE = '__none__';
 
 interface ReceiptFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   receipts: Receipt[];
   clients: ClientOption[];
+  /** Facturas del usuario, para poder vincular el recibo a una ya existente (opcional). */
+  invoices?: Invoice[];
   defaultValues?: {
     invoiceId?: string;
     invoiceStatus?: string;
@@ -64,15 +68,20 @@ function nextReceiptNumber(existing: Receipt[]): string {
   return `${prefix}${String(next).padStart(3, '0')}`;
 }
 
-export default function ReceiptFormDialog({ open, onOpenChange, receipts, clients, defaultValues, receiptToEdit, onCreated }: ReceiptFormDialogProps) {
+export default function ReceiptFormDialog({ open, onOpenChange, receipts, clients, invoices = [], defaultValues, receiptToEdit, onCreated }: ReceiptFormDialogProps) {
   const { t, formatCurrency } = useLocale();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = !!receiptToEdit;
+  // La factura ya venía fijada desde fuera (p.ej. "Generar recibo" en el
+  // detalle de una factura): se mantiene el comportamiento de siempre, sin
+  // selector y con el concepto editable a mano.
+  const invoiceLockedByDefault = !isEditing && !!defaultValues?.invoiceId;
 
   const [receiptNumber, setReceiptNumber] = useState("");
   const [clientId, setClientId] = useState<string>(NO_CLIENT);
   const [clientName, setClientName] = useState("");
   const [clientTaxId, setClientTaxId] = useState("");
+  const [invoiceId, setInvoiceId] = useState<string>(NO_INVOICE);
   const [concept, setConcept] = useState("");
   const [amount, setAmount] = useState("");
   const [receivedAt, setReceivedAt] = useState<Date | undefined>(new Date());
@@ -86,6 +95,7 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
       setClientId(receiptToEdit.clientId ?? NO_CLIENT);
       setClientName(receiptToEdit.clientName);
       setClientTaxId(receiptToEdit.clientTaxId ?? "");
+      setInvoiceId(NO_INVOICE);
       setConcept(receiptToEdit.concept);
       setAmount(String(receiptToEdit.amount));
       setReceivedAt(new Date(receiptToEdit.receivedAt));
@@ -97,6 +107,7 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
     setClientId(defaultValues?.clientId ?? NO_CLIENT);
     setClientName(defaultValues?.clientName ?? "");
     setClientTaxId(defaultValues?.clientTaxId ?? "");
+    setInvoiceId(defaultValues?.invoiceId ?? NO_INVOICE);
     setConcept(defaultValues?.concept ?? "");
     setAmount(defaultValues?.amount ? String(defaultValues.amount) : "");
     setReceivedAt(new Date());
@@ -106,8 +117,28 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, receiptToEdit]);
 
+  // Facturas seleccionables: solo las del cliente elegido, para no vincular
+  // por error a la factura de otro cliente (si no hay cliente elegido, no
+  // tiene sentido ofrecer ninguna).
+  const availableInvoices = clientId !== NO_CLIENT
+    ? invoices.filter((inv) => inv.clientId === clientId)
+    : [];
+
+  const isManuallyLinked = !invoiceLockedByDefault && invoiceId !== NO_INVOICE;
+
+  useEffect(() => {
+    if (invoiceLockedByDefault) return;
+    const selected = availableInvoices.find((inv) => inv.id === invoiceId);
+    // Al vincular, el concepto pasa a reflejar el detalle de la factura: es
+    // lo que representa el cobro de verdad, igual que al vincular un recibo
+    // ya creado.
+    if (selected) setConcept(buildInvoiceConcept(selected));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoiceId]);
+
   const handleClientChange = (value: string) => {
     setClientId(value);
+    if (!invoiceLockedByDefault) setInvoiceId(NO_INVOICE);
     if (value !== NO_CLIENT) {
       const picked = clients.find((c) => c.id === value);
       if (picked) {
@@ -122,7 +153,10 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
     // Si el usuario reescribe el nombre a mano, el recibo deja de estar
     // vinculado al cliente elegido en el desplegable: si no, quedaría
     // enlazado a un cliente cuyo nombre ya no coincide con lo que se ve.
-    if (clientId !== NO_CLIENT) setClientId(NO_CLIENT);
+    if (clientId !== NO_CLIENT) {
+      setClientId(NO_CLIENT);
+      if (!invoiceLockedByDefault) setInvoiceId(NO_INVOICE);
+    }
   };
 
   const isDuplicateNumber = receiptNumber.trim().length > 0 &&
@@ -149,7 +183,7 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
       };
       const result = isEditing
         ? await updateReceipt(receiptToEdit!.id, payload)
-        : await createReceipt({ ...payload, invoiceId: defaultValues?.invoiceId });
+        : await createReceipt({ ...payload, invoiceId: invoiceId !== NO_INVOICE ? invoiceId : undefined });
       if (result.success) {
         toast(
           isEditing
@@ -211,9 +245,38 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
             <Label>CIF/NIF</Label>
             <Input value={clientTaxId} onChange={(e) => setClientTaxId(e.target.value)} placeholder="Opcional" />
           </div>
+          {!isEditing && !invoiceLockedByDefault && clientId !== NO_CLIENT && (
+            <div className="space-y-2">
+              <Label>{t('receipts.invoiceOptionalLabel')}</Label>
+              <Select value={invoiceId} onValueChange={setInvoiceId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_INVOICE}>{t('receipts.linkNoInvoice')}</SelectItem>
+                  {availableInvoices.map((inv) => (
+                    <SelectItem key={inv.id} value={inv.id}>
+                      {inv.invoiceNumber} — {formatCurrency(inv.total)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {availableInvoices.length === 0 && (
+                <p className="text-xs text-muted-foreground">{t('receipts.linkEmptyState')}</p>
+              )}
+            </div>
+          )}
           <div className="space-y-2">
             <Label>{t('receipts.concept')}</Label>
-            <Textarea value={concept} onChange={(e) => setConcept(e.target.value)} />
+            <Textarea
+              value={concept}
+              onChange={(e) => setConcept(e.target.value)}
+              disabled={isManuallyLinked}
+              className={isManuallyLinked ? "text-muted-foreground" : undefined}
+            />
+            {isManuallyLinked && (
+              <p className="text-xs text-muted-foreground">{t('receipts.linkConceptAutoHint')}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label>{t('receipts.amount')}</Label>

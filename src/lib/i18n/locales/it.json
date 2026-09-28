@@ -162,6 +162,7 @@
         "linkButton": "Collega a fattura",
         "linkDialogTitle": "Collega la ricevuta a una fattura",
         "linkSelectLabel": "Fattura",
+        "invoiceOptionalLabel": "Fattura (facoltativa)",
         "linkNoInvoice": "Non collegata",
         "linkEmptyState": "Questo cliente non ha fatture disponibili da collegare.",
         "linkConceptAutoHint": "Il concetto viene generato automaticamente dalle righe della fattura.",

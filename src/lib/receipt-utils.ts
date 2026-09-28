@@ -1,3 +1,5 @@
+import type { Invoice } from "./types";
+
 export type ReceiptKind = "pdf" | "image" | "unknown";
 
 export interface ReceiptMeta {
@@ -62,6 +64,12 @@ function slugify(value: string): string {
         .replace(/^-+|-+$/g, "")
         .toLowerCase()
         .slice(0, 60) || "documento";
+}
+
+/** Concepto que representa el cobro real cuando un recibo se vincula a una factura. */
+export function buildInvoiceConcept(invoice: Invoice): string {
+    if (!invoice.items?.length) return `Factura ${invoice.invoiceNumber}`;
+    return invoice.items.map((item) => `${item.description} (x${item.quantity})`).join(', ');
 }
 
 export function buildReceiptFilename(provider: string, date: Date | string, extension: string): string {

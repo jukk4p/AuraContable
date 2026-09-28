@@ -162,6 +162,7 @@
         "linkButton": "Lier à une facture",
         "linkDialogTitle": "Lier le reçu à une facture",
         "linkSelectLabel": "Facture",
+        "invoiceOptionalLabel": "Facture (facultatif)",
         "linkNoInvoice": "Non lié",
         "linkEmptyState": "Ce client n'a aucune facture disponible à lier.",
         "linkConceptAutoHint": "Le concept est généré automatiquement à partir des lignes de la facture.",
