@@ -115,6 +115,26 @@ export const invoicePayments = pgTable('invoice_payments', {
   invoiceIdx: index('invoice_payments_invoice_id_idx').on(table.invoiceId),
 }));
 
+export const receipts = pgTable('receipts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  invoiceId: uuid('invoice_id').references(() => invoices.id, { onDelete: 'set null' }),
+  clientId: uuid('client_id').references(() => clients.id, { onDelete: 'set null' }),
+  clientName: varchar('client_name', { length: 255 }).notNull(),
+  clientTaxId: varchar('client_tax_id', { length: 100 }),
+  receiptNumber: varchar('receipt_number', { length: 50 }).notNull(),
+  concept: text('concept').notNull(),
+  amount: integer('amount').notNull(), // céntimos
+  receivedAt: timestamp('received_at').notNull(),
+  method: varchar('method', { length: 50 }), // 'Transferencia' | 'Efectivo' | 'Otro'
+  note: text('note'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index('receipts_user_id_idx').on(table.userId),
+  invoiceIdx: index('receipts_invoice_id_idx').on(table.invoiceId),
+  clientIdx: index('receipts_client_id_idx').on(table.clientId),
+}));
+
 export const notifications = pgTable('notifications', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -197,6 +217,17 @@ export const invoicePaymentsRelations = relations(invoicePayments, ({ one }) => 
   invoice: one(invoices, {
     fields: [invoicePayments.invoiceId],
     references: [invoices.id],
+  }),
+}));
+
+export const receiptsRelations = relations(receipts, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [receipts.invoiceId],
+    references: [invoices.id],
+  }),
+  client: one(clients, {
+    fields: [receipts.clientId],
+    references: [clients.id],
   }),
 }));
 
