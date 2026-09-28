@@ -22,6 +22,7 @@
         "invoiceDetails": "Detalls de la Factura",
         "clients": "Clients",
         "expenses": "Despeses",
+        "receipts": "Rebuts",
         "reports": "Informes",
         "settings": "Configuració",
         "myAccount": "El meu compte",
@@ -139,6 +140,24 @@
             "utilities": "Subministraments",
             "other": "Altres"
         }
+    },
+    "receipts": {
+        "title": "Rebuts",
+        "searchPlaceholder": "Cerca per client, concepte o número",
+        "addButton": "Nou Rebut",
+        "receiptNumber": "Número de Rebut",
+        "client": "Client",
+        "clientOptional": "Client (opcional, tria'n un ja donat d'alta)",
+        "concept": "Concepte",
+        "amount": "Import",
+        "date": "Data",
+        "method": "Mètode",
+        "note": "Nota",
+        "emptyState": "Encara no s'ha creat cap rebut.",
+        "deleteConfirmTitle": "Eliminar aquest rebut?",
+        "deleteConfirmDescription": "Aquesta acció no es pot desfer.",
+        "linkedToInvoice": "Corresponent a la factura {number}",
+        "generateFromInvoiceButton": "Generar rebut"
     },
      "reports": {
         "description": "Analitza les teves dades de facturació i despeses."

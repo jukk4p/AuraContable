@@ -22,6 +22,7 @@
         "invoiceDetails": "Detalles de Factura",
         "clients": "Clientes",
         "expenses": "Gastos",
+        "receipts": "Recibos",
         "reports": "Informes",
         "settings": "Ajustes",
         "myAccount": "Mi Cuenta",
@@ -139,6 +140,24 @@
             "utilities": "Suministros",
             "other": "Otros"
         }
+    },
+    "receipts": {
+        "title": "Recibos",
+        "searchPlaceholder": "Buscar por cliente, concepto o número",
+        "addButton": "Nuevo Recibo",
+        "receiptNumber": "Número de Recibo",
+        "client": "Cliente",
+        "clientOptional": "Cliente (opcional, elige uno ya dado de alta)",
+        "concept": "Concepto",
+        "amount": "Importe",
+        "date": "Fecha",
+        "method": "Método",
+        "note": "Nota",
+        "emptyState": "Todavía no se ha creado ningún recibo.",
+        "deleteConfirmTitle": "¿Eliminar este recibo?",
+        "deleteConfirmDescription": "Esta acción no se puede deshacer.",
+        "linkedToInvoice": "Correspondiente a la factura {number}",
+        "generateFromInvoiceButton": "Generar recibo"
     },
     "reports": {
         "description": "Analiza tus datos de facturación y gastos."

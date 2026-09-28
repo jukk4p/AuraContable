@@ -22,6 +22,7 @@
         "invoiceDetails": "Invoice Details",
         "clients": "Clients",
         "expenses": "Expenses",
+        "receipts": "Receipts",
         "reports": "Reports",
         "settings": "Settings",
         "myAccount": "My Account",
@@ -139,6 +140,24 @@
             "utilities": "Utilities",
             "other": "Other"
         }
+    },
+    "receipts": {
+        "title": "Receipts",
+        "searchPlaceholder": "Search by client, concept or number",
+        "addButton": "New Receipt",
+        "receiptNumber": "Receipt Number",
+        "client": "Client",
+        "clientOptional": "Client (optional, pick an existing one)",
+        "concept": "Concept",
+        "amount": "Amount",
+        "date": "Date",
+        "method": "Method",
+        "note": "Note",
+        "emptyState": "No receipts created yet.",
+        "deleteConfirmTitle": "Delete this receipt?",
+        "deleteConfirmDescription": "This action cannot be undone.",
+        "linkedToInvoice": "Corresponding to invoice {number}",
+        "generateFromInvoiceButton": "Generate receipt"
     },
     "reports": {
         "description": "Analyze your invoicing and expense data."

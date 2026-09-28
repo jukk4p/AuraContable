@@ -22,6 +22,7 @@
         "invoiceDetails": "Détails de la facture",
         "clients": "Clients",
         "expenses": "Dépenses",
+        "receipts": "Reçus",
         "reports": "Rapports",
         "settings": "Paramètres",
         "myAccount": "Mon compte",
@@ -139,6 +140,24 @@
             "utilities": "Services publics",
             "other": "Autre"
         }
+    },
+    "receipts": {
+        "title": "Reçus",
+        "searchPlaceholder": "Rechercher par client, concept ou numéro",
+        "addButton": "Nouveau Reçu",
+        "receiptNumber": "Numéro de Reçu",
+        "client": "Client",
+        "clientOptional": "Client (facultatif, choisissez-en un existant)",
+        "concept": "Concept",
+        "amount": "Montant",
+        "date": "Date",
+        "method": "Méthode",
+        "note": "Note",
+        "emptyState": "Aucun reçu créé pour l'instant.",
+        "deleteConfirmTitle": "Supprimer ce reçu ?",
+        "deleteConfirmDescription": "Cette action est irréversible.",
+        "linkedToInvoice": "Correspondant à la facture {number}",
+        "generateFromInvoiceButton": "Générer un reçu"
     },
     "reports": {
         "description": "Analysez vos données de facturation et de dépenses."

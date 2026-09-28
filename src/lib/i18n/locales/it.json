@@ -22,6 +22,7 @@
         "invoiceDetails": "Dettagli Fattura",
         "clients": "Clienti",
         "expenses": "Spese",
+        "receipts": "Ricevute",
         "reports": "Rapporti",
         "settings": "Impostazioni",
         "myAccount": "Il mio account",
@@ -139,6 +140,24 @@
             "utilities": "Utenze",
             "other": "Altro"
         }
+    },
+    "receipts": {
+        "title": "Ricevute",
+        "searchPlaceholder": "Cerca per cliente, concetto o numero",
+        "addButton": "Nuova Ricevuta",
+        "receiptNumber": "Numero Ricevuta",
+        "client": "Cliente",
+        "clientOptional": "Cliente (opzionale, scegline uno già esistente)",
+        "concept": "Concetto",
+        "amount": "Importo",
+        "date": "Data",
+        "method": "Metodo",
+        "note": "Nota",
+        "emptyState": "Non è stata ancora creata nessuna ricevuta.",
+        "deleteConfirmTitle": "Eliminare questa ricevuta?",
+        "deleteConfirmDescription": "Questa azione non può essere annullata.",
+        "linkedToInvoice": "Corrispondente alla fattura {number}",
+        "generateFromInvoiceButton": "Genera ricevuta"
     },
      "reports": {
         "description": "Analizza i tuoi dati di fatturazione e spesa."
