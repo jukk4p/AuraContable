@@ -87,6 +87,49 @@ export async function createReceipt(data: unknown): Promise<ActionResult<{ id: s
   }
 }
 
+export async function updateReceipt(receiptId: string, data: unknown): Promise<ActionResult> {
+  try {
+    const userId = await requireUserId();
+    const v = ReceiptSchema.parse(data);
+
+    const row = await db.query.receipts.findFirst({ where: eq(receipts.id, receiptId) });
+    if (!row || row.userId !== userId) {
+      return { success: false, error: "Recibo no encontrado." };
+    }
+
+    if (v.clientId) {
+      const owned = await db.query.clients.findFirst({
+        where: and(eq(clients.id, v.clientId), eq(clients.userId, userId)),
+      });
+      if (!owned) return { success: false, error: "Cliente no encontrado." };
+    }
+
+    // El vínculo con una factura se gestiona aparte, en linkReceiptToInvoice:
+    // editar los demás campos del recibo no debe tocar invoiceId/invoiceNumber.
+    await db.update(receipts)
+      .set({
+        clientId: v.clientId ?? null,
+        clientName: v.clientName,
+        clientTaxId: v.clientTaxId,
+        receiptNumber: v.receiptNumber,
+        concept: v.concept,
+        amount: Math.round(v.amount * 100),
+        receivedAt: v.receivedAt,
+        method: v.method,
+        note: v.note,
+      })
+      .where(eq(receipts.id, receiptId));
+
+    revalidatePath("/dashboard/receipts");
+    revalidatePath("/dashboard");
+    if (row.invoiceId) revalidatePath(`/dashboard/invoices/${row.invoiceId}`);
+
+    return { success: true, data: null };
+  } catch (error) {
+    return toActionError(error, "No se pudo actualizar el recibo.", "updateReceipt");
+  }
+}
+
 export async function deleteReceipt(receiptId: string): Promise<ActionResult> {
   try {
     const userId = await requireUserId();
@@ -105,6 +148,58 @@ export async function deleteReceipt(receiptId: string): Promise<ActionResult> {
     return { success: true, data: null };
   } catch (error) {
     return toActionError(error, "No se pudo eliminar el recibo.", "deleteReceipt");
+  }
+}
+
+export async function linkReceiptToInvoice(
+  receiptId: string,
+  invoiceId: string | null,
+  concept?: string,
+): Promise<ActionResult> {
+  try {
+    const userId = await requireUserId();
+
+    const row = await db.query.receipts.findFirst({ where: eq(receipts.id, receiptId) });
+    if (!row || row.userId !== userId) {
+      return { success: false, error: "Recibo no encontrado." };
+    }
+
+    let invoiceNumber: string | null = null;
+    if (invoiceId) {
+      const owned = await db.query.invoices.findFirst({
+        where: and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)),
+      });
+      if (!owned) return { success: false, error: "Factura no encontrada." };
+      // Un recibo vinculado a la factura de otro cliente no tendría sentido
+      // en el desglose de cobros de ese cliente.
+      if (row.clientId && owned.clientId !== row.clientId) {
+        return { success: false, error: "La factura debe ser del mismo cliente que el recibo." };
+      }
+      invoiceNumber = owned.invoiceNumber;
+    }
+
+    const updates: { invoiceId: string | null; invoiceNumber: string | null; concept?: string } = {
+      invoiceId,
+      invoiceNumber,
+    };
+    // Al vincular, el detalle de la factura (calculado en el cliente a partir
+    // de sus líneas) sustituye al concepto. Al desvincular, se respeta el
+    // concepto manual que el usuario haya escrito; si lo deja vacío, el
+    // recibo conserva el que ya tenía.
+    if (concept && concept.trim()) updates.concept = concept.trim();
+
+    await db.update(receipts)
+      .set(updates)
+      .where(eq(receipts.id, receiptId));
+
+    revalidatePath("/dashboard/receipts");
+    revalidatePath("/dashboard");
+    if (row.invoiceId) revalidatePath(`/dashboard/invoices/${row.invoiceId}`);
+    if (invoiceId) revalidatePath(`/dashboard/invoices/${invoiceId}`);
+
+    return { success: true, data: null };
+  } catch (error) {
+    return toActionError(error, "No se pudo vincular el recibo.", "linkReceiptToInvoice");
   }
 }
 

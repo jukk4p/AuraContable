@@ -124,7 +124,8 @@ export type InvoicePayment = {
  * Un recibo de cobro, opcionalmente enlazado a una factura y/o a un cliente
  * ya dados de alta. El importe es independiente de `invoice_payments`: se
  * introduce a mano y no tiene por qué coincidir con ningún abono ya
- * registrado. Solo hay alta y borrado — no edición.
+ * registrado. Los campos del recibo no son editables tras crearlo, salvo
+ * su vínculo con una factura (`linkReceiptToInvoice`).
  */
 export type Receipt = {
   id: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Search, Trash2, Download, AlertCircle, Link as LinkIcon } from 'lucide-react';
+import { Plus, Search, Trash2, Download, AlertCircle, Link as LinkIcon, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useSession } from "next-auth/react";
@@ -19,11 +19,13 @@ import {
 import { useLocale } from '@/lib/i18n/locale-provider';
 import { getReceipts, deleteReceipt } from '@/actions/receipts';
 import { getClients } from '@/actions/clients';
+import { getInvoices } from '@/actions/invoices';
 import { getCompanyProfile } from '@/actions/company';
 import { generateReceiptPdf } from '@/lib/pdf-generator';
 import { toast } from '@/hooks/use-toast';
-import type { Receipt, Client, CompanyProfile } from '@/lib/types';
+import type { Receipt, Client, CompanyProfile, Invoice } from '@/lib/types';
 import ReceiptFormDialog, { type ClientOption } from '@/components/receipt-form-dialog';
+import LinkReceiptDialog from '@/components/link-receipt-dialog';
 
 function StatCard({ title, value }: { title: string; value: string }) {
     return (
@@ -41,12 +43,15 @@ export default function ReceiptsPage() {
 
     const [receipts, setReceipts] = useState<Receipt[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [dbLoading, setDbLoading] = useState(true);
     const [dbError, setDbError] = useState<string | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+    const [linkingReceipt, setLinkingReceipt] = useState<Receipt | null>(null);
+    const [editingReceipt, setEditingReceipt] = useState<Receipt | null>(null);
 
     const userId = user?.id;
 
@@ -55,13 +60,15 @@ export default function ReceiptsPage() {
         setDbLoading(true);
         setDbError(null);
         try {
-            const [receiptsData, clientsData, company] = await Promise.all([
+            const [receiptsData, clientsData, invoicesData, company] = await Promise.all([
                 getReceipts(),
                 getClients(),
+                getInvoices(),
                 getCompanyProfile(),
             ]);
             setReceipts(receiptsData);
             setClients(clientsData);
+            setInvoices(invoicesData);
             setCompanyProfile(company);
         } catch (e) {
             console.error("Error cargando los recibos:", e);
@@ -137,7 +144,7 @@ export default function ReceiptsPage() {
                     <h2 className="text-2xl font-semibold tracking-tight">{t('receipts.title')}</h2>
                     <p className="text-sm text-muted-foreground">Genera justificantes de cobro para tus clientes.</p>
                 </div>
-                <Button onClick={() => setIsDialogOpen(true)} size="sm" className="h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-medium">
+                <Button onClick={() => { setEditingReceipt(null); setIsDialogOpen(true); }} size="sm" className="h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-medium">
                     <Plus className="mr-2 h-4 w-4" /> {t('receipts.addButton')}
                 </Button>
             </div>
@@ -206,6 +213,12 @@ export default function ReceiptsPage() {
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title={t('receipts.editButton')} onClick={() => { setEditingReceipt(receipt); setIsDialogOpen(true); }}>
+                                                    <Pencil className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title={t('receipts.linkButton')} onClick={() => setLinkingReceipt(receipt)}>
+                                                    <LinkIcon className="h-4 w-4" />
+                                                </Button>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" disabled={downloadingId === receipt.id} onClick={() => handleDownload(receipt)}>
                                                     <Download className="h-4 w-4" />
                                                 </Button>
@@ -238,10 +251,19 @@ export default function ReceiptsPage() {
 
             <ReceiptFormDialog
                 open={isDialogOpen}
-                onOpenChange={setIsDialogOpen}
+                onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingReceipt(null); }}
                 receipts={receipts}
                 clients={clientOptions}
+                receiptToEdit={editingReceipt}
                 onCreated={fetchData}
+            />
+
+            <LinkReceiptDialog
+                open={!!linkingReceipt}
+                onOpenChange={(open) => { if (!open) setLinkingReceipt(null); }}
+                receipt={linkingReceipt}
+                invoices={invoices}
+                onLinked={fetchData}
             />
         </div>
     );

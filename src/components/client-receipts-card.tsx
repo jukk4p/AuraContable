@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Plus, Download, Trash2 } from 'lucide-react';
+import { Plus, Download, Trash2, Link as LinkIcon, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-import type { Receipt, CompanyProfile } from '@/lib/types';
+import type { Receipt, CompanyProfile, Invoice } from '@/lib/types';
 import { getReceipts, deleteReceipt } from '@/actions/receipts';
+import { getInvoices } from '@/actions/invoices';
 import { getCompanyProfile } from '@/actions/company';
 import { generateReceiptPdf } from '@/lib/pdf-generator';
 import { useLocale } from '@/lib/i18n/locale-provider';
@@ -19,6 +20,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import ReceiptFormDialog from '@/components/receipt-form-dialog';
+import LinkReceiptDialog from '@/components/link-receipt-dialog';
 
 interface ClientReceiptsCardProps {
   clientId: string;
@@ -29,16 +31,20 @@ interface ClientReceiptsCardProps {
 export default function ClientReceiptsCard({ clientId, clientName, clientTaxId }: ClientReceiptsCardProps) {
   const { t, formatCurrency, locale } = useLocale();
   const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [linkingReceipt, setLinkingReceipt] = useState<Receipt | null>(null);
+  const [editingReceipt, setEditingReceipt] = useState<Receipt | null>(null);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [allReceipts, company] = await Promise.all([getReceipts(), getCompanyProfile()]);
+      const [allReceipts, allInvoices, company] = await Promise.all([getReceipts(), getInvoices(), getCompanyProfile()]);
       setReceipts(allReceipts);
+      setInvoices(allInvoices);
       setCompanyProfile(company);
     } catch (error) {
       console.error("Error cargando los recibos del cliente:", error);
@@ -81,7 +87,7 @@ export default function ClientReceiptsCard({ clientId, clientName, clientTaxId }
     <Card className="glass-card border border-border/40 shadow-2xl rounded-[2rem] overflow-hidden p-8">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 mb-4">
         <CardTitle className="text-lg">{t('receipts.title')}</CardTitle>
-        <Button size="sm" variant="outline" type="button" onClick={() => setIsDialogOpen(true)}>
+        <Button size="sm" variant="outline" type="button" onClick={() => { setEditingReceipt(null); setIsDialogOpen(true); }}>
           <Plus className="mr-2 h-4 w-4" /> {t('receipts.addButton')}
         </Button>
       </CardHeader>
@@ -110,6 +116,12 @@ export default function ClientReceiptsCard({ clientId, clientName, clientTaxId }
                   <TableCell className="text-right font-medium">{formatCurrency(receipt.amount)}</TableCell>
                   <TableCell>
                     <div className="flex gap-1 justify-end">
+                      <Button variant="ghost" size="icon" type="button" title={t('receipts.editButton')} onClick={() => { setEditingReceipt(receipt); setIsDialogOpen(true); }}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" type="button" title={t('receipts.linkButton')} onClick={() => setLinkingReceipt(receipt)}>
+                        <LinkIcon className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" type="button" disabled={downloadingId === receipt.id} onClick={() => handleDownload(receipt)}>
                         <Download className="h-4 w-4" />
                       </Button>
@@ -140,11 +152,20 @@ export default function ClientReceiptsCard({ clientId, clientName, clientTaxId }
       </CardContent>
       <ReceiptFormDialog
         open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setEditingReceipt(null); }}
         receipts={receipts}
         clients={[{ id: clientId, name: clientName, taxId: clientTaxId }]}
         defaultValues={{ clientId, clientName, clientTaxId }}
+        receiptToEdit={editingReceipt}
         onCreated={fetchData}
+      />
+
+      <LinkReceiptDialog
+        open={!!linkingReceipt}
+        onOpenChange={(open) => { if (!open) setLinkingReceipt(null); }}
+        receipt={linkingReceipt}
+        invoices={invoices}
+        onLinked={fetchData}
       />
     </Card>
   );
