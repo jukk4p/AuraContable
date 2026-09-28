@@ -1,9 +1,9 @@
 "use client"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { 
-    FileText, LayoutDashboard, Settings, Users, PanelLeft, 
-    Search, Plus, Receipt, BarChart3, Bell, 
+import {
+    FileText, LayoutDashboard, Settings, Users, PanelLeft,
+    Search, Plus, Receipt, ReceiptEuro, BarChart3, Bell,
     User, HelpCircle, LogOut, Sun, Moon,
     Globe, CreditCard, ShieldCheck, Folder, FileSignature
 } from "lucide-react"
@@ -164,6 +164,7 @@ function DashboardHeaderContent({children}: {children: React.ReactNode}) {
               // pantalla es solo interfaz, no hay tabla ni acciones detrás.
               { href: "/dashboard/clients", icon: Users, label: "Clientes" },
               { href: "/dashboard/expenses", icon: Receipt, label: "Gastos" },
+              { href: "/dashboard/receipts", icon: ReceiptEuro, label: "Recibos" },
               { href: "/dashboard/documents", icon: Folder, label: "Documentos" },
           ]
       },
