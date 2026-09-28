@@ -392,10 +392,15 @@ export async function generateReceiptPdf(
     doc.setTextColor(textDark);
     if (receipt.clientTaxId) { doc.text(`${t('receipts.pdfTaxIdLabel')}: ${receipt.clientTaxId}`, clientStartX, clientInfoY); clientInfoY += 4.5; }
 
-    // --- Concepto ---
+    // --- Concepto (altura variable según el texto) ---
     const conceptY = Math.max(companyInfoY, clientInfoY) + 14;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    const conceptLines = doc.splitTextToSize(receipt.concept, pageWidth - 60);
+    const conceptBoxHeight = 14 + conceptLines.length * 5;
+
     doc.setFillColor(cardBg);
-    doc.roundedRect(20, conceptY - 6, pageWidth - 40, 26, 2, 2, 'F');
+    doc.roundedRect(20, conceptY - 6, pageWidth - 40, conceptBoxHeight, 2, 2, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(textMuted);
@@ -403,11 +408,10 @@ export async function generateReceiptPdf(
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     doc.setTextColor(textDark);
-    const conceptLines = doc.splitTextToSize(receipt.concept, pageWidth - 60);
     doc.text(conceptLines, 26, conceptY + 6);
 
     // --- Importe ---
-    const amountY = conceptY + 40;
+    const amountY = conceptY - 6 + conceptBoxHeight + 16;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(textMuted);
@@ -416,21 +420,45 @@ export async function generateReceiptPdf(
     doc.setTextColor(brandDark);
     doc.text(formatCurrency(receipt.amount), 20, amountY + 12);
 
-    let detailY = amountY + 24;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.setTextColor(textDark);
-    if (receipt.method) {
-        doc.text(`${t('receipts.pdfMethodLabel')}: ${receipt.method}`, 20, detailY);
-        detailY += 5;
+    // --- Detalles (método / factura vinculada), en columnas etiqueta+valor
+    // como el resto del documento, en vez de frases sueltas que repetían lo
+    // que ya se leía en el concepto. Si el concepto ya menciona el número de
+    // factura, no se repite aquí.
+    const mentionsInvoiceInConcept = !!receipt.invoiceNumber &&
+        receipt.concept.toLowerCase().includes(receipt.invoiceNumber.toLowerCase());
+    const showInvoiceDetail = !!receipt.invoiceNumber && !mentionsInvoiceInConcept;
+
+    let detailY = amountY + 22;
+    if (receipt.method || showInvoiceDetail) {
+        doc.setLineWidth(0.2);
+        doc.setDrawColor(lineLight);
+        doc.line(20, detailY - 6, pageWidth - 20, detailY - 6);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(textMuted);
+        if (receipt.method) doc.text(t('receipts.pdfMethodLabel').toUpperCase(), 20, detailY);
+        if (showInvoiceDetail) doc.text(t('receipts.pdfInvoiceLabel').toUpperCase(), clientStartX, detailY);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.setTextColor(textDark);
+        if (receipt.method) doc.text(receipt.method, 20, detailY + 5.5);
+        if (showInvoiceDetail) doc.text(receipt.invoiceNumber!, clientStartX, detailY + 5.5);
+
+        detailY += 16;
     }
-    if (receipt.invoiceNumber) {
-        doc.text(t('receipts.linkedToInvoice').replace('{number}', receipt.invoiceNumber), 20, detailY);
-        detailY += 5;
-    }
+
     if (receipt.note) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(textMuted);
+        doc.text(t('receipts.note').toUpperCase(), 20, detailY);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(textDark);
         const noteLines = doc.splitTextToSize(receipt.note, pageWidth - 40);
-        doc.text(noteLines, 20, detailY);
+        doc.text(noteLines, 20, detailY + 5.5);
     }
 
     if (outputType === 'blob') {

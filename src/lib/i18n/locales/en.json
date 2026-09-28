@@ -156,7 +156,6 @@
         "emptyState": "No receipts created yet.",
         "deleteConfirmTitle": "Delete this receipt?",
         "deleteConfirmDescription": "This action cannot be undone.",
-        "linkedToInvoice": "Corresponding to invoice {number}",
         "generateFromInvoiceButton": "Generate receipt",
         "unpaidInvoiceHint": "This invoice is not marked as paid yet. Generating the receipt does not change its status.",
         "duplicateNumberWarning": "A receipt with this number already exists.",
@@ -181,7 +180,8 @@
         "pdfReceivedFrom": "RECEIVED FROM",
         "pdfTaxIdLabel": "Tax ID",
         "pdfAmountReceivedLabel": "AMOUNT RECEIVED",
-        "pdfMethodLabel": "Payment method"
+        "pdfMethodLabel": "Payment method",
+        "pdfInvoiceLabel": "Linked invoice"
     },
     "reports": {
         "description": "Analyze your invoicing and expense data."

@@ -156,7 +156,6 @@
         "emptyState": "Non è stata ancora creata nessuna ricevuta.",
         "deleteConfirmTitle": "Eliminare questa ricevuta?",
         "deleteConfirmDescription": "Questa azione non può essere annullata.",
-        "linkedToInvoice": "Corrispondente alla fattura {number}",
         "generateFromInvoiceButton": "Genera ricevuta",
         "unpaidInvoiceHint": "Questa fattura non è ancora contrassegnata come pagata. Generare la ricevuta non ne cambia lo stato.",
         "duplicateNumberWarning": "Esiste già una ricevuta con questo numero.",
@@ -181,7 +180,8 @@
         "pdfReceivedFrom": "RICEVUTO DA",
         "pdfTaxIdLabel": "P.IVA/CF",
         "pdfAmountReceivedLabel": "IMPORTO RICEVUTO",
-        "pdfMethodLabel": "Metodo di pagamento"
+        "pdfMethodLabel": "Metodo di pagamento",
+        "pdfInvoiceLabel": "Fattura collegata"
     },
      "reports": {
         "description": "Analizza i tuoi dati di fatturazione e spesa."
