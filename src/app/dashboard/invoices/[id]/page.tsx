@@ -56,7 +56,11 @@ export default function InvoiceDetailsPage() {
             const [invoiceData, companyData, receiptsData] = await Promise.all([
                 getInvoiceById(invoiceId),
                 getCompanyProfile(),
-                getReceipts(),
+                // Si falla solo esta consulta (p. ej. un problema puntual con
+                // recibos), no debe tirar abajo toda la página de la factura:
+                // el botón "Generar recibo" simplemente calculará el siguiente
+                // número desde una lista vacía en vez de romper la carga.
+                getReceipts().catch((e) => { console.error("Error cargando recibos:", e); return []; }),
             ]);
 
             if (invoiceData && invoiceData.userId === user.id) {
@@ -382,6 +386,7 @@ export default function InvoiceDetailsPage() {
                 clients={[{ id: invoice.clientId, name: invoice.client.name, taxId: invoice.client.taxId }] as ClientOption[]}
                 defaultValues={{
                     invoiceId: invoice.id,
+                    invoiceStatus: invoice.status,
                     clientId: invoice.clientId,
                     clientName: invoice.client.name,
                     clientTaxId: invoice.client.taxId,

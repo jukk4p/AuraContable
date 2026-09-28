@@ -157,7 +157,17 @@
         "deleteConfirmTitle": "Eliminar aquest rebut?",
         "deleteConfirmDescription": "Aquesta acció no es pot desfer.",
         "linkedToInvoice": "Corresponent a la factura {number}",
-        "generateFromInvoiceButton": "Generar rebut"
+        "generateFromInvoiceButton": "Generar rebut",
+        "unpaidInvoiceHint": "Aquesta factura encara no està marcada com a pagada. Generar el rebut no en canvia l'estat.",
+        "duplicateNumberWarning": "Ja existeix un rebut amb aquest número.",
+        "pdfTitle": "REBUT",
+        "pdfNumberLabel": "Nº REBUT",
+        "pdfDateLabel": "DATA",
+        "pdfIssuer": "EMISSOR",
+        "pdfReceivedFrom": "REBUT DE",
+        "pdfTaxIdLabel": "CIF/NIF",
+        "pdfAmountReceivedLabel": "IMPORT REBUT",
+        "pdfMethodLabel": "Mètode de pagament"
     },
      "reports": {
         "description": "Analitza les teves dades de facturació i despeses."

@@ -15,7 +15,7 @@ const ReceiptSchema = z.object({
   clientName: z.string().min(1, "El nombre del cliente es obligatorio"),
   clientTaxId: z.string().optional(),
   concept: z.string().min(1, "El concepto es obligatorio"),
-  amount: z.number().positive("El importe debe ser mayor que 0"),
+  amount: z.number().finite().positive("El importe debe ser mayor que 0").max(21474836.47, "El importe es demasiado grande"),
   receivedAt: z.coerce.date(),
   method: z.enum(['Transferencia', 'Efectivo', 'Otro']).optional(),
   note: z.string().optional(),

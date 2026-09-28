@@ -317,7 +317,7 @@ export async function generateReceiptPdf(
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor('#FFFFFF');
-    doc.text('RECIBO', 20, 26);
+    doc.text(t('receipts.pdfTitle'), 20, 26);
 
     if (company?.logoUrl && company.logoUrl.startsWith('data:image')) {
         try {
@@ -332,8 +332,8 @@ export async function generateReceiptPdf(
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(textMuted);
-    doc.text('Nº RECIBO', 20, metaY);
-    doc.text('FECHA', 80, metaY);
+    doc.text(t('receipts.pdfNumberLabel'), 20, metaY);
+    doc.text(t('receipts.pdfDateLabel'), 80, metaY);
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
@@ -356,7 +356,7 @@ export async function generateReceiptPdf(
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(brandDark);
     doc.setFontSize(9);
-    doc.text('EMISOR', 25, infoStartY);
+    doc.text(t('receipts.pdfIssuer'), 25, infoStartY);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
@@ -366,7 +366,7 @@ export async function generateReceiptPdf(
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
     doc.setTextColor(textDark);
-    if (company?.taxId) { doc.text(`CIF/NIF: ${company.taxId}`, 20, companyInfoY); companyInfoY += 4.5; }
+    if (company?.taxId) { doc.text(`${t('receipts.pdfTaxIdLabel')}: ${company.taxId}`, 20, companyInfoY); companyInfoY += 4.5; }
     if (company?.address) {
         const addrLines = doc.splitTextToSize(company.address, (pageWidth / 2) - 25);
         doc.text(addrLines, 20, companyInfoY);
@@ -379,7 +379,7 @@ export async function generateReceiptPdf(
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(brandDark);
     doc.setFontSize(9);
-    doc.text('RECIBÍ DE', clientStartX + 5, infoStartY);
+    doc.text(t('receipts.pdfReceivedFrom'), clientStartX + 5, infoStartY);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
@@ -390,7 +390,7 @@ export async function generateReceiptPdf(
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
     doc.setTextColor(textDark);
-    if (receipt.clientTaxId) { doc.text(`CIF/NIF: ${receipt.clientTaxId}`, clientStartX, clientInfoY); clientInfoY += 4.5; }
+    if (receipt.clientTaxId) { doc.text(`${t('receipts.pdfTaxIdLabel')}: ${receipt.clientTaxId}`, clientStartX, clientInfoY); clientInfoY += 4.5; }
 
     // --- Concepto ---
     const conceptY = Math.max(companyInfoY, clientInfoY) + 14;
@@ -399,7 +399,7 @@ export async function generateReceiptPdf(
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(textMuted);
-    doc.text('CONCEPTO', 26, conceptY);
+    doc.text(t('receipts.concept').toUpperCase(), 26, conceptY);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     doc.setTextColor(textDark);
@@ -411,7 +411,7 @@ export async function generateReceiptPdf(
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(textMuted);
-    doc.text('IMPORTE RECIBIDO', 20, amountY);
+    doc.text(t('receipts.pdfAmountReceivedLabel'), 20, amountY);
     doc.setFontSize(24);
     doc.setTextColor(brandDark);
     doc.text(formatCurrency(receipt.amount), 20, amountY + 12);
@@ -421,11 +421,11 @@ export async function generateReceiptPdf(
     doc.setFontSize(8.5);
     doc.setTextColor(textDark);
     if (receipt.method) {
-        doc.text(`Método de pago: ${receipt.method}`, 20, detailY);
+        doc.text(`${t('receipts.pdfMethodLabel')}: ${receipt.method}`, 20, detailY);
         detailY += 5;
     }
     if (receipt.invoiceNumber) {
-        doc.text(`Correspondiente a la factura ${receipt.invoiceNumber}`, 20, detailY);
+        doc.text(t('receipts.linkedToInvoice').replace('{number}', receipt.invoiceNumber), 20, detailY);
         detailY += 5;
     }
     if (receipt.note) {

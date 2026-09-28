@@ -23,6 +23,7 @@ import { getInvoices } from "@/actions/invoices";
 import { getExpenses } from "@/actions/expenses";
 import { getClients } from "@/actions/clients";
 import { getReceipts } from "@/actions/receipts";
+import type { Receipt as ReceiptRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { getMonthBuckets, isInBucket, getNextFilingDeadline } from "@/lib/fiscal";
 import dynamic from 'next/dynamic';
@@ -40,7 +41,7 @@ export default function DashboardPage() {
     const [invoices, setInvoices] = useState<any[]>([]);
     const [clients, setClients] = useState<any[]>([]);
     const [expenses, setExpenses] = useState<any[]>([]);
-    const [receipts, setReceipts] = useState<any[]>([]);
+    const [receipts, setReceipts] = useState<ReceiptRecord[]>([]);
     const [dbLoading, setDbLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
     /** Ventana del gráfico. Los tabs Q1/Q2/Año de antes no filtraban nada. */

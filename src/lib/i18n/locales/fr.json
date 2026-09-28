@@ -157,7 +157,17 @@
         "deleteConfirmTitle": "Supprimer ce reçu ?",
         "deleteConfirmDescription": "Cette action est irréversible.",
         "linkedToInvoice": "Correspondant à la facture {number}",
-        "generateFromInvoiceButton": "Générer un reçu"
+        "generateFromInvoiceButton": "Générer un reçu",
+        "unpaidInvoiceHint": "Cette facture n'est pas encore marquée comme payée. Générer le reçu ne change pas son statut.",
+        "duplicateNumberWarning": "Un reçu avec ce numéro existe déjà.",
+        "pdfTitle": "REÇU",
+        "pdfNumberLabel": "N° REÇU",
+        "pdfDateLabel": "DATE",
+        "pdfIssuer": "ÉMETTEUR",
+        "pdfReceivedFrom": "REÇU DE",
+        "pdfTaxIdLabel": "N° TVA",
+        "pdfAmountReceivedLabel": "MONTANT REÇU",
+        "pdfMethodLabel": "Méthode de paiement"
     },
     "reports": {
         "description": "Analysez vos données de facturation et de dépenses."

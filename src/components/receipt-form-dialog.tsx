@@ -38,6 +38,7 @@ interface ReceiptFormDialogProps {
   clients: ClientOption[];
   defaultValues?: {
     invoiceId?: string;
+    invoiceStatus?: string;
     clientId?: string;
     clientName?: string;
     clientTaxId?: string | null;
@@ -53,8 +54,10 @@ function nextReceiptNumber(existing: Receipt[]): string {
   const thisYear = existing.filter((r) => r.receiptNumber.startsWith(prefix));
   let next = 1;
   if (thisYear.length > 0) {
-    const numbers = thisYear.map((r) => parseInt(r.receiptNumber.split('-').pop() || '0', 10));
-    next = Math.max(...numbers) + 1;
+    const numbers = thisYear
+      .map((r) => parseInt(r.receiptNumber.split('-').pop() || '0', 10))
+      .filter((n) => !Number.isNaN(n));
+    if (numbers.length > 0) next = Math.max(...numbers) + 1;
   }
   return `${prefix}${String(next).padStart(3, '0')}`;
 }
@@ -98,6 +101,17 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
       }
     }
   };
+
+  const handleClientNameChange = (value: string) => {
+    setClientName(value);
+    // Si el usuario reescribe el nombre a mano, el recibo deja de estar
+    // vinculado al cliente elegido en el desplegable: si no, quedaría
+    // enlazado a un cliente cuyo nombre ya no coincide con lo que se ve.
+    if (clientId !== NO_CLIENT) setClientId(NO_CLIENT);
+  };
+
+  const isDuplicateNumber = receiptNumber.trim().length > 0 &&
+    receipts.some((r) => r.receiptNumber === receiptNumber.trim());
 
   const handleSubmit = async () => {
     const parsedAmount = parseFloat(amount.replace(",", "."));
@@ -143,7 +157,15 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
           <div className="space-y-2">
             <Label>{t('receipts.receiptNumber')}</Label>
             <Input value={receiptNumber} onChange={(e) => setReceiptNumber(e.target.value)} />
+            {isDuplicateNumber && (
+              <p className="text-xs text-amber-500">{t('receipts.duplicateNumberWarning')}</p>
+            )}
           </div>
+          {defaultValues?.invoiceStatus && defaultValues.invoiceStatus !== 'Paid' && (
+            <p className="text-xs text-muted-foreground rounded-md bg-muted/50 p-2">
+              {t('receipts.unpaidInvoiceHint')}
+            </p>
+          )}
           {clients.length > 0 && (
             <div className="space-y-2">
               <Label>{t('receipts.clientOptional')}</Label>
@@ -162,7 +184,7 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
           )}
           <div className="space-y-2">
             <Label>{t('receipts.client')}</Label>
-            <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Nombre del cliente" />
+            <Input value={clientName} onChange={(e) => handleClientNameChange(e.target.value)} placeholder="Nombre del cliente" />
           </div>
           <div className="space-y-2">
             <Label>CIF/NIF</Label>

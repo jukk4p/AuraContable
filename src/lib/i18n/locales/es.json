@@ -157,7 +157,17 @@
         "deleteConfirmTitle": "¿Eliminar este recibo?",
         "deleteConfirmDescription": "Esta acción no se puede deshacer.",
         "linkedToInvoice": "Correspondiente a la factura {number}",
-        "generateFromInvoiceButton": "Generar recibo"
+        "generateFromInvoiceButton": "Generar recibo",
+        "unpaidInvoiceHint": "Esta factura todavía no está marcada como pagada. Generar el recibo no cambia su estado.",
+        "duplicateNumberWarning": "Ya existe un recibo con este número.",
+        "pdfTitle": "RECIBO",
+        "pdfNumberLabel": "Nº RECIBO",
+        "pdfDateLabel": "FECHA",
+        "pdfIssuer": "EMISOR",
+        "pdfReceivedFrom": "RECIBÍ DE",
+        "pdfTaxIdLabel": "CIF/NIF",
+        "pdfAmountReceivedLabel": "IMPORTE RECIBIDO",
+        "pdfMethodLabel": "Método de pago"
     },
     "reports": {
         "description": "Analiza tus datos de facturación y gastos."

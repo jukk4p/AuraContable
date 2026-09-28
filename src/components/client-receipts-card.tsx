@@ -32,6 +32,7 @@ export default function ClientReceiptsCard({ clientId, clientName, clientTaxId }
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -39,6 +40,9 @@ export default function ClientReceiptsCard({ clientId, clientName, clientTaxId }
       const [allReceipts, company] = await Promise.all([getReceipts(), getCompanyProfile()]);
       setReceipts(allReceipts);
       setCompanyProfile(company);
+    } catch (error) {
+      console.error("Error cargando los recibos del cliente:", error);
+      toast({ title: "Error", description: "No se pudieron cargar los recibos de este cliente.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +66,15 @@ export default function ClientReceiptsCard({ clientId, clientName, clientTaxId }
   };
 
   const handleDownload = async (receipt: Receipt) => {
-    await generateReceiptPdf(receipt, companyProfile, { t, formatCurrency, locale });
+    setDownloadingId(receipt.id);
+    try {
+      await generateReceiptPdf(receipt, companyProfile, { t, formatCurrency, locale });
+    } catch (error) {
+      console.error("Error downloading receipt PDF:", error);
+      toast({ title: "Error", description: "Hubo un problema al generar el PDF.", variant: "destructive" });
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   return (
@@ -98,7 +110,7 @@ export default function ClientReceiptsCard({ clientId, clientName, clientTaxId }
                   <TableCell className="text-right font-medium">{formatCurrency(receipt.amount)}</TableCell>
                   <TableCell>
                     <div className="flex gap-1 justify-end">
-                      <Button variant="ghost" size="icon" type="button" onClick={() => handleDownload(receipt)}>
+                      <Button variant="ghost" size="icon" type="button" disabled={downloadingId === receipt.id} onClick={() => handleDownload(receipt)}>
                         <Download className="h-4 w-4" />
                       </Button>
                       <AlertDialog>
