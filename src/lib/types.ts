@@ -121,6 +121,31 @@ export type InvoicePayment = {
 };
 
 /**
+ * Un recibo de cobro, opcionalmente enlazado a una factura y/o a un cliente
+ * ya dados de alta. El importe es independiente de `invoice_payments`: se
+ * introduce a mano y no tiene por qué coincidir con ningún abono ya
+ * registrado. Solo hay alta y borrado — no edición.
+ */
+export type Receipt = {
+  id: string;
+  userId: string;
+  invoiceId?: string | null;
+  /** Denormalizado al leer (join con `invoices`), no se guarda en `receipts`. */
+  invoiceNumber?: string | null;
+  clientId?: string | null;
+  /** Copia del nombre del cliente en el momento de crear el recibo. */
+  clientName: string;
+  clientTaxId?: string | null;
+  receiptNumber: string;
+  concept: string;
+  amount: number;
+  receivedAt: Date;
+  method?: 'Transferencia' | 'Efectivo' | 'Otro' | null;
+  note?: string | null;
+  createdAt: Date;
+};
+
+/**
  * Represents a single invoice.
  * Maps to the "invoices" collection.
  */
