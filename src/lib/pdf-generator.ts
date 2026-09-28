@@ -3,7 +3,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import JSZip from 'jszip';
-import type { Invoice, CompanyProfile } from './types';
+import type { Invoice, CompanyProfile, Receipt } from './types';
 import { format } from 'date-fns';
 import { es, fr, it, enUS } from 'date-fns/locale';
 import type { Locale } from './i18n/locales';
@@ -289,4 +289,153 @@ export async function generateInvoicesZip(
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+export async function generateReceiptPdf(
+    receipt: Receipt,
+    company: CompanyProfile | null,
+    l10n: Localization,
+    outputType: 'save' | 'blob' = 'save'
+): Promise<Blob | void> {
+    const doc = new jsPDF();
+    const { t, formatCurrency, locale } = l10n;
+    const dateLocale = localeMap[locale] || enUS;
+
+    const brandDark = '#0F172A';
+    const accentCyan = '#06B6D4';
+    const textDark = '#1E293B';
+    const textMuted = '#64748B';
+    const cardBg = '#F8FAFC';
+    const lineLight = '#E2E8F0';
+
+    const pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth();
+
+    // --- Cabecera ---
+    doc.setFillColor('#000000');
+    doc.rect(0, 0, pageWidth, 42, 'F');
+
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor('#FFFFFF');
+    doc.text('RECIBO', 20, 26);
+
+    if (company?.logoUrl && company.logoUrl.startsWith('data:image')) {
+        try {
+            doc.addImage(company.logoUrl, 'PNG', pageWidth - 65, 13, 45, 16, undefined, 'FAST');
+        } catch (e) {
+            console.error("Error adding logo to PDF:", e);
+        }
+    }
+
+    // --- Nº de recibo y fecha ---
+    const metaY = 52;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(textMuted);
+    doc.text('Nº RECIBO', 20, metaY);
+    doc.text('FECHA', 80, metaY);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(brandDark);
+    doc.text(receipt.receiptNumber, 20, metaY + 6);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(textDark);
+    doc.text(format(new Date(receipt.receivedAt), 'dd MMM yyyy', { locale: dateLocale }), 80, metaY + 6);
+
+    doc.setLineWidth(0.4);
+    doc.setDrawColor(lineLight);
+    doc.line(20, 64, pageWidth - 20, 64);
+
+    // --- Emisor / Recibí de ---
+    const infoStartY = 73;
+
+    doc.setFillColor(accentCyan);
+    doc.rect(20, infoStartY - 4, 2.5, 5, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(brandDark);
+    doc.setFontSize(9);
+    doc.text('EMISOR', 25, infoStartY);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    let companyInfoY = infoStartY + 6;
+    if (company?.name) { doc.text(company.name, 20, companyInfoY); companyInfoY += 5; }
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(textDark);
+    if (company?.taxId) { doc.text(`CIF/NIF: ${company.taxId}`, 20, companyInfoY); companyInfoY += 4.5; }
+    if (company?.address) {
+        const addrLines = doc.splitTextToSize(company.address, (pageWidth / 2) - 25);
+        doc.text(addrLines, 20, companyInfoY);
+        companyInfoY += (addrLines.length * 4.5);
+    }
+
+    const clientStartX = pageWidth / 2 + 10;
+    doc.setFillColor(brandDark);
+    doc.rect(clientStartX, infoStartY - 4, 2.5, 5, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(brandDark);
+    doc.setFontSize(9);
+    doc.text('RECIBÍ DE', clientStartX + 5, infoStartY);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    let clientInfoY = infoStartY + 6;
+    doc.text(receipt.clientName, clientStartX, clientInfoY);
+    clientInfoY += 5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(textDark);
+    if (receipt.clientTaxId) { doc.text(`CIF/NIF: ${receipt.clientTaxId}`, clientStartX, clientInfoY); clientInfoY += 4.5; }
+
+    // --- Concepto ---
+    const conceptY = Math.max(companyInfoY, clientInfoY) + 14;
+    doc.setFillColor(cardBg);
+    doc.roundedRect(20, conceptY - 6, pageWidth - 40, 26, 2, 2, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(textMuted);
+    doc.text('CONCEPTO', 26, conceptY);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(textDark);
+    const conceptLines = doc.splitTextToSize(receipt.concept, pageWidth - 60);
+    doc.text(conceptLines, 26, conceptY + 6);
+
+    // --- Importe ---
+    const amountY = conceptY + 40;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(textMuted);
+    doc.text('IMPORTE RECIBIDO', 20, amountY);
+    doc.setFontSize(24);
+    doc.setTextColor(brandDark);
+    doc.text(formatCurrency(receipt.amount), 20, amountY + 12);
+
+    let detailY = amountY + 24;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(textDark);
+    if (receipt.method) {
+        doc.text(`Método de pago: ${receipt.method}`, 20, detailY);
+        detailY += 5;
+    }
+    if (receipt.invoiceNumber) {
+        doc.text(`Correspondiente a la factura ${receipt.invoiceNumber}`, 20, detailY);
+        detailY += 5;
+    }
+    if (receipt.note) {
+        const noteLines = doc.splitTextToSize(receipt.note, pageWidth - 40);
+        doc.text(noteLines, 20, detailY);
+    }
+
+    if (outputType === 'blob') {
+        return doc.output('blob');
+    } else {
+        doc.save(`${receipt.receiptNumber}.pdf`);
+    }
 }
