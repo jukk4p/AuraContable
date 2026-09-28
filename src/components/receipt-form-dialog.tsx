@@ -72,10 +72,6 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
   const { t, formatCurrency } = useLocale();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = !!receiptToEdit;
-  // La factura ya venía fijada desde fuera (p.ej. "Generar recibo" en el
-  // detalle de una factura): se mantiene el comportamiento de siempre, sin
-  // selector y con el concepto editable a mano.
-  const invoiceLockedByDefault = !isEditing && !!defaultValues?.invoiceId;
 
   const [receiptNumber, setReceiptNumber] = useState("");
   const [clientId, setClientId] = useState<string>(NO_CLIENT);
@@ -124,10 +120,9 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
     ? invoices.filter((inv) => inv.clientId === clientId)
     : [];
 
-  const isManuallyLinked = !invoiceLockedByDefault && invoiceId !== NO_INVOICE;
+  const isLinked = invoiceId !== NO_INVOICE;
 
   useEffect(() => {
-    if (invoiceLockedByDefault) return;
     const selected = availableInvoices.find((inv) => inv.id === invoiceId);
     // Al vincular, el concepto pasa a reflejar el detalle de la factura: es
     // lo que representa el cobro de verdad, igual que al vincular un recibo
@@ -138,7 +133,7 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
 
   const handleClientChange = (value: string) => {
     setClientId(value);
-    if (!invoiceLockedByDefault) setInvoiceId(NO_INVOICE);
+    setInvoiceId(NO_INVOICE);
     if (value !== NO_CLIENT) {
       const picked = clients.find((c) => c.id === value);
       if (picked) {
@@ -155,7 +150,7 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
     // enlazado a un cliente cuyo nombre ya no coincide con lo que se ve.
     if (clientId !== NO_CLIENT) {
       setClientId(NO_CLIENT);
-      if (!invoiceLockedByDefault) setInvoiceId(NO_INVOICE);
+      setInvoiceId(NO_INVOICE);
     }
   };
 
@@ -245,7 +240,7 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
             <Label>CIF/NIF</Label>
             <Input value={clientTaxId} onChange={(e) => setClientTaxId(e.target.value)} placeholder="Opcional" />
           </div>
-          {!isEditing && !invoiceLockedByDefault && clientId !== NO_CLIENT && (
+          {!isEditing && clientId !== NO_CLIENT && (
             <div className="space-y-2">
               <Label>{t('receipts.invoiceOptionalLabel')}</Label>
               <Select value={invoiceId} onValueChange={setInvoiceId}>
@@ -271,10 +266,10 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
             <Textarea
               value={concept}
               onChange={(e) => setConcept(e.target.value)}
-              disabled={isManuallyLinked}
-              className={isManuallyLinked ? "text-muted-foreground" : undefined}
+              disabled={isLinked}
+              className={isLinked ? "text-muted-foreground" : undefined}
             />
-            {isManuallyLinked && (
+            {isLinked && (
               <p className="text-xs text-muted-foreground">{t('receipts.linkConceptAutoHint')}</p>
             )}
           </div>

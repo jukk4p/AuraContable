@@ -11,7 +11,7 @@ import { ArrowLeft, Download, Edit, Trash2, CheckCircle, Clock, AlertCircle as A
 import Link from 'next/link';
 
 import type { Invoice, CompanyProfile, Receipt } from '@/lib/types';
-import { getInvoiceById, updateInvoice, deleteInvoice } from '@/actions/invoices';
+import { getInvoiceById, getInvoices, updateInvoice, deleteInvoice } from '@/actions/invoices';
 import { getCompanyProfile } from '@/actions/company';
 import { getReceipts } from '@/actions/receipts';
 import { buildInvoiceConcept } from '@/lib/receipt-utils';
@@ -39,6 +39,7 @@ export default function InvoiceDetailsPage() {
     const [invoice, setInvoice] = useState<Invoice | null>(null);
     const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
     const [receipts, setReceipts] = useState<Receipt[]>([]);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDownloading, setIsDownloading] = useState(false);
     const [isPreviewing, setIsPreviewing] = useState(false);
@@ -54,7 +55,7 @@ export default function InvoiceDetailsPage() {
         if (!user || !invoiceId) return;
         setIsLoading(true);
         try {
-            const [invoiceData, companyData, receiptsData] = await Promise.all([
+            const [invoiceData, companyData, receiptsData, invoicesData] = await Promise.all([
                 getInvoiceById(invoiceId),
                 getCompanyProfile(),
                 // Si falla solo esta consulta (p. ej. un problema puntual con
@@ -62,6 +63,10 @@ export default function InvoiceDetailsPage() {
                 // el botón "Generar recibo" simplemente calculará el siguiente
                 // número desde una lista vacía en vez de romper la carga.
                 getReceipts().catch((e) => { console.error("Error cargando recibos:", e); return []; }),
+                // Igual para el selector opcional de factura del formulario de
+                // recibo: si falla, se abre sin ese selector en vez de romper
+                // la página.
+                getInvoices().catch((e) => { console.error("Error cargando facturas:", e); return []; }),
             ]);
 
             if (invoiceData && invoiceData.userId === user.id) {
@@ -72,6 +77,7 @@ export default function InvoiceDetailsPage() {
             }
             setCompanyProfile(companyData);
             setReceipts(receiptsData);
+            setInvoices(invoicesData);
         } catch (error) {
             console.error("Error fetching invoice details:", error);
             toast({ title: "Error", description: "No se pudieron cargar los detalles de la factura.", variant: "destructive" });
@@ -385,6 +391,7 @@ export default function InvoiceDetailsPage() {
                 onOpenChange={setIsReceiptDialogOpen}
                 receipts={receipts}
                 clients={[{ id: invoice.clientId, name: invoice.client.name, taxId: invoice.client.taxId }] as ClientOption[]}
+                invoices={invoices}
                 defaultValues={{
                     invoiceId: invoice.id,
                     invoiceStatus: invoice.status,
