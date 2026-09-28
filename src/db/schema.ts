@@ -119,6 +119,11 @@ export const receipts = pgTable('receipts', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   invoiceId: uuid('invoice_id').references(() => invoices.id, { onDelete: 'set null' }),
+  // Copia del número de factura en el momento de crear el recibo, igual que
+  // clientName/clientTaxId: si la factura se borra o se renumera después,
+  // este recibo ya emitido no debe cambiar de contenido ni "desvincularse"
+  // para efectos de qué cuenta como ingreso suelto en el dashboard.
+  invoiceNumber: varchar('invoice_number', { length: 100 }),
   clientId: uuid('client_id').references(() => clients.id, { onDelete: 'set null' }),
   clientName: varchar('client_name', { length: 255 }).notNull(),
   clientTaxId: varchar('client_tax_id', { length: 100 }),

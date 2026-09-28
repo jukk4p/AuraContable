@@ -81,10 +81,13 @@ export default function DashboardPage() {
         const pending = invoices.filter(i => i.status === 'Pending' || i.status === 'PartiallyPaid');
         const overdue = invoices.filter(i => i.status === 'Overdue');
 
-        // Un recibo enlazado a una factura (invoiceId) no suma aparte: ese
-        // ingreso ya lo cuenta invoice.amountPaid. Solo los recibos sueltos
-        // representan dinero cobrado que ninguna factura registra todavía.
-        const standaloneReceipts = receipts.filter(r => !r.invoiceId);
+        // Un recibo que se creó enlazado a una factura no suma aparte: ese
+        // ingreso ya lo cuenta invoice.amountPaid. Se comprueba con
+        // invoiceNumber (una copia guardada en el propio recibo), no con
+        // invoiceId: si la factura se borra después, invoiceId pasa a NULL
+        // pero invoiceNumber sigue ahí, así que el recibo no se reclasifica
+        // como suelto y no duplica un ingreso que la factura ya aportó.
+        const standaloneReceipts = receipts.filter(r => !r.invoiceNumber);
         const receiptsIncome = standaloneReceipts.reduce((sum, r) => sum + (r.amount || 0), 0);
 
         const totalIncome = invoices.reduce((sum, i) => sum + (i.amountPaid || 0), 0) + receiptsIncome;
@@ -107,7 +110,7 @@ export default function DashboardPage() {
                 .filter(i => isInBucket(i.issueDate, bucket))
                 .reduce((s, i) => s + (i.amountPaid || 0), 0);
             const receiptIncome = receipts
-                .filter(r => !r.invoiceId && isInBucket(r.receivedAt, bucket))
+                .filter(r => !r.invoiceNumber && isInBucket(r.receivedAt, bucket))
                 .reduce((s, r) => s + (r.amount || 0), 0);
             const exp = expenses
                 .filter(e => isInBucket(e.date, bucket))

@@ -27,7 +27,7 @@ function mapReceipt(row: any): Receipt {
     id: row.id,
     userId: row.userId,
     invoiceId: row.invoiceId || null,
-    invoiceNumber: row.invoice?.invoiceNumber || null,
+    invoiceNumber: row.invoiceNumber || null,
     clientId: row.clientId || null,
     clientName: row.clientName,
     clientTaxId: row.clientTaxId || undefined,
@@ -46,11 +46,13 @@ export async function createReceipt(data: unknown): Promise<ActionResult<{ id: s
     const userId = await requireUserId();
     const v = ReceiptSchema.parse(data);
 
+    let invoiceNumber: string | undefined;
     if (v.invoiceId) {
       const owned = await db.query.invoices.findFirst({
         where: and(eq(invoices.id, v.invoiceId), eq(invoices.userId, userId)),
       });
       if (!owned) return { success: false, error: "Factura no encontrada." };
+      invoiceNumber = owned.invoiceNumber;
     }
 
     if (v.clientId) {
@@ -63,6 +65,7 @@ export async function createReceipt(data: unknown): Promise<ActionResult<{ id: s
     const inserted = await db.insert(receipts).values({
       userId,
       invoiceId: v.invoiceId,
+      invoiceNumber,
       clientId: v.clientId,
       clientName: v.clientName,
       clientTaxId: v.clientTaxId,
@@ -109,7 +112,6 @@ export async function getReceipts(): Promise<Receipt[]> {
   const userId = await requireUserId();
   const rows = await db.query.receipts.findMany({
     where: eq(receipts.userId, userId),
-    with: { invoice: true },
     orderBy: [desc(receipts.createdAt)],
   });
   return rows.map(mapReceipt);
