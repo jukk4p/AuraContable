@@ -6,7 +6,7 @@ import { es } from "date-fns/locale";
 import { CalendarIcon, Loader2 } from "lucide-react";
 
 import type { Receipt } from "@/lib/types";
-import { createReceipt } from "@/actions/receipts";
+import { createReceipt, updateReceipt } from "@/actions/receipts";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,8 @@ interface ReceiptFormDialogProps {
     concept?: string;
     amount?: number;
   };
+  /** Si se pasa, el diálogo edita este recibo en vez de crear uno nuevo. */
+  receiptToEdit?: Receipt | null;
   onCreated: () => Promise<void>;
 }
 
@@ -62,9 +64,10 @@ function nextReceiptNumber(existing: Receipt[]): string {
   return `${prefix}${String(next).padStart(3, '0')}`;
 }
 
-export default function ReceiptFormDialog({ open, onOpenChange, receipts, clients, defaultValues, onCreated }: ReceiptFormDialogProps) {
+export default function ReceiptFormDialog({ open, onOpenChange, receipts, clients, defaultValues, receiptToEdit, onCreated }: ReceiptFormDialogProps) {
   const { t, formatCurrency } = useLocale();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isEditing = !!receiptToEdit;
 
   const [receiptNumber, setReceiptNumber] = useState("");
   const [clientId, setClientId] = useState<string>(NO_CLIENT);
@@ -78,6 +81,18 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
 
   useEffect(() => {
     if (!open) return;
+    if (receiptToEdit) {
+      setReceiptNumber(receiptToEdit.receiptNumber);
+      setClientId(receiptToEdit.clientId ?? NO_CLIENT);
+      setClientName(receiptToEdit.clientName);
+      setClientTaxId(receiptToEdit.clientTaxId ?? "");
+      setConcept(receiptToEdit.concept);
+      setAmount(String(receiptToEdit.amount));
+      setReceivedAt(new Date(receiptToEdit.receivedAt));
+      setMethod(receiptToEdit.method ?? undefined);
+      setNote(receiptToEdit.note ?? "");
+      return;
+    }
     setReceiptNumber(nextReceiptNumber(receipts));
     setClientId(defaultValues?.clientId ?? NO_CLIENT);
     setClientName(defaultValues?.clientName ?? "");
@@ -89,7 +104,7 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
     setNote("");
     // Solo al abrir: no se quiere resetear el formulario mientras el usuario escribe.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, receiptToEdit]);
 
   const handleClientChange = (value: string) => {
     setClientId(value);
@@ -111,7 +126,7 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
   };
 
   const isDuplicateNumber = receiptNumber.trim().length > 0 &&
-    receipts.some((r) => r.receiptNumber === receiptNumber.trim());
+    receipts.some((r) => r.receiptNumber === receiptNumber.trim() && r.id !== receiptToEdit?.id);
 
   const handleSubmit = async () => {
     const parsedAmount = parseFloat(amount.replace(",", "."));
@@ -121,7 +136,7 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
     }
     setIsSubmitting(true);
     try {
-      const result = await createReceipt({
+      const payload = {
         receiptNumber: receiptNumber.trim(),
         clientId: clientId !== NO_CLIENT ? clientId : undefined,
         clientName: clientName.trim(),
@@ -131,17 +146,23 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
         receivedAt,
         method,
         note: note || undefined,
-        invoiceId: defaultValues?.invoiceId,
-      });
+      };
+      const result = isEditing
+        ? await updateReceipt(receiptToEdit!.id, payload)
+        : await createReceipt({ ...payload, invoiceId: defaultValues?.invoiceId });
       if (result.success) {
-        toast({ title: "Recibo Creado", description: `Se ha generado el recibo ${receiptNumber}.` });
+        toast(
+          isEditing
+            ? { title: t('receipts.editSuccessTitle'), description: t('receipts.editSuccessDescription') }
+            : { title: "Recibo Creado", description: `Se ha generado el recibo ${receiptNumber}.` },
+        );
         onOpenChange(false);
         await onCreated();
       } else {
         toast({ title: "Error", description: result.error, variant: "destructive" });
       }
     } catch (error) {
-      toast({ title: "Error", description: "No se pudo crear el recibo.", variant: "destructive" });
+      toast({ title: "Error", description: "No se pudo guardar el recibo.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -151,7 +172,7 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t('receipts.addButton')}</DialogTitle>
+          <DialogTitle>{isEditing ? t('receipts.editDialogTitle') : t('receipts.addButton')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
           <div className="space-y-2">
@@ -239,7 +260,7 @@ export default function ReceiptFormDialog({ open, onOpenChange, receipts, client
         <DialogFooter>
           <Button onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {t('receipts.addButton')}
+            {isEditing ? t('receipts.editSaveButton') : t('receipts.addButton')}
           </Button>
         </DialogFooter>
       </DialogContent>
