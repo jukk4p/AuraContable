@@ -16,6 +16,7 @@ import { useLocale } from '@/lib/i18n/locale-provider';
 import type { Client } from '@/lib/types';
 import { addClient, updateClient } from '@/actions/clients';
 import { toast } from '@/hooks/use-toast';
+import ClientReceiptsCard from '@/components/client-receipts-card';
 
 const clientFormSchema = z.object({
     name: z.string().min(1, "El nombre del cliente o razón social es obligatorio"),
@@ -278,6 +279,10 @@ export default function ClientForm({ client, userId }: ClientFormProps) {
                     </div>
                 </form>
             </Form>
+
+            {isEditing && client && (
+                <ClientReceiptsCard clientId={client.id} clientName={client.name} clientTaxId={client.taxId} />
+            )}
         </div>
     );
 }
